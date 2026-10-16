@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#101014">
+
+    <title>Multi Bundle</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header class="topbar">
+    <div class="logo">MB</div>
+
+    <div class="brand">
+        <h1>Multi Bundle</h1>
+        <p>Your Code Backup Vault</p>
+    </div>
+
+    <button class="add-btn" onclick="openTab('bundle')">
+        +
+    </button>
+</header>
+
+<main>
+
+    <!-- HOME TAB -->
+    <section id="home" class="tab active">
+
+        <div class="hero">
+            <p class="label">YOUR WORKSPACE</p>
+
+            <h2>Keep your code <span>together.</span></h2>
+
+            <p>
+                Bundle your website and app code into
+                one easy-to-save TXT backup.
+            </p>
+
+            <button class="primary"
+                    onclick="openTab('bundle')">
+                + Create a Bundle
+            </button>
+        </div>
+
+        <div class="stats">
+            <div class="card">
+                <p>Projects</p>
+                <h2 id="projectCount">0</h2>
+            </div>
+
+            <div class="card">
+                <p>Backups</p>
+                <h2 id="backupCount">0</h2>
+            </div>
+        </div>
+
+        <h3>Recent Backups</h3>
+
+        <div id="recentBackups" class="list">
+            No backups yet.
+        </div>
+
+    </section>
+
+
+    <!-- BUNDLE TAB -->
+    <section id="bundle" class="tab">
+
+        <p class="label">CREATE BACKUP</p>
+
+        <h2>Bundle Your Code</h2>
+
+        <p class="muted">
+            Select multiple code files and combine them
+            into one TXT file.
+        </p>
+
+        <label for="projectName">Project Name</label>
+
+        <input
+            type="text"
+            id="projectName"
+            placeholder="Example: Samarid Music"
+        >
+
+        <label for="codeFiles">Choose Code Files</label>
+
+        <input
+            type="file"
+            id="codeFiles"
+            multiple
+            accept=".html,.htm,.css,.js,.json,.txt,.md,.xml,.svg,.php,.py,.sql,.yml,.yaml,.toml"
+        >
+
+        <div id="selectedFiles" class="list">
+            No files selected.
+        </div>
+
+        <button class="secondary full"
+                onclick="clearFiles()">
+            Clear Files
+        </button>
+
+        <button class="primary full"
+                onclick="generateBundle()">
+            Generate TXT Backup
+        </button>
+
+        <p id="status" class="status"></p>
+
+        <div id="previewArea" hidden>
+
+            <h3>Backup Preview</h3>
+
+            <textarea
+                id="preview"
+                readonly
+                rows="12"
+            ></textarea>
+
+            <button class="primary full"
+                    onclick="downloadBundle()">
+                Download TXT
+            </button>
+
+            <button class="secondary full"
+                    onclick="copyBundle()">
+                Copy Code
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- PROJECTS TAB -->
+    <section id="projects" class="tab">
+
+        <p class="label">YOUR WORKSPACE</p>
+
+        <h2>My Projects</h2>
+
+        <p class="muted">
+            Your projects appear here after you create backups.
+        </p>
+
+        <div id="projectList" class="list">
+            No projects yet.
+        </div>
+
+    </section>
+
+
+    <!-- BACKUPS TAB -->
+    <section id="backups" class="tab">
+
+        <p class="label">YOUR ARCHIVE</p>
+
+        <h2>My Backups</h2>
+
+        <p class="muted">
+            Download your previously saved backups.
+        </p>
+
+        <div id="backupList" class="list">
+            No backups saved.
+        </div>
+
+    </section>
+
+
+    <!-- SETTINGS TAB -->
+    <section id="settings" class="tab">
+
+        <p class="label">PREFERENCES</p>
+
+        <h2>Settings</h2>
+
+        <div class="card settings-card">
+            <h3>About Multi Bundle</h3>
+
+            <p>
+                A simple app for combining code files
+                into one TXT backup.
+            </p>
+        </div>
+
+        <div class="card settings-card">
+            <h3>Backup Safety</h3>
+
+            <p>
+                Download important backups to your phone.
+                Browser storage can be cleared.
+            </p>
+        </div>
+
+        <div class="card settings-card">
+            <h3>Privacy</h3>
+
+            <p>
+                Never include passwords, private tokens,
+                or secret API keys in your backups.
+            </p>
+        </div>
+
+        <button class="secondary full"
+                onclick="exportBackupList()">
+            Export Backup List
+        </button>
+
+        <button class="danger full"
+                onclick="deleteAllBackups()">
+            Delete All Backup Records
+        </button>
+
+    </section>
+
+</main>
+
+
+<!-- BOTTOM NAVIGATION -->
+<nav class="bottom-nav">
+
+    <button class="nav active"
+            data-tab="home"
+            onclick="openTab('home')">
+        <span>⌂</span>
+        <small>Home</small>
+    </button>
+
+    <button class="nav"
+            data-tab="bundle"
+            onclick="openTab('bundle')">
+        <span>▣</span>
+        <small>Bundle</small>
+    </button>
+
+    <button class="nav"
+            data-tab="projects"
+            onclick="openTab('projects')">
+        <span>▤</span>
+        <small>Projects</small>
+    </button>
+
+    <button class="nav"
+            data-tab="backups"
+            onclick="openTab('backups')">
+        <span>⇩</span>
+        <small>Backups</small>
+    </button>
+
+    <button class="nav"
+            data-tab="settings"
+            onclick="openTab('settings')">
+        <span>⚙</span>
+        <small>Settings</small>
+    </button>
+
+</nav>
+
+<script src="app.js"></script>
+
+</body>
+</html>

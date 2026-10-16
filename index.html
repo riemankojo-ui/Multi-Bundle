@@ -23,6 +23,7 @@
     <a data-tab="preview">◉ <span>Preview</span></a>
     <a data-tab="bundle">▤ <span>Bundle</span></a>
     <a data-tab="backups">⟲ <span>Backups</span></a>
+    <a data-tab="github">🐙 <span>GitHub</span></a>
   </nav>
   <div class="drawer-section">
     <label>TOOLS</label>
@@ -46,35 +47,12 @@
     <section class="card">
       <label class="eyebrow">PROJECTS</label>
       <h1>Your <span>Projects</span></h1>
-      <p>Import a website folder, ZIP, or GitHub repo. Your files are saved on this device.</p>
+      <p>Import a website folder or ZIP. Your files are saved on this device.</p>
       <div class="actions">
         <label class="btn primary">📁 New project<input id="folderInput" type="file" webkitdirectory directory multiple hidden></label>
         <label class="btn secondary">📦 Import ZIP<input id="zipInput" type="file" accept=".zip,application/zip" hidden></label>
       </div>
       <div class="status" id="status">Choose a folder or ZIP to start a new project. Max 4 projects.</div>
-    </section>
-
-    <section class="card">
-      <label class="eyebrow">GITHUB</label>
-      <h2>Your GitHub repos</h2>
-      <div id="githubLoggedOut">
-        <p>Sign in with a GitHub token to see your repos (including private).</p>
-        <div class="gh-row">
-          <input id="githubToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
-          <button id="githubLoginBtn" class="btn primary">Sign in</button>
-        </div>
-        <p class="note">Create one at github.com/settings/tokens → Generate new token (classic) → tick "repo" → Generate → copy.</p>
-        <div class="status" id="githubStatus">Not signed in.</div>
-      </div>
-      <div id="githubLoggedIn" hidden>
-        <div class="gh-user">
-          <img id="ghAvatar" alt="">
-          <div class="gh-user-info"><b id="ghName">—</b><small id="ghLogin">—</small></div>
-          <button id="githubLogoutBtn" class="btn secondary">Sign out</button>
-        </div>
-        <input id="ghRepoSearch" class="gh-search" type="text" placeholder="🔍 Search your repos…" autocomplete="off">
-        <div id="ghRepoList" class="gh-repo-list"></div>
-      </div>
     </section>
 
     <section class="card">
@@ -110,12 +88,50 @@
   <input id="changesFolderInput" type="file" webkitdirectory directory multiple hidden>
 </section>
 
+<section id="githubPage" class="tab-page" hidden>
+  <section class="card">
+    <label class="eyebrow">GITHUB</label>
+    <h1>Import from <span>GitHub</span></h1>
+    <p>Sign in with a token to see your repos (including private), or paste a public repo URL.</p>
+
+    <div id="githubLoggedOut">
+      <div class="gh-row">
+        <input id="githubToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+        <button id="githubLoginBtn" class="btn primary">Sign in</button>
+      </div>
+      <p class="note">Create one at github.com/settings/tokens → Generate new token (classic) → tick "repo" → Generate → copy.</p>
+      <div class="status" id="githubStatus">Not signed in.</div>
+    </div>
+
+    <div id="githubLoggedIn" hidden>
+      <div class="gh-user">
+        <img id="ghAvatar" alt="">
+        <div class="gh-user-info"><b id="ghName">—</b><small id="ghLogin">—</small></div>
+        <button id="githubLogoutBtn" class="btn secondary">Sign out</button>
+      </div>
+      <input id="ghRepoSearch" class="gh-search" type="text" placeholder="🔍 Search your repos…" autocomplete="off">
+      <div id="ghRepoList" class="gh-repo-list"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <label class="eyebrow">PUBLIC REPO</label>
+    <h2>Import by URL</h2>
+    <p>Works without signing in. Public repos only.</p>
+    <div class="gh-row">
+      <input id="ghPublicUrl" type="text" placeholder="https://github.com/owner/repo" autocomplete="off">
+      <button id="ghPublicBtn" class="btn primary">Import</button>
+    </div>
+    <div class="status" id="ghPublicStatus">Paste a public repo URL.</div>
+  </section>
+</section>
+
 <section id="bundlePage" class="tab-page" hidden>
  <section class="card hero"><label class="eyebrow">BUNDLE CENTER</label><h1>TXT <span>Bundle</span></h1><p>Combine the text-based files from your current project into one readable TXT backup file.</p></section>
  <section class="card"><div class="heading"><div><label class="eyebrow">READY TO EXPORT</label><h2 id="bundleProjectName">No project loaded</h2></div><span id="bundleFileCount" class="pill">0 files</span></div><p id="bundleStatus">Import a project first from the Projects tab.</p><button id="bundleBtn" class="btn primary" disabled>⇩ Export TXT bundle</button><p class="note">Text files are included. Images, fonts, and other binary assets are represented by a note and are not embedded in the TXT file.</p></section>
 </section>
 
-<section id="previewPage" class="tab-page" hidden><div class="preview-top"><div><label class="eyebrow">LOCAL BROWSER</label><h1>Website <span>Preview</span></h1></div><button id="fullScreenBtn" class="btn primary">⛶ Full screen</button></div><section class="card"><div class="page-toolbar"><label for="pageSelect">PAGE</label><select id="pageSelect" disabled><option>No project loaded</option></select><button id="openPageBtn" class="btn secondary" disabled>Open page</button></div><div class="browser"><i></i><i></i><i></i><span id="previewPath">Your website will appear here</span><button id="refreshBtn" disabled>↻</button></div><div id="placeholder" class="placeholder"><div>⌘</div><b>Ready when you are</b><p>Go to Projects and import a website, then select a page here.</p></div><iframe id="frame" title="Local website preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" hidden></iframe><p class="note">PHP, databases, server APIs, and some advanced module setups need a real server.</p><button id="backHomeBtn" class="btn secondary">← Home</button></section></section>
+<section id="previewPage" class="tab-page" hidden><div class="preview-top"><div><label class="eyebrow">LOCAL BROWSER</label><h1>Website <span>Preview</span></h1></div><button id="fullScreenBtn" class="btn primary">⛶ Full screen</button></div><section class="card"><div class="page-toolbar"><label for="pageSelect">PAGE</label><select id="pageSelect" disabled><option>No project loaded</option></select><button id="openPageBtn" class="btn secondary" disabled>Open page</button></div><div class="browser"><i></i><i></i><i></i><span id="previewPath">Your website will appear here</span><button id="refreshBtn" disabled>↻</button></div><div class="preview-wrap"><div id="previewLoader" class="preview-loader"><div class="spinner"></div></div><iframe id="frame" title="Local website preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" hidden></iframe></div><p class="note">PHP, databases, server APIs, and some advanced module setups need a real server.</p><button id="backHomeBtn" class="btn secondary">← Home</button></section></section>
 
 <section id="editorPage" class="tab-page" hidden>
   <div class="editor-shell" id="editorShell">
@@ -125,27 +141,27 @@
       </div>
       <div class="et-row et-actions">
         <button id="editorNewBtn" class="editor-btn" title="New file">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span>New</span>
         </button>
         <button id="editorUndoBtn" class="editor-btn" disabled title="Undo">
-          <svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/></svg>
         </button>
         <button id="editorRedoBtn" class="editor-btn" disabled title="Redo">
-          <svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h4"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h4"/></svg>
         </button>
         <button id="editorSearchBtn" class="editor-btn" title="Search">
-          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
         <button id="editorPreviewBtn" class="editor-btn" title="Preview">
-          <svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"/></svg>
           <span>Preview</span>
         </button>
         <button id="editorFullBtn" class="editor-btn" title="Full screen">
-          <svg viewBox="0 0 24 24"><polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/></svg>
         </button>
         <button id="editorSaveBtn" class="editor-btn primary" title="Save">
-          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           <span>Save</span>
         </button>
       </div>

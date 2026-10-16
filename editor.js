@@ -30,7 +30,6 @@ function highlightJS(code){
   out+=escHtml(code.slice(last));
   return out;
 }
-
 function highlightCSS(code){
   const re=/(\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')|(#[0-9a-fA-F]{3,8}\b|\b\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|s|ms|deg|fr)?\b)|(@[A-Za-z\-]+)|([a-zA-Z\-]+)(?=\s*:)/g;
   let out='',last=0,m;
@@ -48,7 +47,6 @@ function highlightCSS(code){
   out+=escHtml(code.slice(last));
   return out;
 }
-
 function highlightHTML(code){
   const re=/(<!--[\s\S]*?-->)|(<\/?[A-Za-z][\w\-]*)|([A-Za-z\-:]+)(?==)|("(?:[^"]*)")|(>)/g;
   let out='',last=0,m;
@@ -66,7 +64,6 @@ function highlightHTML(code){
   out+=escHtml(code.slice(last));
   return out;
 }
-
 function highlightAll(code){
   const e=(currentPath.split('.').pop()||'').toLowerCase();
   if(e==='css')return highlightCSS(code);
@@ -74,11 +71,9 @@ function highlightAll(code){
   if(['js','mjs','ts','jsx','tsx','json'].includes(e))return highlightJS(code);
   return escHtml(code);
 }
-
 function refreshHighlight(){
   if(!hl)return;
   const v=ta.value;
-  // Keep trailing newline so pre matches textarea height
   hl.innerHTML=highlightAll(v)+(v.endsWith('\n')?' ':'');
   hl.scrollTop=ta.scrollTop;
   hl.scrollLeft=ta.scrollLeft;
@@ -90,7 +85,8 @@ function updateGutter(){
   for(let i=1;i<=n;i++)s+=i+'\n';
   gutter.textContent=s;gutter.scrollTop=ta.scrollTop;
 }
-ta.addEventListener('scroll',function(){gutter.scrollTop=ta.scrollTop;hl.scrollTop=ta.scrollTop;hl.scrollLeft=ta.scrollLeft});
+function syncScroll(){gutter.scrollTop=ta.scrollTop;hl.scrollTop=ta.scrollTop;hl.scrollLeft=ta.scrollLeft}
+ta.addEventListener('scroll',syncScroll);
 ta.addEventListener('input',function(){updateGutter();refreshHighlight();pushHistory();markDirty();updateCursor()});
 ta.addEventListener('click',updateCursor);
 ta.addEventListener('keyup',updateCursor);
@@ -116,7 +112,7 @@ ta.addEventListener('keydown',function(e){
     ta.selectionStart=ta.selectionEnd=s+2;updateGutter();refreshHighlight();pushHistory(true);markDirty()}
 });
 
-/* ===== Search ===== */
+/* ===== Search (fixed arrow navigation) ===== */
 function openSearch(){searchBar.classList.add('open');searchInput.focus();searchInput.select()}
 function closeSearch(){searchBar.classList.remove('open');matches=[];matchIndex=-1;updateSearchCount()}
 function runSearch(){
@@ -127,21 +123,45 @@ function runSearch(){
   if(matches.length){matchIndex=0;selectMatch()}
 }
 function updateSearchCount(){searchCount.textContent=matches.length?(matchIndex+1)+'/'+matches.length:'0/0'}
+
+function scrollToPosition(pos){
+  /* Compute line height from computed style — more accurate than hardcoded px */
+  const cs=getComputedStyle(ta);
+  const lh=parseFloat(cs.lineHeight)||(parseFloat(cs.fontSize)*1.55)||20;
+  const before=ta.value.slice(0,pos);
+  const lineNum=before.split('\n').length;
+  const target=Math.max(0,(lineNum-3)*lh);
+  ta.scrollTop=target;
+  syncScroll();
+}
+
 function selectMatch(){
   if(matchIndex<0||matchIndex>=matches.length)return;
   const s=matches[matchIndex],en=s+searchInput.value.length;
-  ta.focus();ta.setSelectionRange(s,en);
-  const line=ta.value.slice(0,s).split('\n').length;
-  ta.scrollTop=Math.max(0,(line-4)*20);gutter.scrollTop=ta.scrollTop;hl.scrollTop=ta.scrollTop;
+
+  /* Do NOT focus the textarea on mobile — it opens the keyboard and hides the search bar */
+  ta.setSelectionRange(s,en);
+  scrollToPosition(s);
   updateSearchCount();
 }
-searchInput.addEventListener('input',runSearch);
+searchInput.addEventListener('input',function(){
+  /* Reset to first match whenever the query changes */
+  runSearch();
+});
 searchInput.addEventListener('keydown',function(e){
   if(e.key==='Enter'){e.preventDefault();e.shiftKey?prevMatch():nextMatch()}
   if(e.key==='Escape')closeSearch();
 });
-function nextMatch(){if(!matches.length)return;matchIndex=(matchIndex+1)%matches.length;selectMatch()}
-function prevMatch(){if(!matches.length)return;matchIndex=(matchIndex-1+matches.length)%matches.length;selectMatch()}
+function nextMatch(){
+  if(!matches.length)return;
+  matchIndex=(matchIndex+1)%matches.length;
+  selectMatch();
+}
+function prevMatch(){
+  if(!matches.length)return;
+  matchIndex=(matchIndex-1+matches.length)%matches.length;
+  selectMatch();
+}
 $('editorSearchNext').onclick=nextMatch;
 $('editorSearchPrev').onclick=prevMatch;
 $('editorSearchClose').onclick=closeSearch;
@@ -172,13 +192,21 @@ function loadFile(path){
   renderPreview();
 }
 function markDirty(){dirty=true;status.textContent=currentPath+' •'}
-function saveFile(){
+async function saveFile(){
   if(!currentPath)return;
-  const f=files.find(function(x){return x.path===currentPath});if(!f)return;
+  const f=files.find(function(x){return x.path===currentPath});
+  if(!f)return;
   f.text=ta.value;f.blob=null;dirty=false;
   status.textContent=currentPath+' ✓';
+  /* Persist to IndexedDB so changes stay after refresh */
+  if(typeof window.saveCurrentProject==='function'){
+    try{
+      await window.saveCurrentProject();
+      status.textContent=currentPath+' ✓ Saved';
+      setTimeout(function(){status.textContent=currentPath},1500);
+    }catch(e){console.warn('save failed',e)}
+  }
   if(typeof render==='function')render();
-  if(typeof saveCurrentProject==='function')saveCurrentProject();
 }
 fileSelect.addEventListener('change',function(e){
   if(dirty&&!confirm('Discard unsaved changes?')){fileSelect.value=currentPath;return}
@@ -192,6 +220,7 @@ $('editorNewBtn').onclick=function(){
   files.sort(function(a,b){return a.path.localeCompare(b.path)});
   refreshFileList();loadFile(name);
   if(typeof render==='function')render();
+  if(typeof window.saveCurrentProject==='function')window.saveCurrentProject();
 };
 
 /* ===== Preview ===== */
@@ -210,14 +239,12 @@ ta.addEventListener('input',function(){
 $('editorFullBtn').onclick=function(){
   const on=shell.classList.toggle('fullscreen');
   document.body.classList.toggle('editor-full',on);
-  $('editorFullBtn').textContent=on?'⤡':'⛶';
+  $('editorFullBtn').classList.toggle('active',on);
 };
 
-/* Refresh file list when editor opens */
+/* Auto-refresh file list when editor tab opens */
 if(editorPage){
-  const obs=new MutationObserver(function(){
-    if(!editorPage.hidden)refreshFileList();
-  });
+  const obs=new MutationObserver(function(){if(!editorPage.hidden)refreshFileList()});
   obs.observe(editorPage,{attributes:true,attributeFilter:['hidden']});
 }
 

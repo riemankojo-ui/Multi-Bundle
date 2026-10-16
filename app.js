@@ -1,12 +1,12 @@
 const $=id=>document.getElementById(id);
 
-/* ===== Bulletproof tab switching (runs first) ===== */
+/* ===== Bulletproof tab switching ===== */
 document.addEventListener('click',function(e){
   const el=e.target.closest('[data-tab]');
   if(!el)return;
   const name=el.dataset.tab;
   if(!name)return;
-  ['home','projects','bundle','preview','editor','backups'].forEach(function(p){
+  ['home','projects','bundle','preview','editor','backups','github'].forEach(function(p){
     const page=document.getElementById(p+'Page');
     if(page)page.hidden=(p!==name);
   });
@@ -57,37 +57,57 @@ function timeAgo(ts){
 /* ===== File helpers ===== */
 function fileBlob(f){const t=mimeMap[ext(f.path)]||f.type||'application/octet-stream';const src=f.blob||new Blob([f.text||'']);return src.type===t?src:new Blob([src],{type:t})}
 function clearUrls(){urls.forEach(function(u){URL.revokeObjectURL(u)});urls=[];urlCache.clear()}
-function resetPreview(){if($('frame')){$('frame').hidden=true;$('frame').srcdoc=''}if($('placeholder'))$('placeholder').hidden=false;if($('previewPath'))$('previewPath').textContent='Your website will appear here';if($('refreshBtn'))$('refreshBtn').disabled=true}
+function resetPreview(){
+  if($('frame')){$('frame').hidden=true;$('frame').srcdoc=''}
+  if($('placeholder'))$('placeholder').hidden=false;
+  if($('previewPath'))$('previewPath').textContent='Your website will appear here';
+  if($('refreshBtn'))$('refreshBtn').disabled=true;
+  if($('previewLoader'))$('previewLoader').classList.remove('show');
+}
 function findFile(p){p=p.replace(/^\.\//,'').replace(/^\//,'');return files.find(function(f){return f.path===p})||files.find(function(f){return f.path.endsWith('/'+p)})}
 function makeUrl(blob){const u=URL.createObjectURL(blob);urls.push(u);return u}
 function htmlPages(){return files.filter(function(f){return ['html','htm'].includes(ext(f.path))}).sort(function(a,b){return a.path.localeCompare(b.path)})}
 
 /* ===== Current project name ===== */
-function currentProjectName(){
-  return window.__currentProjectName||'No project loaded';
-}
+function currentProjectName(){return window.__currentProjectName||'No project loaded'}
 function setCurrentProjectName(n){
   window.__currentProjectName=n||'No project loaded';
   const dn=$('detailProjectName');if(dn)dn.textContent=window.__currentProjectName;
 }
 
+/* ===== Persist current project ===== */
+async function saveCurrentProject(){
+  if(!currentProjectId||!files.length)return;
+  const all=await dbGetAll();
+  const existing=all.find(function(p){return p.id===currentProjectId});
+  await dbUpsertProject({
+    id:currentProjectId,
+    name:existing?existing.name:currentProjectName(),
+    files:serializeFiles(),
+    savedAt:Date.now(),
+    createdAt:existing?existing.createdAt:Date.now()
+  });
+  await renderProjectCards();
+}
+window.saveCurrentProject=saveCurrentProject;
+
 /* ===== Drawer ===== */
-function openDrawer(){
-  const d=$('drawer'),b=$('drawerBackdrop');
-  if(d)d.classList.add('open');
-  if(b)b.classList.add('open');
-}
-function closeDrawer(){
-  const d=$('drawer'),b=$('drawerBackdrop');
-  if(d)d.classList.remove('open');
-  if(b)b.classList.remove('open');
-}
+function openDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.add('open');if(b)b.classList.add('open')}
+function closeDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open')}
 if($('menuBtn'))$('menuBtn').onclick=openDrawer;
 if($('drawerClose'))$('drawerClose').onclick=closeDrawer;
 if($('drawerBackdrop'))$('drawerBackdrop').onclick=closeDrawer;
 if($('drawerNewProject'))$('drawerNewProject').onclick=function(){closeDrawer();if($('folderInput'))$('folderInput').click()};
 if($('drawerImportZip'))$('drawerImportZip').onclick=function(){closeDrawer();if($('zipInput'))$('zipInput').click()};
-if($('drawerGithub'))$('drawerGithub').onclick=function(){closeDrawer();showTab('projects');setTimeout(function(){const el=$('githubToken');if(el)el.focus()},250)};
+if($('drawerGithub'))$('drawerGithub').onclick=function(){
+  closeDrawer();
+  setTimeout(function(){
+    ['home','projects','bundle','preview','editor','backups','github'].forEach(function(p){
+      const page=document.getElementById(p+'Page');if(page)page.hidden=(p!=='github');
+    });
+    document.querySelectorAll('.bottom span').forEach(function(s){s.classList.remove('selected')});
+  },50);
+};
 if($('drawerClear'))$('drawerClear').onclick=function(){closeDrawer();if($('clearBtn'))$('clearBtn').click()};
 
 /* ===== Project cards ===== */
@@ -95,25 +115,20 @@ async function renderProjectCards(){
   const all=await dbGetAll();
   const box=$('projectCards');if(!box)return;
   if($('projectCount'))$('projectCount').textContent=all.length+' / '+PROJECT_LIMIT;
-  if(!all.length){box.innerHTML='<div class="pc-empty">No saved projects yet.<br>Import a folder, ZIP, or GitHub repo to create one.</div>';return}
+  if(!all.length){box.innerHTML='<div class="pc-empty">No saved projects yet.<br>Import a folder or ZIP to create one.</div>';return}
   box.innerHTML=all.map(function(p){
     const initials=(p.name||'?').slice(0,2).toUpperCase();
     const active=(p.id===currentProjectId)?' active':'';
     return '<div class="project-card'+active+'" data-id="'+esc(p.id)+'">'+
-      '<div class="pc-top">'+
-        '<div class="pc-icon">'+esc(initials)+'</div>'+
-        '<div class="pc-info">'+
-          '<div class="pc-name">'+esc(p.name||'Untitled')+'</div>'+
-          '<div class="pc-meta">'+p.files.length+' file'+(p.files.length===1?'':'s')+' · '+timeAgo(p.savedAt)+'</div>'+
-        '</div>'+
-      '</div>'+
+      '<div class="pc-top"><div class="pc-icon">'+esc(initials)+'</div>'+
+      '<div class="pc-info"><div class="pc-name">'+esc(p.name||'Untitled')+'</div>'+
+      '<div class="pc-meta">'+p.files.length+' file'+(p.files.length===1?'':'s')+' · '+timeAgo(p.savedAt)+'</div></div></div>'+
       '<div class="pc-actions">'+
-        '<button class="pc-btn primary" data-act="preview">▶ Preview</button>'+
-        '<button class="pc-btn" data-act="edit" title="Edit code">✎</button>'+
-        '<button class="pc-btn" data-act="changes" title="Import changes">↻</button>'+
-        '<button class="pc-btn danger" data-act="delete" title="Delete">🗑</button>'+
-      '</div>'+
-    '</div>';
+      '<button class="pc-btn primary" data-act="preview">▶ Preview</button>'+
+      '<button class="pc-btn" data-act="edit" title="Edit code">✎</button>'+
+      '<button class="pc-btn" data-act="changes" title="Import changes">↻</button>'+
+      '<button class="pc-btn danger" data-act="delete" title="Delete">🗑</button>'+
+      '</div></div>';
   }).join('');
   box.querySelectorAll('.project-card').forEach(function(card){
     const id=card.dataset.id;
@@ -180,8 +195,6 @@ function cleanIncoming(result){
 
 async function processIncoming(result,defaultName){
   result=cleanIncoming(result);
-
-  /* Ask for a project name — pre-filled with the folder/zip/repo name */
   const name=(prompt('Project name:',defaultName||'My project')||'').trim();
   if(!name)return;
 
@@ -189,37 +202,19 @@ async function processIncoming(result,defaultName){
   const existing=all.find(function(p){return p.name===name});
 
   if(existing){
-    /* Same name → update existing project */
     currentProjectId=existing.id;
     setCurrentProjectName(name);
     files=result;
-    await dbUpsertProject({
-      id:existing.id,
-      name:name,
-      files:serializeFiles(),
-      savedAt:Date.now(),
-      createdAt:existing.createdAt
-    });
+    await dbUpsertProject({id:existing.id,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:existing.createdAt});
     if($('status'))$('status').textContent='Updated "'+name+'" with '+files.length+' files.';
   }else{
-    /* New name → create a new project */
-    if(all.length>=PROJECT_LIMIT){
-      alert('You can only have '+PROJECT_LIMIT+' projects. Delete one first.');
-      return;
-    }
+    if(all.length>=PROJECT_LIMIT){alert('You can only have '+PROJECT_LIMIT+' projects. Delete one first.');return}
     currentProjectId=Date.now().toString();
     setCurrentProjectName(name);
     files=result;
-    await dbUpsertProject({
-      id:currentProjectId,
-      name:name,
-      files:serializeFiles(),
-      savedAt:Date.now(),
-      createdAt:Date.now()
-    });
+    await dbUpsertProject({id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now()});
     if($('status'))$('status').textContent='Created "'+name+'" with '+files.length+' files.';
   }
-
   await renderProjectCards();
   populatePages();
   render();
@@ -286,6 +281,7 @@ if($('zipInput'))$('zipInput').addEventListener('change',async function(e){
 
 /* ===== GitHub ===== */
 function setGhStatus(t){if($('githubStatus'))$('githubStatus').textContent=t}
+function setGhPublicStatus(t){if($('ghPublicStatus'))$('ghPublicStatus').textContent=t}
 function getToken(){return ghToken}
 
 async function saveToken(t){ghToken=t;try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(t,'githubToken');await new Promise(function(r){tx.oncomplete=r})}catch(e){}}
@@ -362,18 +358,19 @@ function renderRepoList(){
   list.querySelectorAll('.gh-repo').forEach(function(el){el.onclick=function(){importRepo(el.dataset.full,el.dataset.branch)}});
 }
 
-async function importRepo(fullName,branch){
+async function importRepo(fullName,branch,isPublic){
   const parts=fullName.split('/');
   const owner=parts[0],repo=parts[1];
   const bn=branch||'main';
-  setGhStatus('Fetching '+fullName+' ('+bn+')…');
+  const statusFn=isPublic?setGhPublicStatus:setGhStatus;
+  statusFn('Fetching '+fullName+' ('+bn+')…');
   try{
     const r=await ghFetch('https://api.github.com/repos/'+owner+'/'+repo+'/git/trees/'+bn+'?recursive=1');
-    if(!r.ok){setGhStatus('Could not list files.');return}
+    if(!r.ok){statusFn('Could not list files.');return}
     const tree=await r.json();
     const blobs=(tree.tree||[]).filter(function(x){return x.type==='blob'});
-    if(!blobs.length){setGhStatus('Repo has no files.');return}
-    setGhStatus('Downloading '+blobs.length+' files…');
+    if(!blobs.length){statusFn('Repo has no files.');return}
+    statusFn('Downloading '+blobs.length+' files…');
     let done=0;
     const result=await Promise.all(blobs.map(async function(node){
       const path=node.path;
@@ -393,20 +390,30 @@ async function importRepo(fullName,branch){
           blob=await dr.blob();
         }else return null;
         done++;
-        if(done%10===0)setGhStatus('Downloading… '+done+'/'+blobs.length);
+        if(done%10===0)statusFn('Downloading… '+done+'/'+blobs.length);
         return {path:path,name:base(path),size:blob.size,type:blob.type,blob:blob,text:isText?await blob.text():null};
       }catch(e){return null}
     }));
     const clean=result.filter(function(x){return x});
     await processIncoming(clean,repo);
-    setGhStatus('Imported '+fullName+' — '+clean.length+' files.');
-  }catch(e){setGhStatus('Import failed: '+e.message)}
+    statusFn('Imported '+fullName+' — '+clean.length+' files.');
+  }catch(e){statusFn('Import failed: '+e.message)}
 }
 
 if($('githubLoginBtn'))$('githubLoginBtn').onclick=githubLogin;
 if($('githubLogoutBtn'))$('githubLogoutBtn').onclick=githubLogout;
 if($('githubToken'))$('githubToken').addEventListener('keydown',function(e){if(e.key==='Enter')githubLogin()});
 if($('ghRepoSearch'))$('ghRepoSearch').addEventListener('input',renderRepoList);
+
+function handlePublicUrl(){
+  const raw=($('ghPublicUrl').value||'').trim();
+  if(!raw){setGhPublicStatus('Paste a URL.');return}
+  const m=raw.match(/github\.com\/([^\/\s]+)\/([^\/\s#?]+?)(?:\.git)?(?:\/tree\/([^\/\s#?]+))?\/?(?:[#?].*)?$/i);
+  if(!m){setGhPublicStatus('Invalid URL.');return}
+  importRepo(m[1]+'/'+m[2].replace(/\.git$/,''),m[3]||'main',true);
+}
+if($('ghPublicBtn'))$('ghPublicBtn').onclick=handlePublicUrl;
+if($('ghPublicUrl'))$('ghPublicUrl').addEventListener('keydown',function(e){if(e.key==='Enter')handlePublicUrl()});
 
 (async function(){
   const t=await loadToken();
@@ -439,7 +446,7 @@ function render(){
   const name=currentProjectName();
   setT('homeProjectName',name);
   setT('homeFileCount',files.length+' files');
-  setT('homeStatus',files.length?files.length+' files loaded. Open Projects to manage, Editor to modify.':'Go to Projects to import a website folder, ZIP, or GitHub repo.');
+  setT('homeStatus',files.length?files.length+' files loaded. Open Projects to manage, Editor to modify.':'Go to Projects to import a website folder or ZIP.');
   setT('bundleProjectName',name);
   setT('bundleFileCount',files.length+' files');
   setT('bundleStatus',files.length?'Ready to export '+files.length+' files.':'Import a project first.');
@@ -485,6 +492,10 @@ function cssRewrite(css,path,depth){
 }
 function htmlRewrite(html,path){
   const doc=new DOMParser().parseFromString(html,'text/html');
+  /* Dark base style prevents white flash */
+  const base=doc.createElement('style');
+  base.textContent='html,body{background:#101114;color:#f7f7f8}';
+  if(doc.head)doc.head.insertBefore(base,doc.head.firstChild);
   doc.querySelectorAll('link[href]').forEach(function(el){
     const rel=(el.getAttribute('rel')||'').toLowerCase();if(rel.indexOf('stylesheet')===-1)return;
     const href=el.getAttribute('href');const f=relative(path,href);
@@ -516,12 +527,22 @@ function htmlRewrite(html,path){
 
 function openPage(path){
   resetPreview();
-  const f=findFile(path);if(!f){if($('previewPath'))$('previewPath').textContent='File not found';return}
-  currentPagePath=f.path;if($('pageSelect'))$('pageSelect').value=f.path;
+  const f=findFile(path);
+  if(!f){if($('previewPath'))$('previewPath').textContent='File not found';return}
+  currentPagePath=f.path;
+  if($('pageSelect'))$('pageSelect').value=f.path;
   if($('previewPath'))$('previewPath').textContent=f.path;
   if(f.text==null){if($('placeholder'))$('placeholder').hidden=false;return}
-  if($('frame')){$('frame').srcdoc=htmlRewrite(f.text,f.path);$('frame').hidden=false}
+
+  const frame=$('frame'),loader=$('previewLoader');
+  if(loader)loader.classList.add('show');
   if($('placeholder'))$('placeholder').hidden=true;
+  frame.hidden=false;
+  frame.onload=function(){
+    if(loader)loader.classList.remove('show');
+    frame.onload=null;
+  };
+  frame.srcdoc=htmlRewrite(f.text,f.path);
   if($('refreshBtn'))$('refreshBtn').disabled=false;
 }
 
@@ -541,7 +562,7 @@ function exportBundle(){
 }
 
 function showTab(name){
-  ['home','projects','bundle','preview','editor','backups'].forEach(function(p){
+  ['home','projects','bundle','preview','editor','backups','github'].forEach(function(p){
     const el=$(p+'Page');if(el)el.hidden=(p!==name);
   });
   document.querySelectorAll('.bottom span').forEach(function(s){
@@ -552,6 +573,7 @@ function showTab(name){
   });
   if(name==='projects')showProjectsList();
 }
+window.showTab=showTab;
 
 /* ===== Buttons ===== */
 if($('homeProjectsBtn'))$('homeProjectsBtn').onclick=function(){showTab('projects')};
@@ -571,6 +593,8 @@ if($('clearBtn'))$('clearBtn').onclick=async function(){
   setCurrentProjectName('No project loaded');
   render();showTab('home');
 };
+
+document.querySelectorAll('.bottom span').forEach(function(s){s.onclick=function(){showTab(s.dataset.tab)}});
 
 /* Boot */
 render();

@@ -9,7 +9,49 @@
  <section class="card note-card"><b>ℹ️ Local workspace</b><p>Best for static HTML, CSS, JavaScript, and images. Server-side features like PHP and databases need a real server. Keep your original files safe.</p></section>
 </section>
 <section id="projectsPage" class="tab-page" hidden>
- <section class="card"><label class="eyebrow">PROJECTS</label><h1>Your <span>Projects</span></h1><p>Import a website folder or ZIP. Your files stay in this browser session.</p><div class="actions"><label class="btn primary">📁 Choose website folder<input id="folderInput" type="file" webkitdirectory directory multiple hidden></label><label class="btn secondary">📦 Import ZIP<input id="zipInput" type="file" accept=".zip,application/zip" hidden></label></div><div class="status" id="status">Choose a folder or ZIP to get started.</div><div class="heading"><div><label class="eyebrow">PROJECT FILES</label><h2 id="projectName">No project loaded</h2></div><span id="fileCount" class="pill">0 files</span></div><div id="fileList" class="filelist empty"><b>Your files will appear here</b><small>Look for index.html to start.</small></div><div class="actions"><button id="projectsPreviewBtn" class="btn primary" disabled>▶ Open Preview</button><button id="projectsBundleBtn" class="btn secondary" disabled>⇩ Go to Bundle</button></div></section>
+
+  <div id="projectsListView">
+    <section class="card">
+      <label class="eyebrow">PROJECTS</label>
+      <h1>Your <span>Projects</span></h1>
+      <p>Import a website folder or ZIP. Your files are saved on this device.</p>
+      <div class="actions">
+        <label class="btn primary">📁 New project<input id="folderInput" type="file" webkitdirectory directory multiple hidden></label>
+        <label class="btn secondary">📦 Import ZIP<input id="zipInput" type="file" accept=".zip,application/zip" hidden></label>
+      </div>
+      <div class="status" id="status">Choose a folder or ZIP to start a new project.</div>
+    </section>
+    <section class="card">
+      <div class="heading">
+        <div><label class="eyebrow">SAVED PROJECTS</label><h2>All projects</h2></div>
+        <span id="projectCount" class="pill">0</span>
+      </div>
+      <div id="projectCards" class="project-cards"></div>
+    </section>
+  </div>
+
+  <div id="projectDetailView" hidden>
+    <section class="card">
+      <button id="backToProjectsBtn" class="btn secondary">← All projects</button>
+      <div class="heading" style="margin-top:14px">
+        <div><label class="eyebrow">PROJECT</label><h2 id="detailProjectName">—</h2></div>
+        <span id="detailFileCount" class="pill">0 files</span>
+      </div>
+      <div class="actions">
+        <button id="detailEditBtn" class="btn primary">✎ Edit code</button>
+        <button id="detailImportChangesBtn" class="btn secondary">↻ Import changes</button>
+        <button id="detailBundleBtn" class="btn secondary">⇩ Bundle</button>
+        <button id="detailDeleteBtn" class="btn secondary">🗑 Delete</button>
+      </div>
+      <div class="status" id="detailStatus">Tap "Edit code" to modify files.</div>
+    </section>
+    <section class="card">
+      <div class="heading"><label class="eyebrow">FILES</label></div>
+      <div id="detailFileList" class="filelist"></div>
+    </section>
+  </div>
+
+  <input id="changesFolderInput" type="file" webkitdirectory directory multiple hidden>
 </section>
 <section id="bundlePage" class="tab-page" hidden>
  <section class="card hero"><label class="eyebrow">BUNDLE CENTER</label><h1>TXT <span>Bundle</span></h1><p>Combine the text-based files from your current project into one readable TXT backup file.</p></section>

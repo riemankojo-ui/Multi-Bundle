@@ -24,8 +24,9 @@
       <button id="editorUndoBtn" class="editor-btn" disabled title="Undo">↶</button>
       <button id="editorRedoBtn" class="editor-btn" disabled title="Redo">↷</button>
       <button id="editorSearchBtn" class="editor-btn" title="Search">🔍</button>
+      <button id="editorPreviewBtn" class="editor-btn" title="Preview">▶</button>
       <button id="editorFullBtn" class="editor-btn" title="Full screen">⛶</button>
-      <button id="editorSaveBtn" class="editor-btn primary">Save code</button>
+      <button id="editorSaveBtn" class="editor-btn primary">Save</button>
     </div>
     <div class="editor-searchbar" id="editorSearchBar">
       <input id="editorSearchInput" class="editor-search-input" placeholder="Search in file…" />
@@ -39,31 +40,50 @@
         <div class="editor-gutter" id="editorGutter">1</div>
         <textarea id="editorTextarea" spellcheck="false" placeholder="Select a project file to edit code"></textarea>
       </div>
-      <div class="editor-preview-pane" id="editorPreviewPane">
-        <div class="editor-preview-bar">
-          <span>PREVIEW</span>
-          <button id="editorPreviewRefresh" class="editor-btn small">↻</button>
-        </div>
-        <iframe id="editorPreviewFrame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"></iframe>
-      </div>
     </div>
     <div class="editor-statusbar">
       <span id="editorStatus">No file selected</span>
       <span id="editorCursor">Ln 1, Col 1</span>
     </div>
+    <div class="editor-preview-pane" id="editorPreviewPane">
+      <div class="editor-preview-bar">
+        <span>PREVIEW</span>
+        <div style="display:flex;gap:6px">
+          <button id="editorPreviewRefresh" class="editor-btn small">↻</button>
+          <button id="editorPreviewClose" class="editor-btn small">✕</button>
+        </div>
+      </div>
+      <iframe id="editorPreviewFrame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"></iframe>
+    </div>
   </div>
 </section>
 <section id="backupsPage" class="tab-page" hidden><section class="card"><label class="eyebrow">BACKUPS</label><h1>Safe <span>Backups</span></h1><p>Create a TXT bundle from the Bundle tab and save it somewhere safe. This prototype does not yet keep a backup history automatically.</p><button id="backupsBundleBtn" class="btn primary">⇩ Open Bundle</button></section></section>
-<section id="settingsPage" class="tab-page" hidden><section class="card"><label class="eyebrow">PREFERENCES</label><h1>App <span>Settings</span></h1><p>Multi Bundle is running as a local web prototype. ZIP import needs an internet connection to load its ZIP library.</p><button id="settingsHomeBtn" class="btn secondary">← Home</button></section></section>
 </main>
 <nav class="bottom">
-  <span class="selected" data-tab="home">⌂<small>Home</small></span>
-  <span data-tab="bundle">▤<small>Bundle</small></span>
-  <span data-tab="projects">▣<small>Projects</small></span>
-  <span data-tab="editor">{ }<small>Editor</small></span>
-  <span data-tab="preview">◉<small>Preview</small></span>
-  <span data-tab="backups">⟲<small>Backups</small></span>
-  <span data-tab="settings">⚙<small>Settings</small></span>
+  <span class="selected" data-tab="home">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <small>Home</small>
+  </span>
+  <span data-tab="bundle">
+    <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    <small>Bundle</small>
+  </span>
+  <span data-tab="projects">
+    <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    <small>Projects</small>
+  </span>
+  <span data-tab="editor">
+    <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+    <small>Editor</small>
+  </span>
+  <span data-tab="preview">
+    <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    <small>Preview</small>
+  </span>
+  <span data-tab="backups">
+    <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+    <small>Backups</small>
+  </span>
 </nav>
 <script src="app.js"></script>
 <script src="editor.js"></script>

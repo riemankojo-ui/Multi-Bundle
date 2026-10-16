@@ -126,6 +126,11 @@ function renderPreview(){
   previewFrame.srcdoc=(typeof htmlRewrite==='function')?htmlRewrite(ta.value,currentPath):ta.value;
 }
 $('editorPreviewRefresh').onclick=renderPreview;
+$('editorPreviewRefresh').onclick=renderPreview;
+$('editorPreviewBtn').onclick=()=>{renderPreview();$('editorPreviewPane').classList.add('open')};
+$('editorPreviewClose').onclick=()=>$('editorPreviewPane').classList.remove('open');
+$('editorPreviewBtn').onclick=()=>{renderPreview();$('editorPreviewPane').classList.add('open')};
+$('editorPreviewClose').onclick=()=>$('editorPreviewPane').classList.remove('open');
 ta.addEventListener('input',()=>{
   if(/\.html?$/i.test(currentPath)){clearTimeout(window.__pvT);window.__pvT=setTimeout(renderPreview,600)}
 });

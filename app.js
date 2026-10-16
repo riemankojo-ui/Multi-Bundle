@@ -196,7 +196,7 @@ function exportBundle(){
 }
 
 function showTab(name){
-  ['home','projects','bundle','preview','editor','backups','settings'].forEach(p=>{
+['home','projects','bundle','preview','editor','backups'].forEach(...)
     const el=$(p+'Page');
     if(el)el.hidden=(p!==name);
   });
@@ -245,9 +245,7 @@ $('homeOpenPreviewBtn').onclick=()=>{showTab('preview');if(currentPagePath)openP
 $('projectsPreviewBtn').onclick=()=>{showTab('preview');if(currentPagePath)openPage(currentPagePath);};
 $('projectsBundleBtn').onclick=()=>showTab('bundle');
 $('bundleBtn').onclick=exportBundle;
-$('backupsBundleBtn').onclick=()=>showTab('bundle');
-$('settingsHomeBtn').onclick=()=>showTab('home');
-$('backHomeBtn').onclick=()=>showTab('home');
+$('backupsBundleBtn').onclick=()=>showTab('bundle');$('backHomeBtn').onclick=()=>showTab('home');
 $('openPageBtn').onclick=()=>{if($('pageSelect').value)openPage($('pageSelect').value);};
 $('pageSelect').onchange=e=>{currentPagePath=e.target.value;};
 $('refreshBtn').onclick=()=>{if(currentPagePath)openPage(currentPagePath);};

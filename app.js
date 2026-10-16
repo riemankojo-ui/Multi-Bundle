@@ -27,3 +27,48 @@ function assetUrl(from,ref){if(!ref||/^(data:|blob:|https?:|\/\/|#|mailto:|tel:|
 function cssRewrite(css,path,depth=0){
  css=css.replace(/@import\s+(?:url\(\s*(['"]?)(.*?)\1\s*\)|(['"])(.*?)\3)\s*([^;]*);/gi,(m,q1,u1,q2,u2,media)=>{const f=depth<5?relative(path,u1||u2):null;if(!f||f.text==null)return m;const inner=cssRewrite(f.text,f.path,depth+1);return media.trim()?`@media ${media.trim()}{${inner}}`:inner});
  return css.replace(/url\(\s*(['"]?)(.*?)\1\s*\)/gi,(m,q,u)=>`url("${assetUrl(path,u)}")`)
+}
+// Runs inside the preview frame: lets links between pages and fetch() of local files work
+const BRIDGE=`<script>(function(){var P=parent,n=0,w={};function send(m){try{P.postMessage(m,'*')}catch(e){}}
+document.addEventListener('click',function(e){if(e.defaultPrevented||e.button||e.metaKey||e.ctrlKey||e.shiftKey)return;var a=e.target&&e.target.closest&&e.target.closest('a[href]');if(!a)return;var h=a.getAttribute('href');if(!h||/^(https?:|\\/\\/|mailto:|tel:|#|javascript:|data:|blob:)/i.test(h))return;e.preventDefault();send({mbNav:h})},true);
+window.addEventListener('message',function(e){var d=e.data;if(e.source!==P||!d||!d.mbRes||!w[d.mbRes])return;var c=w[d.mbRes];delete w[d.mbRes];c(d.blob)});
+var of=window.fetch;window.fetch=function(u){if(typeof u!=='string'&&!(u instanceof URL))return of.apply(this,arguments);var s=String(u);if(/^([a-z][a-z0-9+.-]*:|\\/\\/)/i.test(s))return of.apply(this,arguments);return new Promise(function(ok){var id=++n;w[id]=function(b){ok(b?new Response(b,{status:200,headers:{'Content-Type':b.type||'application/octet-stream'}}):new Response('Not found',{status:404}))};send({mbFetch:id,url:s})})}})();<\/script>`;
+async function preview(entry){
+ resetPreview();currentPagePath=entry.path;if($('pageSelect'))$('pageSelect').value=entry.path;let html=entry.text??await entry.blob.text();const from=entry.path;
+ const tags=html.match(/<link\b[^>]*>/gi)||[];
+ for(const tag of tags){const m=tag.match(/\bhref\s*=\s*(['"])(.*?)\1/i);if(!m)continue;let nt;if(/stylesheet/i.test(tag)){const f=relative(from,m[2]);nt=f&&f.text!==null?tag.replace(m[0],()=>`href="${makeUrl(new Blob([cssRewrite(f.text,f.path)],{type:'text/css'}))}"`):tag.replace(m[0],()=>`href="${assetUrl(from,m[2])}"`)}else nt=tag.replace(m[0],()=>`href="${assetUrl(from,m[2])}"`);html=html.replace(tag,()=>nt)}
+ html=html.replace(/\b(src|poster)\s*=\s*(['"])(.*?)\2/gi,(m,a,q,v)=>`${a}="${assetUrl(from,v)}"`);
+ html=html.replace(/\bsrcset\s*=\s*(['"])(.*?)\1/gi,(m,q,v)=>`srcset="${v.split(',').map(part=>{const b=part.trim().split(/\s+/);b[0]=assetUrl(from,b[0]);return b.join(' ')}).join(', ')}"`);
+ html=html.replace(/<style\b([^>]*)>([\s\S]*?)<\/style>/gi,(m,a,c)=>`<style${a}>${cssRewrite(c,from)}</style>`);
+ if(/<head\b[^>]*>/i.test(html))html=html.replace(/<head\b[^>]*>/i,m=>m+'<base target="_self">'+BRIDGE);else html='<base target="_self">'+BRIDGE+html;
+ $('frame').hidden=false;$('placeholder').hidden=true;$('frame').srcdoc=html;$('previewPath').textContent=from;$('refreshBtn').disabled=false;$('status').textContent='Previewing '+from+'. Some advanced site features may not work in this prototype.';showTab('preview');
+}
+$('projectsPreviewBtn').addEventListener('click',async()=>{const pages=htmlPages();const chosen=pages.find(f=>f.path===$('pageSelect')?.value)||pages.find(x=>base(x.path).toLowerCase()==='index.html')||pages[0];if(!chosen){$('status').textContent='No HTML files found in this project.';return}try{await preview(chosen)}catch(e){$('status').textContent='Could not preview this page. Try a static HTML site.'}});
+$('openPageBtn').addEventListener('click',async()=>{const f=files.find(x=>x.path===$('pageSelect').value);if(!f)return;try{await preview(f)}catch(e){$('status').textContent='Could not preview this page.'}});
+$('pageSelect').addEventListener('change',()=>{currentPagePath=$('pageSelect').value;});
+$('refreshBtn').addEventListener('click',()=>{const f=files.find(x=>x.path===currentPagePath)||files.find(x=>x.path===$('previewPath').textContent);if(f)preview(f)});
+$('bundleBtn').addEventListener('click',()=>{const body=files.map(f=>`===== FILE: ${f.path} =====\n${f.text!==null&&f.text!==undefined?f.text:'[Binary file omitted from TXT bundle]'}\n`).join('\n');const blob=new Blob([`MULTI BUNDLE BACKUP\nProject: ${$('projectName').textContent}\nFiles: ${files.length}\n\n${body}`],{type:'text/plain;charset=utf-8'});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=($('projectName').textContent||'website').replace(/[^\w.-]+/g,'_')+'_bundle.txt';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)});
+$('clearBtn').addEventListener('click',()=>{files=[];resetPreview();$('projectName').textContent='No project loaded';$('status').textContent='Project cleared. Choose a folder or ZIP to get started.';render()});
+function showTab(tab){
+ document.querySelectorAll('.tab-page').forEach(page=>page.hidden=page.id!==tab+'Page');
+ document.querySelectorAll('.bottom span').forEach(el=>el.classList.toggle('selected',el.dataset.tab===tab));
+ if(tab==='preview')populatePages();
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.bottom span[data-tab]').forEach(el=>el.addEventListener('click',()=>showTab(el.dataset.tab)));
+$('navBundle')?.addEventListener('click',()=>showTab('bundle'));
+$('homeProjectsBtn').onclick=()=>showTab('projects');
+$('homePreviewBtn').onclick=()=>showTab('preview');
+$('homeOpenPreviewBtn').onclick=async()=>{const pages=htmlPages();const chosen=pages.find(f=>f.path===currentPagePath)||pages.find(x=>base(x.path).toLowerCase()==='index.html')||pages[0];if(chosen)try{await preview(chosen)}catch(e){showTab('preview')}};
+$('homeBundleBtn').onclick=()=>showTab('bundle');
+$('projectsPreviewBtn').onclick=()=>showTab('preview');
+$('projectsBundleBtn').onclick=()=>showTab('bundle');
+$('backupsBundleBtn').onclick=()=>showTab('bundle');
+$('settingsHomeBtn').onclick=()=>showTab('home');
+$('backHomeBtn').onclick=()=>showTab('home');
+$('fullScreenBtn').onclick=async()=>{try{if(!document.fullscreenElement)await $('frame').requestFullscreen();else await document.exitFullscreen()}catch(e){$('frame').scrollIntoView({behavior:'smooth',block:'start'})}};
+window.addEventListener('message',async ev=>{
+ if(ev.source!==$('frame').contentWindow)return;const d=ev.data||{};
+ if(d.mbNav){const t=relative(currentPagePath,d.mbNav);if(t&&['html','htm'].includes(ext(t.path))){try{await preview(t)}catch(e){$('status').textContent='Could not open '+t.path}}else $('status').textContent='Linked page not found in project: '+d.mbNav}
+ else if(d.mbFetch){const f=relative(currentPagePath,d.url);ev.source.postMessage({mbRes:d.mbFetch,blob:f?fileBlob(f):null},'*')}
+});

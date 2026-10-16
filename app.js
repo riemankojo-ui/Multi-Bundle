@@ -9,7 +9,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const size=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':(n/1048576).toFixed(1)+' MB';
 const mimeMap={html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',mjs:'text/javascript',json:'application/json',webmanifest:'application/manifest+json',txt:'text/plain',md:'text/plain',xml:'application/xml',svg:'image/svg+xml',csv:'text/csv',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',avif:'image/avif',bmp:'image/bmp',ico:'image/x-icon',woff:'font/woff',woff2:'font/woff2',ttf:'font/ttf',otf:'font/otf',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',mp4:'video/mp4',webm:'video/webm',pdf:'application/pdf'};
 
-/* ========== IndexedDB ========== */
+/* ===== IndexedDB ===== */
 const DB_NAME='multibundle',DB_STORE='project';
 function openDB(){return new Promise(function(res,rej){const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=function(){const db=r.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE)};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
 async function dbGetAll(){try{const db=await openDB();const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get('projects');const d=await new Promise(function(res){req.onsuccess=function(){res(req.result)};req.onerror=function(){res(null)}});return d||[]}catch(e){return[]}}
@@ -26,7 +26,7 @@ async function saveCurrentProject(){
   const existing=all.find(function(p){return p.id===currentProjectId});
   await dbUpsertProject({
     id:currentProjectId,
-    name:$('projectName').textContent,
+    name:$('detailProjectName')?$('detailProjectName').textContent:($('homeProjectName')?$('homeProjectName').textContent:'Project'),
     files:serializeFiles(),
     savedAt:Date.now(),
     createdAt:existing?existing.createdAt:Date.now()
@@ -41,70 +41,64 @@ function timeAgo(ts){
   const d=Math.floor(h/24);return d+' day'+(d>1?'s':'')+' ago';
 }
 
-/* ========== File helpers ========== */
+/* ===== File helpers ===== */
 function fileBlob(f){const t=mimeMap[ext(f.path)]||f.type||'application/octet-stream';const src=f.blob||new Blob([f.text||'']);return src.type===t?src:new Blob([src],{type:t})}
 function clearUrls(){urls.forEach(function(u){URL.revokeObjectURL(u)});urls=[];urlCache.clear()}
-function resetPreview(){clearUrls();$('frame').hidden=true;$('frame').srcdoc='';$('placeholder').hidden=false;$('previewPath').textContent='Your website will appear here';$('refreshBtn').disabled=true}
+function resetPreview(){if($('frame')){$('frame').hidden=true;$('frame').srcdoc=''}if($('placeholder'))$('placeholder').hidden=false;if($('previewPath'))$('previewPath').textContent='Your website will appear here';if($('refreshBtn'))$('refreshBtn').disabled=true}
 function findFile(p){p=p.replace(/^\.\//,'').replace(/^\//,'');return files.find(function(f){return f.path===p})||files.find(function(f){return f.path.endsWith('/'+p)})}
 function makeUrl(blob){const u=URL.createObjectURL(blob);urls.push(u);return u}
 function htmlPages(){return files.filter(function(f){return ['html','htm'].includes(ext(f.path))}).sort(function(a,b){return a.path.localeCompare(b.path)})}
 
-/* ========== Project cards ========== */
+/* ===== Project cards ===== */
 async function renderProjectCards(){
   const all=await dbGetAll();
-  const box=$('projectCards');
-  $('projectCount').textContent=all.length+(all.length===1?' project':' projects');
+  const box=$('projectCards');if(!box)return;
+  if($('projectCount'))$('projectCount').textContent=all.length+(all.length===1?' project':' projects');
   if(!all.length){box.innerHTML='<div class="pc-empty">No saved projects yet.<br>Import a folder or ZIP to create one.</div>';return}
   box.innerHTML=all.map(function(p){
     const initials=(p.name||'?').slice(0,2).toUpperCase();
     return '<div class="project-card" data-id="'+esc(p.id)+'">'+
-      '<div class="pc-top">'+
-        '<div class="pc-icon">'+esc(initials)+'</div>'+
-        '<div class="pc-name">'+esc(p.name||'Untitled')+'</div>'+
-      '</div>'+
+      '<div class="pc-top"><div class="pc-icon">'+esc(initials)+'</div><div class="pc-name">'+esc(p.name||'Untitled')+'</div></div>'+
       '<div class="pc-meta"><span>'+p.files.length+' file'+(p.files.length===1?'':'s')+'</span><span>'+timeAgo(p.savedAt)+'</span></div>'+
     '</div>';
   }).join('');
-  box.querySelectorAll('.project-card').forEach(function(c){
-    c.onclick=function(){openProjectDetail(c.dataset.id)};
-  });
+  box.querySelectorAll('.project-card').forEach(function(c){c.onclick=function(){openProjectDetail(c.dataset.id)}});
 }
 
 async function openProjectDetail(id){
   const all=await dbGetAll();
-  const p=all.find(function(x){return x.id===id});
-  if(!p)return;
+  const p=all.find(function(x){return x.id===id});if(!p)return;
   currentProjectId=p.id;
   files=deserializeFiles(p.files);
-  $('projectName').textContent=p.name;
-  $('detailProjectName').textContent=p.name;
-  $('detailFileCount').textContent=files.length+' files';
-  $('detailStatus').textContent='Loaded '+files.length+' files. Edit or import changes.';
+  if($('detailProjectName'))$('detailProjectName').textContent=p.name;
+  if($('detailFileCount'))$('detailFileCount').textContent=files.length+' files';
+  if($('detailStatus'))$('detailStatus').textContent='Loaded '+files.length+' files. Edit or import changes.';
   const list=$('detailFileList');
-  list.className='filelist';
-  list.innerHTML=files.slice(0,200).map(function(f){
-    return '<div class="file-row"><div class="file-icon">'+esc(ext(f.path).slice(0,4).toUpperCase()||'FILE')+'</div><div class="file-meta"><div class="file-name">'+esc(base(f.path))+'</div><div class="file-path">'+esc(f.path)+'</div></div><div class="file-size">'+size(f.size||0)+'</div></div>';
-  }).join('')+(files.length>200?'<div style="padding:10px;text-align:center;color:var(--muted);font-size:11px">First 200 files shown</div>':'');
-  $('projectsListView').hidden=true;
-  $('projectDetailView').hidden=false;
+  if(list){
+    list.className='filelist';
+    list.innerHTML=files.slice(0,200).map(function(f){
+      return '<div class="file-row"><div class="file-icon">'+esc(ext(f.path).slice(0,4).toUpperCase()||'FILE')+'</div><div class="file-meta"><div class="file-name">'+esc(base(f.path))+'</div><div class="file-path">'+esc(f.path)+'</div></div><div class="file-size">'+size(f.size||0)+'</div></div>';
+    }).join('')+(files.length>200?'<div style="padding:10px;text-align:center;color:var(--muted);font-size:11px">First 200 files shown</div>':'');
+  }
+  if($('projectsListView'))$('projectsListView').hidden=true;
+  if($('projectDetailView'))$('projectDetailView').hidden=false;
   populatePages();
   render();
 }
 
 function showProjectsList(){
-  $('projectsListView').hidden=false;
-  $('projectDetailView').hidden=true;
+  if($('projectsListView'))$('projectsListView').hidden=false;
+  if($('projectDetailView'))$('projectDetailView').hidden=true;
   renderProjectCards();
 }
 
-/* ========== Import flows ========== */
+/* ===== Import flows ===== */
 async function importNewFiles(result,name){
   const id=Date.now().toString();
   currentProjectId=id;
   files=result.filter(function(f){return f.path&&!f.path.split('/').some(function(p){return p.startsWith('.')&&p!=='.well-known'})}).sort(function(a,b){return a.path.localeCompare(b.path)});
-  $('projectName').textContent=name||'Imported website';
   await dbUpsertProject({id:id,name:name||'Imported website',files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now()});
-  $('status').textContent='Created new project with '+files.length+' files.';
+  if($('status'))$('status').textContent='Created new project with '+files.length+' files.';
   await renderProjectCards();
   populatePages();
   render();
@@ -116,7 +110,7 @@ async function importChanges(result){
   const incoming=result.filter(function(f){return f.path&&!f.path.split('/').some(function(p){return p.startsWith('.')&&p!=='.well-known'})}).sort(function(a,b){return a.path.localeCompare(b.path)});
   const map=new Map();
   incoming.forEach(function(f){map.set(f.path,f)});
-  let updated=0,added=0,kept=0;
+  let updated=0,added=0;
   files.forEach(function(f){
     if(map.has(f.path)){
       const nf=map.get(f.path);
@@ -125,13 +119,14 @@ async function importChanges(result){
   });
   map.forEach(function(f){files.push(f);added++});
   files.sort(function(a,b){return a.path.localeCompare(b.path)});
-  await dbUpsertProject({id:currentProjectId,name:$('projectName').textContent,files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now()});
-  $('detailStatus').textContent='Changes imported: '+updated+' updated, '+added+' new.';
-  $('detailFileCount').textContent=files.length+' files';
+  const name=$('detailProjectName')?$('detailProjectName').textContent:'Project';
+  await dbUpsertProject({id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now()});
+  if($('detailStatus'))$('detailStatus').textContent='Changes imported: '+updated+' updated, '+added+' new.';
+  if($('detailFileCount'))$('detailFileCount').textContent=files.length+' files';
   await openProjectDetail(currentProjectId);
 }
 
-/* ========== Folder / ZIP pickers ========== */
+/* ===== Folder / ZIP pickers ===== */
 $('folderInput').addEventListener('change',async function(e){
   const list=[].slice.call(e.target.files);if(!list.length)return;
   const name=(list[0].webkitRelativePath||'').split('/')[0]||'Website';
@@ -144,7 +139,7 @@ $('folderInput').addEventListener('change',async function(e){
 
 $('changesFolderInput').addEventListener('change',async function(e){
   const list=[].slice.call(e.target.files);if(!list.length)return;
-  $('detailStatus').textContent='Reading folder…';
+  if($('detailStatus'))$('detailStatus').textContent='Reading folder…';
   const result=await Promise.all(list.map(async function(f){
     return{path:(f.webkitRelativePath||f.name).split('/').slice(1).join('/')||f.name,name:f.name,size:f.size,type:f.type,blob:f,text:textExt.has(ext(f.name))?await f.text():null};
   }));
@@ -154,8 +149,8 @@ $('changesFolderInput').addEventListener('change',async function(e){
 
 $('zipInput').addEventListener('change',async function(e){
   const f=e.target.files[0];if(!f)return;
-  if(!window.JSZip){$('status').textContent='ZIP library did not load.';return}
-  $('status').textContent='Reading ZIP…';
+  if(!window.JSZip){if($('status'))$('status').textContent='ZIP library did not load.';return}
+  if($('status'))$('status').textContent='Reading ZIP…';
   try{
     const z=await JSZip.loadAsync(f);
     let result=await Promise.all(Object.values(z.files).filter(function(x){return !x.dir}).map(async function(x){
@@ -165,11 +160,11 @@ $('zipInput').addEventListener('change',async function(e){
     const roots=Array.from(new Set(result.map(function(x){return x.path.split('/')[0]})));
     if(roots.length===1&&result.every(function(x){return x.path.indexOf('/')!==-1})){result.forEach(function(x){x.path=x.path.slice(x.path.indexOf('/')+1)})}
     await importNewFiles(result,f.name.replace(/\.zip$/i,''));
-  }catch(err){$('status').textContent='Could not read this ZIP.'}
+  }catch(err){if($('status'))$('status').textContent='Could not read this ZIP.'}
   e.target.value='';
 });
 
-/* ========== Detail view buttons ========== */
+/* ===== Detail view buttons ===== */
 $('backToProjectsBtn').onclick=showProjectsList;
 $('detailEditBtn').onclick=function(){showTab('editor')};
 $('detailImportChangesBtn').onclick=function(){if(currentProjectId)$('changesFolderInput').click()};
@@ -182,25 +177,27 @@ $('detailDeleteBtn').onclick=async function(){
   showProjectsList();
 };
 
-/* ========== Render ========== */
+/* ===== Render (null-safe) ===== */
 function render(){
   const pages=htmlPages();
-  $('fileCount').textContent=files.length+' files';
-  $('bundleBtn').disabled=!files.length;
-  $('projectsBundleBtn').disabled=!files.length;
-  $('homeBundleBtn').disabled=!files.length;
-  $('homeOpenPreviewBtn').disabled=!pages.length;
-  $('homeProjectName').textContent=$('projectName').textContent;
-  $('homeFileCount').textContent=files.length+' files';
-  $('homeStatus').textContent=files.length?files.length+' files loaded.':'Go to Projects to import a website folder or ZIP.';
-  $('bundleProjectName').textContent=$('projectName').textContent;
-  $('bundleFileCount').textContent=files.length+' files';
-  $('bundleStatus').textContent=files.length?'Ready to export '+files.length+' files.':'Import a project first.';
+  const setT=function(id,v){const el=$(id);if(el)el.textContent=v};
+  const setD=function(id,v){const el=$(id);if(el)el.disabled=v};
+
+  const pname=$('detailProjectName')&&$('detailProjectName').textContent;
+  const fallback=currentProjectId?'Project':'No project loaded';
+
+  setT('homeProjectName',pname||fallback);
+  setT('homeFileCount',files.length+' files');
+  setT('homeStatus',files.length?files.length+' files loaded. Open Projects to manage, Editor to modify.':'Go to Projects to import a website folder or ZIP.');
+  setT('bundleProjectName',pname||fallback);
+  setT('bundleFileCount',files.length+' files');
+  setT('bundleStatus',files.length?'Ready to export '+files.length+' files.':'Import a project first.');
+
+  setD('homeBundleBtn',!files.length);
+  setD('homeOpenPreviewBtn',!pages.length);
+  setD('bundleBtn',!files.length);
+
   populatePages();
-  if(files.length){
-    $('fileList').className='filelist';
-    $('fileList').innerHTML=files.slice(0,500).map(function(f){return '<div class="file-row"><div class="file-icon">'+esc(ext(f.path).slice(0,4).toUpperCase()||'FILE')+'</div><div class="file-meta"><div class="file-name">'+esc(base(f.path))+'</div><div class="file-path">'+esc(f.path)+'</div></div><div class="file-size">'+size(f.size||0)+'</div></div>'}).join('');
-  }
 }
 
 function populatePages(){
@@ -273,17 +270,18 @@ function htmlRewrite(html,path){
 
 function openPage(path){
   resetPreview();
-  const f=findFile(path);if(!f){$('previewPath').textContent='File not found';return}
+  const f=findFile(path);if(!f){if($('previewPath'))$('previewPath').textContent='File not found';return}
   currentPagePath=f.path;if($('pageSelect'))$('pageSelect').value=f.path;
-  $('previewPath').textContent=f.path;
-  if(f.text==null){$('placeholder').hidden=false;return}
-  $('frame').srcdoc=htmlRewrite(f.text,f.path);
-  $('frame').hidden=false;$('placeholder').hidden=true;$('refreshBtn').disabled=false;
+  if($('previewPath'))$('previewPath').textContent=f.path;
+  if(f.text==null){if($('placeholder'))$('placeholder').hidden=false;return}
+  if($('frame')){$('frame').srcdoc=htmlRewrite(f.text,f.path);$('frame').hidden=false}
+  if($('placeholder'))$('placeholder').hidden=true;
+  if($('refreshBtn'))$('refreshBtn').disabled=false;
 }
 
 function exportBundle(){
   if(!files.length)return;
-  const name=$('projectName').textContent||'bundle';
+  const name=($('detailProjectName')&&$('detailProjectName').textContent)||'bundle';
   const tf=files.filter(function(f){return f.text!=null});
   const bf=files.filter(function(f){return f.text==null});
   let out='Multi Bundle Export\nProject: '+name+'\nFiles: '+files.length+'\nExported: '+new Date().toISOString()+'\n'+'='.repeat(60)+'\n\n';
@@ -306,11 +304,11 @@ function showTab(name){
   if(name==='projects')showProjectsList();
 }
 
+/* ===== Home & misc buttons ===== */
 $('homeProjectsBtn').onclick=function(){showTab('projects')};
 $('homePreviewBtn').onclick=function(){showTab('preview')};
 $('homeBundleBtn').onclick=function(){exportBundle()};
 $('homeOpenPreviewBtn').onclick=function(){showTab('preview');if(currentPagePath)openPage(currentPagePath)};
-$('projectsBundleBtn').onclick=function(){showTab('bundle')};
 $('bundleBtn').onclick=exportBundle;
 $('backupsBundleBtn').onclick=function(){showTab('bundle')};
 $('backHomeBtn').onclick=function(){showTab('home')};
@@ -319,9 +317,8 @@ $('pageSelect').onchange=function(e){currentPagePath=e.target.value};
 $('refreshBtn').onclick=function(){if(currentPagePath)openPage(currentPagePath)};
 $('fullScreenBtn').onclick=function(){const f=$('frame');if(f.requestFullscreen)f.requestFullscreen();else if(f.webkitRequestFullscreen)f.webkitRequestFullscreen()};
 $('clearBtn').onclick=async function(){
-  if(files.length&&!confirm('Clear the current project from memory? (It stays saved under Projects.)'))return;
+  if(files.length&&!confirm('Clear the current project from memory? (Saved projects stay under Projects tab.)'))return;
   resetPreview();files=[];urls=[];currentPagePath='';currentProjectId=null;
-  $('projectName').textContent='No project loaded';
   render();showTab('home');
 };
 

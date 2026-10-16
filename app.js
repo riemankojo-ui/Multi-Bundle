@@ -8,6 +8,66 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const size=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':(n/1048576).toFixed(1)+' MB';
 const mimeMap={html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',mjs:'text/javascript',json:'application/json',webmanifest:'application/manifest+json',txt:'text/plain',md:'text/plain',xml:'application/xml',svg:'image/svg+xml',csv:'text/csv',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',avif:'image/avif',bmp:'image/bmp',ico:'image/x-icon',woff:'font/woff',woff2:'font/woff2',ttf:'font/ttf',otf:'font/otf',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',mp4:'video/mp4',webm:'video/webm',pdf:'application/pdf'};
 
+/* ---------- IndexedDB persistence ---------- */
+const DB_NAME='multibundle';
+const DB_STORE='project';
+
+function openDB(){
+  return new Promise(function(resolve,reject){
+    const req=indexedDB.open(DB_NAME,1);
+    req.onupgradeneeded=function(){
+      const db=req.result;
+      if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE);
+    };
+    req.onsuccess=function(){resolve(req.result)};
+    req.onerror=function(){reject(req.error)};
+  });
+}
+
+async function saveProjectToDB(){
+  if(!files.length)return;
+  try{
+    const db=await openDB();
+    const tx=db.transaction(DB_STORE,'readwrite');
+    const store=tx.objectStore(DB_STORE);
+    const serialized=files.map(function(f){
+      return {path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob};
+    });
+    store.put({
+      name:$('projectName').textContent,
+      files:serialized,
+      savedAt:Date.now()
+    },'last');
+    await new Promise(function(res,rej){tx.oncomplete=res;tx.onerror=rej});
+  }catch(e){console.warn('save failed',e)}
+}
+
+async function restoreProjectFromDB(){
+  try{
+    const db=await openDB();
+    const tx=db.transaction(DB_STORE,'readonly');
+    const req=tx.objectStore(DB_STORE).get('last');
+    const data=await new Promise(function(res,rej){req.onsuccess=function(){res(req.result)};req.onerror=rej});
+    if(!data||!data.files||!data.files.length)return false;
+    files=data.files;
+    $('projectName').textContent=data.name||'Restored project';
+    $('status').textContent='Restored '+files.length+' files from your last session.';
+    populatePages();
+    render();
+    return true;
+  }catch(e){console.warn('restore failed',e);return false}
+}
+
+async function clearProjectFromDB(){
+  try{
+    const db=await openDB();
+    const tx=db.transaction(DB_STORE,'readwrite');
+    tx.objectStore(DB_STORE).delete('last');
+    await new Promise(function(res){tx.oncomplete=res});
+  }catch(e){}
+}
+/* ---------- end persistence ---------- */
+
 function fileBlob(f){const t=mimeMap[ext(f.path)]||f.type||'application/octet-stream';const src=f.blob||new Blob([f.text||'']);return src.type===t?src:new Blob([src],{type:t})}
 function clearUrls(){urls.forEach(u=>URL.revokeObjectURL(u));urls=[];urlCache.clear()}
 function resetPreview(){clearUrls();$('frame').hidden=true;$('frame').srcdoc='';$('placeholder').hidden=false;$('previewPath').textContent='Your website will appear here';$('refreshBtn').disabled=true}
@@ -24,7 +84,7 @@ function render(){
   $('homeOpenPreviewBtn').disabled=!pages.length;
   $('homeProjectName').textContent=$('projectName').textContent;
   $('homeFileCount').textContent=files.length+' files';
-  $('homeStatus').textContent=files.length?`${files.length} files loaded. Open Projects to manage files, Preview to test pages, or Bundle to export.`:'Go to Projects to import a website folder or ZIP.';
+  $('homeStatus').textContent=files.length?files.length+' files loaded. Open Projects to manage files, Preview to test pages, or Bundle to export.':'Go to Projects to import a website folder or ZIP.';
   $('bundleProjectName').textContent=$('projectName').textContent;
   $('bundleFileCount').textContent=files.length+' files';
   $('bundleStatus').textContent=files.length?'Ready to export '+files.length+' files from this project.':'Import a project first from the Projects tab.';
@@ -35,7 +95,7 @@ function render(){
     return;
   }
   $('fileList').className='filelist';
-  $('fileList').innerHTML=files.slice(0,500).map(f=>`<div class="file-row"><div class="file-icon">${esc(ext(f.path).slice(0,4).toUpperCase()||'FILE')}</div><div class="file-meta"><div class="file-name">${esc(base(f.path))}</div><div class="file-path">${esc(f.path)}</div></div><div class="file-size">${size(f.size||0)}</div></div>`).join('')+(files.length>500?'<div>First 500 files shown.</div>':'');
+  $('fileList').innerHTML=files.slice(0,500).map(f=>'<div class="file-row"><div class="file-icon">'+esc(ext(f.path).slice(0,4).toUpperCase()||'FILE')+'</div><div class="file-meta"><div class="file-name">'+esc(base(f.path))+'</div><div class="file-path">'+esc(f.path)+'</div></div><div class="file-size">'+size(f.size||0)+'</div></div>').join('')+(files.length>500?'<div>First 500 files shown.</div>':'');
 }
 
 function loadFiles(newFiles,name){
@@ -46,6 +106,7 @@ function loadFiles(newFiles,name){
   $('status').textContent='Loaded '+files.length+' files. Open the Preview tab to choose an HTML page.';
   populatePages();
   render();
+  saveProjectToDB();
 }
 
 function htmlPages(){return files.filter(f=>['html','htm'].includes(ext(f.path))).sort((a,b)=>a.path.localeCompare(b.path))}
@@ -100,7 +161,7 @@ function cssRewrite(css,path,depth){
     const f=depth<5?relative(path,u1||u2):null;
     if(!f||f.text==null)return m;
     const inner=cssRewrite(f.text,f.path,depth+1);
-    return media.trim()?('@media '+media.trim()+'\{'+inner+'\}'):inner;
+    return media.trim()?('@media '+media.trim()+'{'+inner+'}'):inner;
   });
   return css.replace(/url\(\s*(['"]?)(.*?)\1\s*\)/gi,function(m,q,u){return 'url("'+assetUrl(path,u)+'")'});
 }
@@ -262,7 +323,7 @@ $('fullScreenBtn').onclick=function(){
   if(f.requestFullscreen)f.requestFullscreen();
   else if(f.webkitRequestFullscreen)f.webkitRequestFullscreen();
 };
-$('clearBtn').onclick=function(){
+$('clearBtn').onclick=async function(){
   if(files.length&&!confirm('Clear the current project and start over?'))return;
   resetPreview();
   files=[];urls=[];currentPagePath='';
@@ -270,6 +331,7 @@ $('clearBtn').onclick=function(){
   $('status').textContent='Choose a folder or ZIP to get started.';
   render();
   showTab('home');
+  await clearProjectFromDB();
 };
 
 document.querySelectorAll('.bottom span').forEach(function(s){
@@ -277,3 +339,4 @@ document.querySelectorAll('.bottom span').forEach(function(s){
 });
 
 render();
+restoreProjectFromDB();

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f01424"><title>Multi Bundle</title><link rel="stylesheet" href="style.css"><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f01424"><title>Multi Bundle</title><link rel="stylesheet" href="style.css"><link rel="manifest" href="manifest.json"><link rel="icon" type="image/png" href="logo.png"><link rel="apple-touch-icon" href="logo.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Multi Bundle"><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script></head>
 <body>
 
 <header class="app-head">
@@ -9,6 +9,7 @@
   <div class="head-title">MULTI <span>BUNDLE</span></div>
   <button id="clearBtn" class="head-btn" title="Clear">↺</button>
 </header>
+
 <div id="drawerBackdrop" class="drawer-backdrop"></div>
 <aside id="drawer" class="drawer">
   <div class="drawer-head">
@@ -56,7 +57,6 @@
     <section class="card">
       <label class="eyebrow">GITHUB</label>
       <h2>Your GitHub repos</h2>
-
       <div id="githubLoggedOut">
         <p>Sign in with a GitHub token to see your repos (including private).</p>
         <div class="gh-row">
@@ -66,7 +66,6 @@
         <p class="note">Create one at github.com/settings/tokens → Generate new token (classic) → tick "repo" → Generate → copy.</p>
         <div class="status" id="githubStatus">Not signed in.</div>
       </div>
-
       <div id="githubLoggedIn" hidden>
         <div class="gh-user">
           <img id="ghAvatar" alt="">
@@ -121,14 +120,35 @@
 <section id="editorPage" class="tab-page" hidden>
   <div class="editor-shell" id="editorShell">
     <div class="editor-toolbar">
-      <select id="editorFileSelect" class="editor-file-select"></select>
-      <button id="editorNewBtn" class="editor-btn">+ New</button>
-      <button id="editorUndoBtn" class="editor-btn" disabled title="Undo">↶</button>
-      <button id="editorRedoBtn" class="editor-btn" disabled title="Redo">↷</button>
-      <button id="editorSearchBtn" class="editor-btn" title="Search">🔍</button>
-      <button id="editorPreviewBtn" class="editor-btn" title="Preview">▶</button>
-      <button id="editorFullBtn" class="editor-btn" title="Full screen">⛶</button>
-      <button id="editorSaveBtn" class="editor-btn primary">Save</button>
+      <div class="et-row et-file-row">
+        <select id="editorFileSelect" class="editor-file-select"></select>
+      </div>
+      <div class="et-row et-actions">
+        <button id="editorNewBtn" class="editor-btn" title="New file">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>New</span>
+        </button>
+        <button id="editorUndoBtn" class="editor-btn" disabled title="Undo">
+          <svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/></svg>
+        </button>
+        <button id="editorRedoBtn" class="editor-btn" disabled title="Redo">
+          <svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h4"/></svg>
+        </button>
+        <button id="editorSearchBtn" class="editor-btn" title="Search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+        <button id="editorPreviewBtn" class="editor-btn" title="Preview">
+          <svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+          <span>Preview</span>
+        </button>
+        <button id="editorFullBtn" class="editor-btn" title="Full screen">
+          <svg viewBox="0 0 24 24"><polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/></svg>
+        </button>
+        <button id="editorSaveBtn" class="editor-btn primary" title="Save">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <span>Save</span>
+        </button>
+      </div>
     </div>
     <div class="editor-searchbar" id="editorSearchBar">
       <input id="editorSearchInput" class="editor-search-input" placeholder="Search in file…" />
@@ -192,6 +212,8 @@
     <small>Backups</small>
   </span>
 </nav>
+
 <script src="app.js"></script>
 <script src="editor.js"></script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})})}</script>
 </body></html>

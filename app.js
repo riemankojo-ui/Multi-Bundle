@@ -2,7 +2,6 @@ const $=id=>document.getElementById(id);
 let files=[],urls=[],currentPagePath='',urlCache=new Map();
 
 const textExt=new Set(['html','htm','css','js','mjs','json','txt','md','xml','svg','php','py','sql','yaml','yml','toml','csv','webmanifest','ts','jsx','tsx']);
-const imgExt=new Set(['png','jpg','jpeg','gif','webp','avif','bmp','ico']);
 const ext=p=>(p.split('.').pop()||'').toLowerCase();
 const base=p=>p.split('/').pop();
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -44,7 +43,7 @@ function loadFiles(newFiles,name){
   currentPagePath='';
   files=newFiles.filter(f=>f.path&&!f.path.split('/').some(p=>p.startsWith('.')&&p!=='.well-known')).sort((a,b)=>a.path.localeCompare(b.path));
   $('projectName').textContent=name||'Imported website';
-  $('status').textContent=`Loaded ${files.length} files. Open the Preview tab to choose an HTML page.`;
+  $('status').textContent='Loaded '+files.length+' files. Open the Preview tab to choose an HTML page.';
   populatePages();
   render();
 }
@@ -74,7 +73,7 @@ function populatePages(){
 function relative(from,ref){
   if(!ref||/^(data:|blob:|https?:|\/\/|#|mailto:|tel:|javascript:)/i.test(ref))return null;
   let p=ref.split('#')[0].split('?')[0];
-  try{p=decodeURIComponent(p)}catch{}
+  try{p=decodeURIComponent(p)}catch(e){}
   if(p.startsWith('/'))p=p.slice(1);
   else p=(from.includes('/')?from.slice(0,from.lastIndexOf('/')+1):'')+p;
   const stack=[];
@@ -95,21 +94,22 @@ function assetUrl(from,ref){
   return u;
 }
 
-function cssRewrite(css,path,depth=0){
-  css=css.replace(/@import\s+(?:url\(\s*(['"]?)(.*?)\1\s*\)|(['"])(.*?)\3)\s*([^;]*);/gi,(m,q1,u1,q2,u2,media)=>{
+function cssRewrite(css,path,depth){
+  depth=depth||0;
+  css=css.replace(/@import\s+(?:url\(\s*(['"]?)(.*?)\1\s*\)|(['"])(.*?)\3)\s*([^;]*);/gi,function(m,q1,u1,q2,u2,media){
     const f=depth<5?relative(path,u1||u2):null;
     if(!f||f.text==null)return m;
     const inner=cssRewrite(f.text,f.path,depth+1);
-    return media.trim()?`@media ${media.trim()}{${inner}}`:inner;
+    return media.trim()?('@media '+media.trim()+'\{'+inner+'\}'):inner;
   });
-  return css.replace(/url\(\s*(['"]?)(.*?)\1\s*\)/gi,(m,q,u)=>`url("${assetUrl(path,u)}")`);
+  return css.replace(/url\(\s*(['"]?)(.*?)\1\s*\)/gi,function(m,q,u){return 'url("'+assetUrl(path,u)+'")'});
 }
 
 function htmlRewrite(html,path){
   const doc=new DOMParser().parseFromString(html,'text/html');
-  doc.querySelectorAll('link[href]').forEach(el=>{
+  doc.querySelectorAll('link[href]').forEach(function(el){
     const rel=(el.getAttribute('rel')||'').toLowerCase();
-    if(!rel.includes('stylesheet'))return;
+    if(rel.indexOf('stylesheet')===-1)return;
     const href=el.getAttribute('href');
     const f=relative(path,href);
     if(f&&f.text!=null){
@@ -120,7 +120,7 @@ function htmlRewrite(html,path){
       el.setAttribute('href',assetUrl(path,href));
     }
   });
-  doc.querySelectorAll('script[src]').forEach(el=>{
+  doc.querySelectorAll('script[src]').forEach(function(el){
     const src=el.getAttribute('src');
     const f=relative(path,src);
     if(f&&f.text!=null){
@@ -133,21 +133,24 @@ function htmlRewrite(html,path){
       el.setAttribute('src',assetUrl(path,src));
     }
   });
-  doc.querySelectorAll('style').forEach(el=>{
+  doc.querySelectorAll('style').forEach(function(el){
     if(el.textContent)el.textContent=cssRewrite(el.textContent,path);
   });
-  doc.querySelectorAll('[style]').forEach(el=>{
+  doc.querySelectorAll('[style]').forEach(function(el){
     const s=el.getAttribute('style');
-    if(s&&s.includes('url('))el.setAttribute('style',s.replace(/url\(\s*(['"]?)(.*?)\1\s*\)/gi,(m,q,u)=>`url("${assetUrl(path,u)}")`));
+    if(s&&s.indexOf('url(')!==-1){
+      el.setAttribute('style',s.replace(/url\(\s*(['"]?)(.*?)\1\s*\)/gi,function(m,q,u){return 'url("'+assetUrl(path,u)+'")'}));
+    }
   });
   const attrMap={img:['src','srcset'],source:['src','srcset'],video:['src','poster'],audio:['src'],track:['src'],embed:['src'],object:['data']};
-  for(const [tag,attrs] of Object.entries(attrMap)){
-    doc.querySelectorAll(tag).forEach(el=>{
-      attrs.forEach(a=>{
+  for(const tag in attrMap){
+    if(!Object.prototype.hasOwnProperty.call(attrMap,tag))continue;
+    doc.querySelectorAll(tag).forEach(function(el){
+      attrMap[tag].forEach(function(a){
         const v=el.getAttribute(a);
         if(!v)return;
         if(a==='srcset'){
-          el.setAttribute(a,v.split(',').map(part=>{
+          el.setAttribute(a,v.split(',').map(function(part){
             const m=part.trim().match(/^(\S+)(\s+.+)?$/);
             return m?assetUrl(path,m[1])+(m[2]||''):part;
           }).join(', '));
@@ -177,13 +180,13 @@ function openPage(path){
 function exportBundle(){
   if(!files.length)return;
   const name=$('projectName').textContent||'bundle';
-  const textFiles=files.filter(f=>f.text!=null);
-  const binFiles=files.filter(f=>f.text==null);
-  let out=`Multi Bundle Export\nProject: ${name}\nFiles: ${files.length}\nExported: ${new Date().toISOString()}\n${'='.repeat(60)}\n\n`;
-  textFiles.forEach(f=>{out+=`\n${'='.repeat(60)}\nFILE: ${f.path}\n${'='.repeat(60)}\n\n${f.text}\n`});
+  const textFiles=files.filter(function(f){return f.text!=null});
+  const binFiles=files.filter(function(f){return f.text==null});
+  let out='Multi Bundle Export\nProject: '+name+'\nFiles: '+files.length+'\nExported: '+new Date().toISOString()+'\n'+'='.repeat(60)+'\n\n';
+  textFiles.forEach(function(f){out+='\n'+'='.repeat(60)+'\nFILE: '+f.path+'\n'+'='.repeat(60)+'\n\n'+f.text+'\n'});
   if(binFiles.length){
-    out+=`\n${'='.repeat(60)}\nBINARY / NON-TEXT FILES (not embedded)\n${'='.repeat(60)}\n\n`;
-    binFiles.forEach(f=>{out+=`- ${f.path} (${size(f.size||0)})\n`});
+    out+='\n'+'='.repeat(60)+'\nBINARY / NON-TEXT FILES (not embedded)\n'+'='.repeat(60)+'\n\n';
+    binFiles.forEach(function(f){out+='- '+f.path+' ('+size(f.size||0)+')\n'});
   }
   const blob=new Blob([out],{type:'text/plain'});
   const a=document.createElement('a');
@@ -192,46 +195,49 @@ function exportBundle(){
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
 }
 
 function showTab(name){
-['home','projects','bundle','preview','editor','backups'].forEach(p=>{
-    const el=$(p+'Page');
+  ['home','projects','bundle','preview','editor','backups'].forEach(function(p){
     const el=$(p+'Page');
     if(el)el.hidden=(p!==name);
   });
-  document.querySelectorAll('.bottom span').forEach(s=>{
+  document.querySelectorAll('.bottom span').forEach(function(s){
     s.classList.toggle('selected',s.dataset.tab===name);
   });
 }
 
-$('folderInput').addEventListener('change',async e=>{
-  const list=[...e.target.files];
+$('folderInput').addEventListener('change',async function(e){
+  const list=[].slice.call(e.target.files);
   if(!list.length)return;
-  const name=list[0].webkitRelativePath?.split('/')[0]||'Website';
-  const result=await Promise.all(list.map(async f=>({
-    path:(f.webkitRelativePath||f.name).split('/').slice(1).join('/')||f.name,
-    name:f.name,size:f.size,type:f.type,blob:f,
-    text:textExt.has(ext(f.name))?await f.text():null
-  })));
+  const name=(list[0].webkitRelativePath||'').split('/')[0]||'Website';
+  const result=await Promise.all(list.map(async function(f){
+    return {
+      path:(f.webkitRelativePath||f.name).split('/').slice(1).join('/')||f.name,
+      name:f.name,size:f.size,type:f.type,blob:f,
+      text:textExt.has(ext(f.name))?await f.text():null
+    };
+  }));
   loadFiles(result,name);
   e.target.value='';
 });
 
-$('zipInput').addEventListener('change',async e=>{
+$('zipInput').addEventListener('change',async function(e){
   const f=e.target.files[0];
   if(!f)return;
   if(!window.JSZip){$('status').textContent='ZIP library did not load. Connect to the internet and reload, or import a folder.';return}
   $('status').textContent='Reading ZIP…';
   try{
     const z=await JSZip.loadAsync(f);
-    let result=await Promise.all(Object.values(z.files).filter(x=>!x.dir).map(async x=>{
+    let result=await Promise.all(Object.values(z.files).filter(function(x){return !x.dir}).map(async function(x){
       const blob=await x.async('blob');
-      return {path:x.name.replace(/^\/+/,''),name:base(x.name),size:blob.size,type:blob.type,blob,text:textExt.has(ext(x.name))?await blob.text():null};
+      return {path:x.name.replace(/^\/+/,''),name:base(x.name),size:blob.size,type:blob.type,blob:blob,text:textExt.has(ext(x.name))?await blob.text():null};
     }));
-    const roots=[...new Set(result.map(x=>x.path.split('/')[0]))];
-    if(roots.length===1&&result.every(x=>x.path.includes('/')))result.forEach(x=>x.path=x.path.slice(x.path.indexOf('/')+1));
+    const roots=Array.from(new Set(result.map(function(x){return x.path.split('/')[0]})));
+    if(roots.length===1&&result.every(function(x){return x.path.indexOf('/')!==-1})){
+      result.forEach(function(x){x.path=x.path.slice(x.path.indexOf('/')+1)});
+    }
     loadFiles(result,f.name.replace(/\.zip$/i,''));
   }catch(err){
     $('status').textContent='Could not read this ZIP. Make sure it is a valid ZIP archive.';
@@ -239,23 +245,24 @@ $('zipInput').addEventListener('change',async e=>{
   e.target.value='';
 });
 
-$('homeProjectsBtn').onclick=()=>showTab('projects');
-$('homePreviewBtn').onclick=()=>showTab('preview');
-$('homeBundleBtn').onclick=()=>{exportBundle();};
-$('homeOpenPreviewBtn').onclick=()=>{showTab('preview');if(currentPagePath)openPage(currentPagePath);};
-$('projectsPreviewBtn').onclick=()=>{showTab('preview');if(currentPagePath)openPage(currentPagePath);};
-$('projectsBundleBtn').onclick=()=>showTab('bundle');
+$('homeProjectsBtn').onclick=function(){showTab('projects')};
+$('homePreviewBtn').onclick=function(){showTab('preview')};
+$('homeBundleBtn').onclick=function(){exportBundle()};
+$('homeOpenPreviewBtn').onclick=function(){showTab('preview');if(currentPagePath)openPage(currentPagePath)};
+$('projectsPreviewBtn').onclick=function(){showTab('preview');if(currentPagePath)openPage(currentPagePath)};
+$('projectsBundleBtn').onclick=function(){showTab('bundle')};
 $('bundleBtn').onclick=exportBundle;
-$('backupsBundleBtn').onclick=()=>showTab('bundle');$('backHomeBtn').onclick=()=>showTab('home');
-$('openPageBtn').onclick=()=>{if($('pageSelect').value)openPage($('pageSelect').value);};
-$('pageSelect').onchange=e=>{currentPagePath=e.target.value;};
-$('refreshBtn').onclick=()=>{if(currentPagePath)openPage(currentPagePath);};
-$('fullScreenBtn').onclick=()=>{
+$('backupsBundleBtn').onclick=function(){showTab('bundle')};
+$('backHomeBtn').onclick=function(){showTab('home')};
+$('openPageBtn').onclick=function(){if($('pageSelect').value)openPage($('pageSelect').value)};
+$('pageSelect').onchange=function(e){currentPagePath=e.target.value};
+$('refreshBtn').onclick=function(){if(currentPagePath)openPage(currentPagePath)};
+$('fullScreenBtn').onclick=function(){
   const f=$('frame');
   if(f.requestFullscreen)f.requestFullscreen();
   else if(f.webkitRequestFullscreen)f.webkitRequestFullscreen();
 };
-$('clearBtn').onclick=()=>{
+$('clearBtn').onclick=function(){
   if(files.length&&!confirm('Clear the current project and start over?'))return;
   resetPreview();
   files=[];urls=[];currentPagePath='';
@@ -265,6 +272,8 @@ $('clearBtn').onclick=()=>{
   showTab('home');
 };
 
-document.querySelectorAll('.bottom span').forEach(s=>{s.onclick=()=>showTab(s.dataset.tab)});
+document.querySelectorAll('.bottom span').forEach(function(s){
+  s.onclick=function(){showTab(s.dataset.tab)};
+});
 
 render();

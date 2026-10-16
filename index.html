@@ -1,15 +1,46 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f01424"><title>Multi Bundle</title><link rel="stylesheet" href="style.css"><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script></head>
 <body>
-<header class="topbar"><div class="mark">MB</div><div class="brand"><b>MULTI <span>BUNDLE</span></b><small>Local website preview</small></div><button id="clearBtn" class="icon">↺</button></header>
+
+<header class="app-head">
+  <button id="menuBtn" class="head-btn" aria-label="Menu">
+    <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="head-title">MULTI <span>BUNDLE</span></div>
+  <button id="clearBtn" class="head-btn" title="Clear">↺</button>
+</header>
+<div id="drawerBackdrop" class="drawer-backdrop"></div>
+<aside id="drawer" class="drawer">
+  <div class="drawer-head">
+    <div class="drawer-logo"><span class="drawer-mark">MB</span><div><b>MULTI <span>BUNDLE</span></b><small>Local workspace</small></div></div>
+    <button id="drawerClose" class="drawer-x">×</button>
+  </div>
+  <nav class="drawer-nav">
+    <a data-tab="home">⌂ <span>Home</span></a>
+    <a data-tab="projects">▣ <span>Projects</span></a>
+    <a data-tab="editor">{ } <span>Editor</span></a>
+    <a data-tab="preview">◉ <span>Preview</span></a>
+    <a data-tab="bundle">▤ <span>Bundle</span></a>
+    <a data-tab="backups">⟲ <span>Backups</span></a>
+  </nav>
+  <div class="drawer-section">
+    <label>TOOLS</label>
+    <button id="drawerNewProject">📁 New project</button>
+    <button id="drawerImportZip">📦 Import ZIP</button>
+    <button id="drawerGithub">🐙 Import from GitHub</button>
+    <button id="drawerClear">↺ Clear current project</button>
+  </div>
+  <div class="drawer-foot">Multi Bundle · Local preview · v1</div>
+</aside>
+
 <main>
 <section id="homePage" class="tab-page">
- <section class="card hero"><label class="eyebrow">YOUR LOCAL WORKSPACE</label><h1>Build it. <span>Preview it.</span></h1><p>Keep your website files organized, create a TXT bundle, and preview static pages locally on your device.</p><div class="actions"><button id="homeProjectsBtn" class="btn primary">▣ Open Projects</button><button id="homePreviewBtn" class="btn secondary">◉ Open Preview</button><button id="homeGithubBtn" class="btn secondary">🐙 GitHub</button></div></section>
+ <section class="card hero"><label class="eyebrow">YOUR LOCAL WORKSPACE</label><h1>Build it. <span>Preview it.</span></h1><p>Keep your website files organized, create a TXT bundle, and preview static pages locally on your device.</p><div class="actions"><button id="homeProjectsBtn" class="btn primary">▣ Open Projects</button><button id="homePreviewBtn" class="btn secondary">◉ Open Preview</button></div></section>
  <section class="card"><label class="eyebrow">CURRENT PROJECT</label><div class="heading"><h2 id="homeProjectName">No project loaded</h2><span id="homeFileCount" class="pill">0 files</span></div><p id="homeStatus">Go to Projects to import a website folder or ZIP.</p><div class="actions"><button id="homeBundleBtn" class="btn primary" disabled>⇩ Create TXT bundle</button><button id="homeOpenPreviewBtn" class="btn secondary" disabled>▶ Preview website</button></div></section>
  <section class="card note-card"><b>ℹ️ Local workspace</b><p>Best for static HTML, CSS, JavaScript, and images. Server-side features like PHP and databases need a real server. Keep your original files safe.</p></section>
 </section>
-<section id="projectsPage" class="tab-page" hidden>
 
+<section id="projectsPage" class="tab-page" hidden>
   <div id="projectsListView">
     <section class="card">
       <label class="eyebrow">PROJECTS</label>
@@ -19,18 +50,32 @@
         <label class="btn primary">📁 New project<input id="folderInput" type="file" webkitdirectory directory multiple hidden></label>
         <label class="btn secondary">📦 Import ZIP<input id="zipInput" type="file" accept=".zip,application/zip" hidden></label>
       </div>
-      <div class="status" id="status">Choose a folder or ZIP to start a new project.</div>
+      <div class="status" id="status">Choose a folder or ZIP to start a new project. Max 4 projects.</div>
     </section>
 
     <section class="card">
       <label class="eyebrow">GITHUB</label>
-      <h2>Import from GitHub</h2>
-      <p>Paste a repo URL. Example: <code>github.com/user/repo</code></p>
-      <div class="gh-row">
-        <input id="githubUrl" type="text" placeholder="https://github.com/owner/repo" autocomplete="off">
-        <button id="githubImportBtn" class="btn primary">⇩ Import</button>
+      <h2>Your GitHub repos</h2>
+
+      <div id="githubLoggedOut">
+        <p>Sign in with a GitHub token to see your repos (including private).</p>
+        <div class="gh-row">
+          <input id="githubToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+          <button id="githubLoginBtn" class="btn primary">Sign in</button>
+        </div>
+        <p class="note">Create one at github.com/settings/tokens → Generate new token (classic) → tick "repo" → Generate → copy.</p>
+        <div class="status" id="githubStatus">Not signed in.</div>
       </div>
-      <div class="status" id="githubStatus">Public repos only. Branch defaults to main (falls back to master).</div>
+
+      <div id="githubLoggedIn" hidden>
+        <div class="gh-user">
+          <img id="ghAvatar" alt="">
+          <div class="gh-user-info"><b id="ghName">—</b><small id="ghLogin">—</small></div>
+          <button id="githubLogoutBtn" class="btn secondary">Sign out</button>
+        </div>
+        <input id="ghRepoSearch" class="gh-search" type="text" placeholder="🔍 Search your repos…" autocomplete="off">
+        <div id="ghRepoList" class="gh-repo-list"></div>
+      </div>
     </section>
 
     <section class="card">
@@ -65,11 +110,14 @@
 
   <input id="changesFolderInput" type="file" webkitdirectory directory multiple hidden>
 </section>
+
 <section id="bundlePage" class="tab-page" hidden>
  <section class="card hero"><label class="eyebrow">BUNDLE CENTER</label><h1>TXT <span>Bundle</span></h1><p>Combine the text-based files from your current project into one readable TXT backup file.</p></section>
  <section class="card"><div class="heading"><div><label class="eyebrow">READY TO EXPORT</label><h2 id="bundleProjectName">No project loaded</h2></div><span id="bundleFileCount" class="pill">0 files</span></div><p id="bundleStatus">Import a project first from the Projects tab.</p><button id="bundleBtn" class="btn primary" disabled>⇩ Export TXT bundle</button><p class="note">Text files are included. Images, fonts, and other binary assets are represented by a note and are not embedded in the TXT file.</p></section>
 </section>
+
 <section id="previewPage" class="tab-page" hidden><div class="preview-top"><div><label class="eyebrow">LOCAL BROWSER</label><h1>Website <span>Preview</span></h1></div><button id="fullScreenBtn" class="btn primary">⛶ Full screen</button></div><section class="card"><div class="page-toolbar"><label for="pageSelect">PAGE</label><select id="pageSelect" disabled><option>No project loaded</option></select><button id="openPageBtn" class="btn secondary" disabled>Open page</button></div><div class="browser"><i></i><i></i><i></i><span id="previewPath">Your website will appear here</span><button id="refreshBtn" disabled>↻</button></div><div id="placeholder" class="placeholder"><div>⌘</div><b>Ready when you are</b><p>Go to Projects and import a website, then select a page here.</p></div><iframe id="frame" title="Local website preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" hidden></iframe><p class="note">PHP, databases, server APIs, and some advanced module setups need a real server.</p><button id="backHomeBtn" class="btn secondary">← Home</button></section></section>
+
 <section id="editorPage" class="tab-page" hidden>
   <div class="editor-shell" id="editorShell">
     <div class="editor-toolbar">
@@ -92,7 +140,10 @@
     <div class="editor-body">
       <div class="editor-pane">
         <div class="editor-gutter" id="editorGutter">1</div>
-        <textarea id="editorTextarea" spellcheck="false" placeholder="Select a project file to edit code"></textarea>
+        <div class="editor-code">
+          <pre class="editor-hl" id="editorHighlight" aria-hidden="true"></pre>
+          <textarea id="editorTextarea" spellcheck="false" placeholder="Select a project file to edit code"></textarea>
+        </div>
       </div>
     </div>
     <div class="editor-statusbar">
@@ -111,8 +162,10 @@
     </div>
   </div>
 </section>
+
 <section id="backupsPage" class="tab-page" hidden><section class="card"><label class="eyebrow">BACKUPS</label><h1>Safe <span>Backups</span></h1><p>Create a TXT bundle from the Bundle tab and save it somewhere safe. This prototype does not yet keep a backup history automatically.</p><button id="backupsBundleBtn" class="btn primary">⇩ Open Bundle</button></section></section>
 </main>
+
 <nav class="bottom">
   <span class="selected" data-tab="home">
     <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>

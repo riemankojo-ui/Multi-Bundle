@@ -1,7 +1,7 @@
 (function(){
 const $=id=>document.getElementById(id);
-const ta=$('editorTextarea'),gutter=$('editorGutter'),fileSelect=$('editorFileSelect'),
-      status=$('editorStatus'),cursorInfo=$('editorCursor'),
+const ta=$('editorTextarea'),gutter=$('editorGutter'),hl=$('editorHighlight'),
+      fileSelect=$('editorFileSelect'),status=$('editorStatus'),cursorInfo=$('editorCursor'),
       undoBtn=$('editorUndoBtn'),redoBtn=$('editorRedoBtn'),
       searchBar=$('editorSearchBar'),searchInput=$('editorSearchInput'),
       searchCount=$('editorSearchCount'),
@@ -10,18 +10,92 @@ const ta=$('editorTextarea'),gutter=$('editorGutter'),fileSelect=$('editorFileSe
 let currentPath='',dirty=false,undoStack=[],redoStack=[],lastPush=0,
     matches=[],matchIndex=-1;
 
-/* Line numbers */
+/* ===== Syntax highlight ===== */
+function escHtml(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+
+function highlightJS(code){
+  const re=/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(`(?:\\.|[^`\\])*`|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')|\b(function|const|let|var|if|else|for|while|return|class|new|this|true|false|null|undefined|async|await|import|export|from|of|in|try|catch|finally|throw|typeof|instanceof|delete|void|yield|switch|case|break|continue|default|do|extends|super|static|get|set)\b|\b(\d+(?:\.\d+)?)\b|\b([A-Za-z_$][\w$]*)(?=\s*\()/g;
+  let out='',last=0,m;
+  while((m=re.exec(code))!==null){
+    out+=escHtml(code.slice(last,m.index));
+    const t=m[0];
+    if(m[1])out+='<span class="tk-cmt">'+escHtml(t)+'</span>';
+    else if(m[2])out+='<span class="tk-str">'+escHtml(t)+'</span>';
+    else if(m[3])out+='<span class="tk-kw">'+escHtml(t)+'</span>';
+    else if(m[4])out+='<span class="tk-num">'+escHtml(t)+'</span>';
+    else if(m[5])out+='<span class="tk-fn">'+escHtml(t)+'</span>';
+    else out+=escHtml(t);
+    last=m.index+t.length;
+  }
+  out+=escHtml(code.slice(last));
+  return out;
+}
+
+function highlightCSS(code){
+  const re=/(\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')|(#[0-9a-fA-F]{3,8}\b|\b\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|s|ms|deg|fr)?\b)|(@[A-Za-z\-]+)|([a-zA-Z\-]+)(?=\s*:)/g;
+  let out='',last=0,m;
+  while((m=re.exec(code))!==null){
+    out+=escHtml(code.slice(last,m.index));
+    const t=m[0];
+    if(m[1])out+='<span class="tk-cmt">'+escHtml(t)+'</span>';
+    else if(m[2])out+='<span class="tk-str">'+escHtml(t)+'</span>';
+    else if(m[3])out+='<span class="tk-num">'+escHtml(t)+'</span>';
+    else if(m[4])out+='<span class="tk-kw">'+escHtml(t)+'</span>';
+    else if(m[5])out+='<span class="tk-attr">'+escHtml(t)+'</span>';
+    else out+=escHtml(t);
+    last=m.index+t.length;
+  }
+  out+=escHtml(code.slice(last));
+  return out;
+}
+
+function highlightHTML(code){
+  const re=/(<!--[\s\S]*?-->)|(<\/?[A-Za-z][\w\-]*)|([A-Za-z\-:]+)(?==)|("(?:[^"]*)")|(>)/g;
+  let out='',last=0,m;
+  while((m=re.exec(code))!==null){
+    out+=escHtml(code.slice(last,m.index));
+    const t=m[0];
+    if(m[1])out+='<span class="tk-cmt">'+escHtml(t)+'</span>';
+    else if(m[2])out+='<span class="tk-tag">'+escHtml(t)+'</span>';
+    else if(m[3])out+='<span class="tk-attr">'+escHtml(t)+'</span>';
+    else if(m[4])out+='<span class="tk-str">'+escHtml(t)+'</span>';
+    else if(m[5])out+='<span class="tk-tag">'+escHtml(t)+'</span>';
+    else out+=escHtml(t);
+    last=m.index+t.length;
+  }
+  out+=escHtml(code.slice(last));
+  return out;
+}
+
+function highlightAll(code){
+  const e=(currentPath.split('.').pop()||'').toLowerCase();
+  if(e==='css')return highlightCSS(code);
+  if(e==='html'||e==='htm'||e==='svg'||e==='xml')return highlightHTML(code);
+  if(['js','mjs','ts','jsx','tsx','json'].includes(e))return highlightJS(code);
+  return escHtml(code);
+}
+
+function refreshHighlight(){
+  if(!hl)return;
+  const v=ta.value;
+  // Keep trailing newline so pre matches textarea height
+  hl.innerHTML=highlightAll(v)+(v.endsWith('\n')?' ':'');
+  hl.scrollTop=ta.scrollTop;
+  hl.scrollLeft=ta.scrollLeft;
+}
+
+/* ===== Line numbers ===== */
 function updateGutter(){
   const n=ta.value.split('\n').length;let s='';
   for(let i=1;i<=n;i++)s+=i+'\n';
   gutter.textContent=s;gutter.scrollTop=ta.scrollTop;
 }
-ta.addEventListener('scroll',()=>{gutter.scrollTop=ta.scrollTop});
-ta.addEventListener('input',()=>{updateGutter();pushHistory();markDirty();updateCursor()});
+ta.addEventListener('scroll',function(){gutter.scrollTop=ta.scrollTop;hl.scrollTop=ta.scrollTop;hl.scrollLeft=ta.scrollLeft});
+ta.addEventListener('input',function(){updateGutter();refreshHighlight();pushHistory();markDirty();updateCursor()});
 ta.addEventListener('click',updateCursor);
 ta.addEventListener('keyup',updateCursor);
 
-/* Undo / redo */
+/* ===== Undo / redo ===== */
 function pushHistory(force){
   const now=Date.now();
   if(!force&&now-lastPush<300)return;lastPush=now;
@@ -31,18 +105,18 @@ function pushHistory(force){
   redoStack=[];updateBtns();
 }
 function updateBtns(){undoBtn.disabled=undoStack.length<2;redoBtn.disabled=!redoStack.length}
-undoBtn.onclick=()=>{if(undoStack.length<2)return;redoStack.push(undoStack.pop());ta.value=undoStack[undoStack.length-1];updateGutter();markDirty();updateBtns()};
-redoBtn.onclick=()=>{if(!redoStack.length)return;const n=redoStack.pop();undoStack.push(n);ta.value=n;updateGutter();markDirty();updateBtns()};
-ta.addEventListener('keydown',e=>{
+undoBtn.onclick=function(){if(undoStack.length<2)return;redoStack.push(undoStack.pop());ta.value=undoStack[undoStack.length-1];updateGutter();refreshHighlight();markDirty();updateBtns()};
+redoBtn.onclick=function(){if(!redoStack.length)return;const n=redoStack.pop();undoStack.push(n);ta.value=n;updateGutter();refreshHighlight();markDirty();updateBtns()};
+ta.addEventListener('keydown',function(e){
   if((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey){e.preventDefault();undoBtn.click()}
   if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.key==='z'&&e.shiftKey))){e.preventDefault();redoBtn.click()}
   if((e.ctrlKey||e.metaKey)&&e.key==='f'){e.preventDefault();openSearch()}
   if(e.key==='Tab'){e.preventDefault();const s=ta.selectionStart,en=ta.selectionEnd;
     ta.value=ta.value.slice(0,s)+'  '+ta.value.slice(en);
-    ta.selectionStart=ta.selectionEnd=s+2;updateGutter();pushHistory(true);markDirty()}
+    ta.selectionStart=ta.selectionEnd=s+2;updateGutter();refreshHighlight();pushHistory(true);markDirty()}
 });
 
-/* Search */
+/* ===== Search ===== */
 function openSearch(){searchBar.classList.add('open');searchInput.focus();searchInput.select()}
 function closeSearch(){searchBar.classList.remove('open');matches=[];matchIndex=-1;updateSearchCount()}
 function runSearch(){
@@ -58,11 +132,11 @@ function selectMatch(){
   const s=matches[matchIndex],en=s+searchInput.value.length;
   ta.focus();ta.setSelectionRange(s,en);
   const line=ta.value.slice(0,s).split('\n').length;
-  ta.scrollTop=Math.max(0,(line-4)*20);gutter.scrollTop=ta.scrollTop;
+  ta.scrollTop=Math.max(0,(line-4)*20);gutter.scrollTop=ta.scrollTop;hl.scrollTop=ta.scrollTop;
   updateSearchCount();
 }
 searchInput.addEventListener('input',runSearch);
-searchInput.addEventListener('keydown',e=>{
+searchInput.addEventListener('keydown',function(e){
   if(e.key==='Enter'){e.preventDefault();e.shiftKey?prevMatch():nextMatch()}
   if(e.key==='Escape')closeSearch();
 });
@@ -71,87 +145,81 @@ function prevMatch(){if(!matches.length)return;matchIndex=(matchIndex-1+matches.
 $('editorSearchNext').onclick=nextMatch;
 $('editorSearchPrev').onclick=prevMatch;
 $('editorSearchClose').onclick=closeSearch;
-$('editorSearchBtn').onclick=()=>{searchBar.classList.contains('open')?closeSearch():openSearch()};
+$('editorSearchBtn').onclick=function(){searchBar.classList.contains('open')?closeSearch():openSearch()};
 
-/* Cursor */
+/* ===== Cursor ===== */
 function updateCursor(){
   const p=ta.selectionStart,b=ta.value.slice(0,p);
   const line=b.split('\n').length,col=p-b.lastIndexOf('\n');
-  cursorInfo.textContent=`Ln ${line}, Col ${col}`;
+  cursorInfo.textContent='Ln '+line+', Col '+col;
 }
 
-/* File list */
+/* ===== File list ===== */
 function refreshFileList(){
   if(typeof files==='undefined')return;
-  const tf=files.filter(f=>f.text!=null);
+  const tf=files.filter(function(f){return f.text!=null});
   const cur=currentPath;fileSelect.innerHTML='';
   if(!tf.length){fileSelect.add(new Option('No project selected',''));return}
-  tf.forEach(f=>fileSelect.add(new Option(f.path,f.path)));
-  if(cur&&tf.find(f=>f.path===cur))fileSelect.value=cur;
+  tf.forEach(function(f){fileSelect.add(new Option(f.path,f.path))});
+  if(cur&&tf.find(function(f){return f.path===cur}))fileSelect.value=cur;
 }
 function loadFile(path){
-  const f=files.find(x=>x.path===path);if(!f||f.text==null)return;
+  const f=files.find(function(x){return x.path===path});if(!f||f.text==null)return;
   currentPath=path;ta.value=f.text;dirty=false;
   undoStack=[f.text];redoStack=[];updateBtns();
-  updateGutter();updateCursor();
+  updateGutter();updateCursor();refreshHighlight();
   status.textContent=path;fileSelect.value=path;
   renderPreview();
 }
 function markDirty(){dirty=true;status.textContent=currentPath+' •'}
 function saveFile(){
   if(!currentPath)return;
-  const f=files.find(x=>x.path===currentPath);if(!f)return;
+  const f=files.find(function(x){return x.path===currentPath});if(!f)return;
   f.text=ta.value;f.blob=null;dirty=false;
   status.textContent=currentPath+' ✓';
   if(typeof render==='function')render();
+  if(typeof saveCurrentProject==='function')saveCurrentProject();
 }
-fileSelect.addEventListener('change',e=>{
+fileSelect.addEventListener('change',function(e){
   if(dirty&&!confirm('Discard unsaved changes?')){fileSelect.value=currentPath;return}
   loadFile(e.target.value);
 });
 $('editorSaveBtn').onclick=saveFile;
-$('editorNewBtn').onclick=()=>{
+$('editorNewBtn').onclick=function(){
   const name=prompt('New file path (e.g. pages/about.html):');if(!name)return;
-  if(files.find(f=>f.path===name)){alert('File already exists');return}
+  if(files.find(function(f){return f.path===name})){alert('File already exists');return}
   files.push({path:name,name:name.split('/').pop(),size:0,type:'text/plain',blob:null,text:''});
-  files.sort((a,b)=>a.path.localeCompare(b.path));
+  files.sort(function(a,b){return a.path.localeCompare(b.path)});
   refreshFileList();loadFile(name);
   if(typeof render==='function')render();
 };
 
-/* Preview */
+/* ===== Preview ===== */
 function renderPreview(){
   if(!currentPath)return;
-  const f=files.find(x=>x.path===currentPath);if(!f)return;
   previewFrame.srcdoc=(typeof htmlRewrite==='function')?htmlRewrite(ta.value,currentPath):ta.value;
 }
 $('editorPreviewRefresh').onclick=renderPreview;
-$('editorPreviewRefresh').onclick=renderPreview;
-$('editorPreviewBtn').onclick=()=>{renderPreview();$('editorPreviewPane').classList.add('open')};
-$('editorPreviewClose').onclick=()=>$('editorPreviewPane').classList.remove('open');
-$('editorPreviewBtn').onclick=()=>{renderPreview();$('editorPreviewPane').classList.add('open')};
-$('editorPreviewClose').onclick=()=>$('editorPreviewPane').classList.remove('open');
-ta.addEventListener('input',()=>{
+$('editorPreviewBtn').onclick=function(){renderPreview();$('editorPreviewPane').classList.add('open')};
+$('editorPreviewClose').onclick=function(){$('editorPreviewPane').classList.remove('open')};
+ta.addEventListener('input',function(){
   if(/\.html?$/i.test(currentPath)){clearTimeout(window.__pvT);window.__pvT=setTimeout(renderPreview,600)}
 });
 
-/* Fullscreen */
-$('editorFullBtn').onclick=()=>{
+/* ===== Fullscreen ===== */
+$('editorFullBtn').onclick=function(){
   const on=shell.classList.toggle('fullscreen');
   document.body.classList.toggle('editor-full',on);
   $('editorFullBtn').textContent=on?'⤡':'⛶';
 };
 
-/* Refresh list whenever the editor tab opens */
+/* Refresh file list when editor opens */
 if(editorPage){
-  const obs=new MutationObserver(()=>{
-    if(!editorPage.hidden){
-      refreshFileList();
-      if(!currentPath){/* leave empty so user picks */}
-    }
+  const obs=new MutationObserver(function(){
+    if(!editorPage.hidden)refreshFileList();
   });
   obs.observe(editorPage,{attributes:true,attributeFilter:['hidden']});
 }
 
-updateGutter();refreshFileList();
+updateGutter();refreshFileList();refreshHighlight();
 })();

@@ -35,6 +35,92 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const size=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':(n/1048576).toFixed(1)+' MB';
 const mimeMap={html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',mjs:'text/javascript',json:'application/json',webmanifest:'application/manifest+json',txt:'text/plain',md:'text/plain',xml:'application/xml',svg:'image/svg+xml',csv:'text/csv',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',avif:'image/avif',bmp:'image/bmp',ico:'image/x-icon',woff:'font/woff',woff2:'font/woff2',ttf:'font/ttf',otf:'font/otf',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',mp4:'video/mp4',webm:'video/webm',pdf:'application/pdf'};
 
+/* ===== Toast & Modal helpers ===== */
+function showToast(msg,type){
+  const root=$('toastRoot');if(!root)return;
+  const t=document.createElement('div');
+  t.className='toast'+(type?' '+type:'');
+  t.textContent=msg;
+  root.appendChild(t);
+  setTimeout(function(){
+    t.style.transition='opacity .2s,transform .2s';
+    t.style.opacity='0';
+    t.style.transform='translateY(-10px)';
+    setTimeout(function(){t.remove()},220);
+  },2400);
+}
+window.showToast=showToast;
+
+function showModal(opts){
+  return new Promise(function(resolve){
+    const root=$('modalRoot');
+    const icon=$('modalIcon'),title=$('modalTitle'),msg=$('modalMessage'),
+          inp=$('modalInput'),ok=$('modalConfirmBtn'),cancel=$('modalCancelBtn');
+    icon.textContent=opts.icon||'?';
+    title.textContent=opts.title||'';
+    msg.textContent=opts.message||'';
+    if(opts.input){
+      inp.hidden=false;
+      inp.value=opts.inputValue||'';
+      inp.placeholder=opts.inputPlaceholder||'';
+    }else{inp.hidden=true}
+    ok.textContent=opts.confirmText||'OK';
+    cancel.textContent=opts.cancelText||'Cancel';
+    cancel.hidden=!!opts.hideCancel;
+    root.hidden=false;
+    setTimeout(function(){if(opts.input)inp.focus()},80);
+
+    function done(val){
+      root.hidden=true;
+      ok.onclick=null;cancel.onclick=null;
+      document.removeEventListener('keydown',onKey);
+      resolve(val);
+    }
+    function onKey(e){
+      if(e.key==='Enter'&&opts.input){e.preventDefault();done(inp.value)}
+      else if(e.key==='Escape'){done(null)}
+    }
+    ok.onclick=function(){done(opts.input?inp.value:true)};
+    cancel.onclick=function(){done(null)};
+    document.addEventListener('keydown',onKey);
+  });
+}
+function showConfirm(message,opts){
+  opts=opts||{};
+  return showModal({
+    icon:opts.icon||'⚠',
+    title:opts.title||'Confirm',
+    message:message,
+    confirmText:opts.confirmText||'OK',
+    cancelText:opts.cancelText||'Cancel'
+  }).then(function(r){return r!==null});
+}
+function showPrompt(title,defaultValue,opts){
+  opts=opts||{};
+  return showModal({
+    icon:opts.icon||'✎',
+    title:title,
+    message:opts.message||'',
+    input:true,
+    inputValue:defaultValue||'',
+    inputPlaceholder:opts.placeholder||'',
+    confirmText:opts.confirmText||'OK',
+    cancelText:opts.cancelText||'Cancel'
+  });
+}
+function showInfo(title,message){
+  return showModal({
+    icon:'ℹ',
+    title:title,
+    message:message,
+    hideCancel:true,
+    confirmText:'Got it'
+  });
+}
+window.showConfirm=showConfirm;
+window.showPrompt=showPrompt;
+window.showInfo=showInfo;
+
 /* ===== IndexedDB ===== */
 const DB_NAME='multibundle',DB_STORE='project';
 function openDB(){return new Promise(function(res,rej){const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=function(){const db=r.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE)};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
@@ -75,7 +161,6 @@ function setCurrentProjectName(n){
   const dn=$('detailProjectName');if(dn)dn.textContent=window.__currentProjectName;
 }
 
-/* ===== Persist current project ===== */
 async function saveCurrentProject(){
   if(!currentProjectId||!files.length)return;
   const all=await dbGetAll();
@@ -101,12 +186,7 @@ if($('drawerNewProject'))$('drawerNewProject').onclick=function(){closeDrawer();
 if($('drawerImportZip'))$('drawerImportZip').onclick=function(){closeDrawer();if($('zipInput'))$('zipInput').click()};
 if($('drawerGithub'))$('drawerGithub').onclick=function(){
   closeDrawer();
-  setTimeout(function(){
-    ['home','projects','bundle','preview','editor','backups','github'].forEach(function(p){
-      const page=document.getElementById(p+'Page');if(page)page.hidden=(p!=='github');
-    });
-    document.querySelectorAll('.bottom span').forEach(function(s){s.classList.remove('selected')});
-  },50);
+  setTimeout(function(){showTab('github')},50);
 };
 if($('drawerClear'))$('drawerClear').onclick=function(){closeDrawer();if($('clearBtn'))$('clearBtn').click()};
 
@@ -158,11 +238,13 @@ async function cardPreview(id){const p=await loadProjectIntoMemory(id);if(!p)ret
 async function cardEdit(id){const p=await loadProjectIntoMemory(id);if(!p)return;render();showTab('editor')}
 async function cardChanges(id){const p=await loadProjectIntoMemory(id);if(!p)return;if($('changesFolderInput'))$('changesFolderInput').click()}
 async function cardDelete(id,name){
-  if(!confirm('Delete project "'+name+'" permanently?'))return;
+  const ok=await showConfirm('Delete "'+name+'" permanently? This cannot be undone.',{title:'Delete project',confirmText:'Delete',cancelText:'Keep'});
+  if(!ok)return;
   await dbDeleteProject(id);
   if(currentProjectId===id){currentProjectId=null;files=[];setCurrentProjectName('No project loaded')}
   await renderProjectCards();
   render();
+  showToast('Project deleted');
 }
 
 async function openProjectDetail(id){
@@ -195,25 +277,34 @@ function cleanIncoming(result){
 
 async function processIncoming(result,defaultName){
   result=cleanIncoming(result);
-  const name=(prompt('Project name:',defaultName||'My project')||'').trim();
-  if(!name)return;
+  if(!result.length){showToast('No files found','error');return}
+
+  const name=await showPrompt('Name this project',defaultName||'My project',{
+    message:'Give your project a name. If a project with this name exists, it will be updated.',
+    icon:'📁'
+  });
+  if(!name||!name.trim())return;
+  const trimmed=name.trim();
 
   const all=await dbGetAll();
-  const existing=all.find(function(p){return p.name===name});
+  const existing=all.find(function(p){return p.name===trimmed});
 
   if(existing){
     currentProjectId=existing.id;
-    setCurrentProjectName(name);
+    setCurrentProjectName(trimmed);
     files=result;
-    await dbUpsertProject({id:existing.id,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:existing.createdAt});
-    if($('status'))$('status').textContent='Updated "'+name+'" with '+files.length+' files.';
+    await dbUpsertProject({id:existing.id,name:trimmed,files:serializeFiles(),savedAt:Date.now(),createdAt:existing.createdAt});
+    showToast('Updated "'+trimmed+'" with '+files.length+' files','success');
   }else{
-    if(all.length>=PROJECT_LIMIT){alert('You can only have '+PROJECT_LIMIT+' projects. Delete one first.');return}
+    if(all.length>=PROJECT_LIMIT){
+      showInfo('Project limit reached','You can only have '+PROJECT_LIMIT+' projects. Delete one to make room.');
+      return;
+    }
     currentProjectId=Date.now().toString();
-    setCurrentProjectName(name);
+    setCurrentProjectName(trimmed);
     files=result;
-    await dbUpsertProject({id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now()});
-    if($('status'))$('status').textContent='Created "'+name+'" with '+files.length+' files.';
+    await dbUpsertProject({id:currentProjectId,name:trimmed,files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now()});
+    showToast('Created "'+trimmed+'" with '+files.length+' files','success');
   }
   await renderProjectCards();
   populatePages();
@@ -250,7 +341,7 @@ if($('changesFolderInput'))$('changesFolderInput').addEventListener('change',asy
   const name=existing?existing.name:currentProjectName();
   setCurrentProjectName(name);
   await dbUpsertProject({id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:existing?existing.createdAt:Date.now()});
-  if($('status'))$('status').textContent='Imported changes: '+updated+' updated, '+added+' new.';
+  showToast('Imported: '+updated+' updated, '+added+' new','success');
   await renderProjectCards();
   populatePages();
   render();
@@ -270,12 +361,12 @@ async function loadZipBlob(blob,fallbackName){
 
 if($('zipInput'))$('zipInput').addEventListener('change',async function(e){
   const f=e.target.files[0];if(!f)return;
-  if(!window.JSZip){if($('status'))$('status').textContent='ZIP library did not load.';return}
-  if($('status'))$('status').textContent='Reading ZIP…';
+  if(!window.JSZip){showToast('ZIP library did not load','error');return}
+  showToast('Reading ZIP…');
   try{
     const r=await loadZipBlob(f,f.name.replace(/\.zip$/i,''));
     await processIncoming(r.result,r.name);
-  }catch(err){if($('status'))$('status').textContent='Could not read this ZIP.'}
+  }catch(err){showToast('Could not read this ZIP','error')}
   e.target.value='';
 });
 
@@ -305,6 +396,7 @@ async function githubLogin(){
     await saveToken(t);
     setGhStatus('Signed in as @'+user.login);
     await showGithubLoggedIn(user);
+    showToast('Signed in as @'+user.login,'success');
   }catch(e){setGhStatus('Network error: '+e.message)}
 }
 async function githubLogout(){
@@ -313,6 +405,7 @@ async function githubLogout(){
   if($('githubLoggedOut'))$('githubLoggedOut').hidden=false;
   if($('githubToken'))$('githubToken').value='';
   setGhStatus('Signed out.');
+  showToast('Signed out');
 }
 async function showGithubLoggedIn(user){
   if($('githubLoggedOut'))$('githubLoggedOut').hidden=true;
@@ -490,12 +583,40 @@ function cssRewrite(css,path,depth){
   });
   return css.replace(/url\(\s*(['"]?)(.*?)\1\s*\)/gi,function(m,q,u){return 'url("'+assetUrl(path,u)+'")'});
 }
+
+/* Script injected into every previewed page: intercept link clicks */
+const LINK_INTERCEPTOR='(function(){'+
+  'function intercept(e){'+
+    'var t=e.target;'+
+    'while(t&&t.tagName!=="A")t=t.parentElement;'+
+    'if(!t)return;'+
+    'var href=t.getAttribute("href");'+
+    'if(!href)return;'+
+    'if(href.charAt(0)==="#"||href.indexOf("javascript:")===0||href.indexOf("mailto:")===0||href.indexOf("tel:")===0)return;'+
+    'if(/^(https?:)?\\/\\//i.test(href)||href.indexOf("data:")===0||href.indexOf("blob:")===0){'+
+      't.setAttribute("target","_blank");t.setAttribute("rel","noopener");return;'+
+    '}'+
+    'e.preventDefault();e.stopPropagation();'+
+    'try{parent.postMessage({type:"mb-nav",href:href},"*")}catch(err){}'+
+  '}'+
+  'document.addEventListener("click",intercept,true);'+
+'})();';
+
 function htmlRewrite(html,path){
   const doc=new DOMParser().parseFromString(html,'text/html');
-  /* Dark base style prevents white flash */
+  if(!doc.head){const h=doc.createElement('head');doc.documentElement.insertBefore(h,doc.documentElement.firstChild)}
+
+  /* color-scheme meta prevents white flash */
+  const meta=doc.createElement('meta');
+  meta.setAttribute('name','color-scheme');
+  meta.setAttribute('content','dark');
+  doc.head.insertBefore(meta,doc.head.firstChild);
+
+  /* Dark base style injected FIRST */
   const base=doc.createElement('style');
-  base.textContent='html,body{background:#101114;color:#f7f7f8}';
-  if(doc.head)doc.head.insertBefore(base,doc.head.firstChild);
+  base.textContent='html{background:#0d0e12}body{background:#0d0e12;color:#f7f7f8;margin:0}';
+  doc.head.insertBefore(base,doc.head.firstChild);
+
   doc.querySelectorAll('link[href]').forEach(function(el){
     const rel=(el.getAttribute('rel')||'').toLowerCase();if(rel.indexOf('stylesheet')===-1)return;
     const href=el.getAttribute('href');const f=relative(path,href);
@@ -522,8 +643,24 @@ function htmlRewrite(html,path){
       });
     });
   }
+  /* Inject link interceptor at the end of body */
+  const s=doc.createElement('script');
+  s.textContent=LINK_INTERCEPTOR;
+  if(doc.body)doc.body.appendChild(s);else doc.documentElement.appendChild(s);
+
   return '<!doctype html>'+doc.documentElement.outerHTML;
 }
+window.htmlRewrite=htmlRewrite;
+
+/* Handle link navigation from inside preview iframe */
+window.addEventListener('message',function(e){
+  if(!e.data||e.data.type!=='mb-nav')return;
+  const href=e.data.href;
+  if(!href||href==='form-submit')return;
+  const target=relative(currentPagePath,href);
+  if(target){openPage(target.path)}
+  else{showToast('Page not found: '+href,'error')}
+});
 
 function openPage(path){
   resetPreview();
@@ -559,6 +696,7 @@ function exportBundle(){
   a.download=name.replace(/[^\w\-]+/g,'_')+'.txt';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
+  showToast('Bundle downloaded','success');
 }
 
 function showTab(name){
@@ -588,14 +726,16 @@ if($('pageSelect'))$('pageSelect').onchange=function(e){currentPagePath=e.target
 if($('refreshBtn'))$('refreshBtn').onclick=function(){if(currentPagePath)openPage(currentPagePath)};
 if($('fullScreenBtn'))$('fullScreenBtn').onclick=function(){const f=$('frame');if(f.requestFullscreen)f.requestFullscreen();else if(f.webkitRequestFullscreen)f.webkitRequestFullscreen()};
 if($('clearBtn'))$('clearBtn').onclick=async function(){
-  if(files.length&&!confirm('Clear the current project from memory? (Saved projects stay under Projects tab.)'))return;
+  if(!files.length)return;
+  const ok=await showConfirm('Clear the current project from memory? Saved projects stay under Projects tab.',{title:'Clear project',confirmText:'Clear',cancelText:'Cancel'});
+  if(!ok)return;
   resetPreview();files=[];urls=[];currentPagePath='';currentProjectId=null;
   setCurrentProjectName('No project loaded');
   render();showTab('home');
+  showToast('Cleared');
 };
 
 document.querySelectorAll('.bottom span').forEach(function(s){s.onclick=function(){showTab(s.dataset.tab)}});
 
-/* Boot */
 render();
 renderProjectCards();

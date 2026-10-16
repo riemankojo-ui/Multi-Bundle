@@ -131,7 +131,7 @@
  <section class="card"><div class="heading"><div><label class="eyebrow">READY TO EXPORT</label><h2 id="bundleProjectName">No project loaded</h2></div><span id="bundleFileCount" class="pill">0 files</span></div><p id="bundleStatus">Import a project first from the Projects tab.</p><button id="bundleBtn" class="btn primary" disabled>⇩ Export TXT bundle</button><p class="note">Text files are included. Images, fonts, and other binary assets are represented by a note and are not embedded in the TXT file.</p></section>
 </section>
 
-<section id="previewPage" class="tab-page" hidden><div class="preview-top"><div><label class="eyebrow">LOCAL BROWSER</label><h1>Website <span>Preview</span></h1></div><button id="fullScreenBtn" class="btn primary">⛶ Full screen</button></div><section class="card"><div class="page-toolbar"><label for="pageSelect">PAGE</label><select id="pageSelect" disabled><option>No project loaded</option></select><button id="openPageBtn" class="btn secondary" disabled>Open page</button></div><div class="browser"><i></i><i></i><i></i><span id="previewPath">Your website will appear here</span><button id="refreshBtn" disabled>↻</button></div><div class="preview-wrap"><div id="previewLoader" class="preview-loader"><div class="spinner"></div></div><iframe id="frame" title="Local website preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" hidden></iframe></div><p class="note">PHP, databases, server APIs, and some advanced module setups need a real server.</p><button id="backHomeBtn" class="btn secondary">← Home</button></section></section>
+<section id="previewPage" class="tab-page" hidden><div class="preview-top"><div><label class="eyebrow">LOCAL BROWSER</label><h1>Website <span>Preview</span></h1></div><button id="fullScreenBtn" class="btn primary">⛶ Full screen</button></div><section class="card"><div class="page-toolbar"><label for="pageSelect">PAGE</label><select id="pageSelect" disabled><option>No project loaded</option></select><button id="openPageBtn" class="btn secondary" disabled>Open page</button></div><div class="browser"><i></i><i></i><i></i><span id="previewPath">Your website will appear here</span><button id="refreshBtn" disabled>↻</button></div><div class="preview-wrap"><div id="previewLoader" class="preview-loader"><div class="spinner"></div></div><iframe id="frame" bgcolor="#0d0e12" title="Local website preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" hidden></iframe></div><p class="note">PHP, databases, server APIs, and some advanced module setups need a real server.</p><button id="backHomeBtn" class="btn secondary">← Home</button></section></section>
 
 <section id="editorPage" class="tab-page" hidden>
   <div class="editor-shell" id="editorShell">
@@ -194,13 +194,32 @@
           <button id="editorPreviewClose" class="editor-btn small">✕</button>
         </div>
       </div>
-      <iframe id="editorPreviewFrame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"></iframe>
+      <div class="editor-preview-wrap">
+        <div id="editorPreviewLoader" class="preview-loader show"><div class="spinner"></div></div>
+        <iframe id="editorPreviewFrame" bgcolor="#0d0e12" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"></iframe>
+      </div>
     </div>
   </div>
 </section>
 
 <section id="backupsPage" class="tab-page" hidden><section class="card"><label class="eyebrow">BACKUPS</label><h1>Safe <span>Backups</span></h1><p>Create a TXT bundle from the Bundle tab and save it somewhere safe. This prototype does not yet keep a backup history automatically.</p><button id="backupsBundleBtn" class="btn primary">⇩ Open Bundle</button></section></section>
 </main>
+
+<div id="toastRoot" class="toast-root"></div>
+
+<div id="modalRoot" class="modal-root" hidden>
+  <div class="modal-backdrop"></div>
+  <div class="modal-card">
+    <div class="modal-icon" id="modalIcon">?</div>
+    <h3 class="modal-title" id="modalTitle">Title</h3>
+    <p class="modal-message" id="modalMessage"></p>
+    <input class="modal-input" id="modalInput" hidden autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn secondary" id="modalCancelBtn">Cancel</button>
+      <button class="btn primary" id="modalConfirmBtn">OK</button>
+    </div>
+  </div>
+</div>
 
 <nav class="bottom">
   <span class="selected" data-tab="home">

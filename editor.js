@@ -10,6 +10,10 @@ const ta=$('editorTextarea'),gutter=$('editorGutter'),hl=$('editorHighlight'),
 let currentPath='',dirty=false,undoStack=[],redoStack=[],lastPush=0,
     matches=[],matchIndex=-1;
 
+const toast=window.showToast||function(){};
+const promptFn=window.showPrompt||function(){return Promise.resolve(null)};
+const confirmFn=window.showConfirm||function(){return Promise.resolve(false)};
+
 /* ===== Syntax highlight ===== */
 function escHtml(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
 
@@ -112,7 +116,7 @@ ta.addEventListener('keydown',function(e){
     ta.selectionStart=ta.selectionEnd=s+2;updateGutter();refreshHighlight();pushHistory(true);markDirty()}
 });
 
-/* ===== Search (fixed arrow navigation) ===== */
+/* ===== Search ===== */
 function openSearch(){searchBar.classList.add('open');searchInput.focus();searchInput.select()}
 function closeSearch(){searchBar.classList.remove('open');matches=[];matchIndex=-1;updateSearchCount()}
 function runSearch(){
@@ -123,45 +127,28 @@ function runSearch(){
   if(matches.length){matchIndex=0;selectMatch()}
 }
 function updateSearchCount(){searchCount.textContent=matches.length?(matchIndex+1)+'/'+matches.length:'0/0'}
-
 function scrollToPosition(pos){
-  /* Compute line height from computed style — more accurate than hardcoded px */
   const cs=getComputedStyle(ta);
   const lh=parseFloat(cs.lineHeight)||(parseFloat(cs.fontSize)*1.55)||20;
   const before=ta.value.slice(0,pos);
   const lineNum=before.split('\n').length;
-  const target=Math.max(0,(lineNum-3)*lh);
-  ta.scrollTop=target;
+  ta.scrollTop=Math.max(0,(lineNum-3)*lh);
   syncScroll();
 }
-
 function selectMatch(){
   if(matchIndex<0||matchIndex>=matches.length)return;
   const s=matches[matchIndex],en=s+searchInput.value.length;
-
-  /* Do NOT focus the textarea on mobile — it opens the keyboard and hides the search bar */
   ta.setSelectionRange(s,en);
   scrollToPosition(s);
   updateSearchCount();
 }
-searchInput.addEventListener('input',function(){
-  /* Reset to first match whenever the query changes */
-  runSearch();
-});
+searchInput.addEventListener('input',runSearch);
 searchInput.addEventListener('keydown',function(e){
   if(e.key==='Enter'){e.preventDefault();e.shiftKey?prevMatch():nextMatch()}
   if(e.key==='Escape')closeSearch();
 });
-function nextMatch(){
-  if(!matches.length)return;
-  matchIndex=(matchIndex+1)%matches.length;
-  selectMatch();
-}
-function prevMatch(){
-  if(!matches.length)return;
-  matchIndex=(matchIndex-1+matches.length)%matches.length;
-  selectMatch();
-}
+function nextMatch(){if(!matches.length)return;matchIndex=(matchIndex+1)%matches.length;selectMatch()}
+function prevMatch(){if(!matches.length)return;matchIndex=(matchIndex-1+matches.length)%matches.length;selectMatch()}
 $('editorSearchNext').onclick=nextMatch;
 $('editorSearchPrev').onclick=prevMatch;
 $('editorSearchClose').onclick=closeSearch;
@@ -198,34 +185,46 @@ async function saveFile(){
   if(!f)return;
   f.text=ta.value;f.blob=null;dirty=false;
   status.textContent=currentPath+' ✓';
-  /* Persist to IndexedDB so changes stay after refresh */
   if(typeof window.saveCurrentProject==='function'){
     try{
       await window.saveCurrentProject();
       status.textContent=currentPath+' ✓ Saved';
+      toast('Saved','success');
       setTimeout(function(){status.textContent=currentPath},1500);
-    }catch(e){console.warn('save failed',e)}
+    }catch(e){toast('Save failed','error')}
   }
   if(typeof render==='function')render();
 }
-fileSelect.addEventListener('change',function(e){
-  if(dirty&&!confirm('Discard unsaved changes?')){fileSelect.value=currentPath;return}
+fileSelect.addEventListener('change',async function(e){
+  if(dirty){
+    const ok=await confirmFn('You have unsaved changes. Discard them?',{title:'Unsaved changes',confirmText:'Discard',cancelText:'Keep editing'});
+    if(!ok){fileSelect.value=currentPath;return}
+  }
   loadFile(e.target.value);
 });
 $('editorSaveBtn').onclick=saveFile;
-$('editorNewBtn').onclick=function(){
-  const name=prompt('New file path (e.g. pages/about.html):');if(!name)return;
-  if(files.find(function(f){return f.path===name})){alert('File already exists');return}
-  files.push({path:name,name:name.split('/').pop(),size:0,type:'text/plain',blob:null,text:''});
+$('editorNewBtn').onclick=async function(){
+  const name=await promptFn('New file', '', {message:'Enter a file path, e.g. pages/about.html',icon:'📄'});
+  if(!name||!name.trim())return;
+  const p=name.trim();
+  if(files.find(function(f){return f.path===p})){toast('File already exists','error');return}
+  files.push({path:p,name:p.split('/').pop(),size:0,type:'text/plain',blob:null,text:''});
   files.sort(function(a,b){return a.path.localeCompare(b.path)});
-  refreshFileList();loadFile(name);
+  refreshFileList();loadFile(p);
   if(typeof render==='function')render();
   if(typeof window.saveCurrentProject==='function')window.saveCurrentProject();
+  toast('Created '+p,'success');
 };
 
-/* ===== Preview ===== */
+/* ===== Preview (no flash) ===== */
 function renderPreview(){
   if(!currentPath)return;
+  const loader=$('editorPreviewLoader');
+  if(loader)loader.classList.add('show');
+  previewFrame.onload=function(){
+    if(loader)loader.classList.remove('show');
+    previewFrame.onload=null;
+  };
   previewFrame.srcdoc=(typeof htmlRewrite==='function')?htmlRewrite(ta.value,currentPath):ta.value;
 }
 $('editorPreviewRefresh').onclick=renderPreview;
@@ -242,7 +241,6 @@ $('editorFullBtn').onclick=function(){
   $('editorFullBtn').classList.toggle('active',on);
 };
 
-/* Auto-refresh file list when editor tab opens */
 if(editorPage){
   const obs=new MutationObserver(function(){if(!editorPage.hidden)refreshFileList()});
   obs.observe(editorPage,{attributes:true,attributeFilter:['hidden']});

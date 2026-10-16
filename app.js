@@ -20,19 +20,6 @@ async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all
 function serializeFiles(){return files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})}
 function deserializeFiles(arr){return arr.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})}
 
-async function saveCurrentProject(){
-  if(!files.length||!currentProjectId)return;
-  const all=await dbGetAll();
-  const existing=all.find(function(p){return p.id===currentProjectId});
-  await dbUpsertProject({
-    id:currentProjectId,
-    name:$('detailProjectName')?$('detailProjectName').textContent:($('homeProjectName')?$('homeProjectName').textContent:'Project'),
-    files:serializeFiles(),
-    savedAt:Date.now(),
-    createdAt:existing?existing.createdAt:Date.now()
-  });
-}
-
 function timeAgo(ts){
   const s=Math.floor((Date.now()-ts)/1000);
   if(s<60)return 'just now';
@@ -54,25 +41,83 @@ async function renderProjectCards(){
   const all=await dbGetAll();
   const box=$('projectCards');if(!box)return;
   if($('projectCount'))$('projectCount').textContent=all.length+(all.length===1?' project':' projects');
-  if(!all.length){box.innerHTML='<div class="pc-empty">No saved projects yet.<br>Import a folder or ZIP to create one.</div>';return}
+  if(!all.length){box.innerHTML='<div class="pc-empty">No saved projects yet.<br>Import a folder, ZIP, or GitHub repo to create one.</div>';return}
   box.innerHTML=all.map(function(p){
     const initials=(p.name||'?').slice(0,2).toUpperCase();
-    return '<div class="project-card" data-id="'+esc(p.id)+'">'+
-      '<div class="pc-top"><div class="pc-icon">'+esc(initials)+'</div><div class="pc-name">'+esc(p.name||'Untitled')+'</div></div>'+
-      '<div class="pc-meta"><span>'+p.files.length+' file'+(p.files.length===1?'':'s')+'</span><span>'+timeAgo(p.savedAt)+'</span></div>'+
+    const active=(p.id===currentProjectId)?' active':'';
+    return '<div class="project-card'+active+'" data-id="'+esc(p.id)+'">'+
+      '<div class="pc-top">'+
+        '<div class="pc-icon">'+esc(initials)+'</div>'+
+        '<div class="pc-info">'+
+          '<div class="pc-name">'+esc(p.name||'Untitled')+'</div>'+
+          '<div class="pc-meta">'+p.files.length+' file'+(p.files.length===1?'':'s')+' · '+timeAgo(p.savedAt)+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="pc-actions">'+
+        '<button class="pc-btn primary" data-act="preview">▶ Preview</button>'+
+        '<button class="pc-btn" data-act="edit" title="Edit code">✎</button>'+
+        '<button class="pc-btn" data-act="changes" title="Import changes">↻</button>'+
+        '<button class="pc-btn danger" data-act="delete" title="Delete">🗑</button>'+
+      '</div>'+
     '</div>';
   }).join('');
-  box.querySelectorAll('.project-card').forEach(function(c){c.onclick=function(){openProjectDetail(c.dataset.id)}});
+  box.querySelectorAll('.project-card').forEach(function(card){
+    const id=card.dataset.id;
+    card.querySelectorAll('.pc-btn').forEach(function(btn){
+      btn.onclick=function(e){
+        e.stopPropagation();
+        const act=btn.dataset.act;
+        if(act==='preview')cardPreview(id);
+        else if(act==='edit')cardEdit(id);
+        else if(act==='changes')cardChanges(id);
+        else if(act==='delete')cardDelete(id,card.querySelector('.pc-name').textContent);
+      };
+    });
+    card.onclick=function(){openProjectDetail(id)};
+  });
+}
+
+async function loadProjectIntoMemory(id){
+  const all=await dbGetAll();
+  const p=all.find(function(x){return x.id===id});if(!p)return null;
+  currentProjectId=p.id;
+  files=deserializeFiles(p.files);
+  return p;
+}
+
+async function cardPreview(id){
+  const p=await loadProjectIntoMemory(id);if(!p)return;
+  render();
+  showTab('preview');
+  const first=htmlPages()[0];
+  if(first)openPage(first.path);
+}
+
+async function cardEdit(id){
+  const p=await loadProjectIntoMemory(id);if(!p)return;
+  render();
+  showTab('editor');
+}
+
+async function cardChanges(id){
+  const p=await loadProjectIntoMemory(id);if(!p)return;
+  if($('status'))$('status').textContent='Pick the same folder to import changes into "'+p.name+'".';
+  $('changesFolderInput').click();
+}
+
+async function cardDelete(id,name){
+  if(!confirm('Delete project "'+name+'" permanently?'))return;
+  await dbDeleteProject(id);
+  if(currentProjectId===id){currentProjectId=null;files=[]}
+  await renderProjectCards();
+  render();
 }
 
 async function openProjectDetail(id){
-  const all=await dbGetAll();
-  const p=all.find(function(x){return x.id===id});if(!p)return;
-  currentProjectId=p.id;
-  files=deserializeFiles(p.files);
+  const p=await loadProjectIntoMemory(id);if(!p)return;
   if($('detailProjectName'))$('detailProjectName').textContent=p.name;
   if($('detailFileCount'))$('detailFileCount').textContent=files.length+' files';
-  if($('detailStatus'))$('detailStatus').textContent='Loaded '+files.length+' files. Edit or import changes.';
+  if($('detailStatus'))$('detailStatus').textContent='Loaded '+files.length+' files.';
   const list=$('detailFileList');
   if(list){
     list.className='filelist';
@@ -84,6 +129,7 @@ async function openProjectDetail(id){
   if($('projectDetailView'))$('projectDetailView').hidden=false;
   populatePages();
   render();
+  renderProjectCards();
 }
 
 function showProjectsList(){
@@ -92,24 +138,50 @@ function showProjectsList(){
   renderProjectCards();
 }
 
-/* ===== Import flows ===== */
-async function importNewFiles(result,name){
-  const id=Date.now().toString();
-  currentProjectId=id;
-  files=result.filter(function(f){return f.path&&!f.path.split('/').some(function(p){return p.startsWith('.')&&p!=='.well-known'})}).sort(function(a,b){return a.path.localeCompare(b.path)});
-  await dbUpsertProject({id:id,name:name||'Imported website',files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now()});
-  if($('status'))$('status').textContent='Created new project with '+files.length+' files.';
+/* ===== Import pipeline ===== */
+function cleanIncoming(result){
+  return result.filter(function(f){return f.path&&!f.path.split('/').some(function(p){return p.startsWith('.')&&p!=='.well-known'})}).sort(function(a,b){return a.path.localeCompare(b.path)});
+}
+
+async function processIncoming(result,name){
+  result=cleanIncoming(result);
+  const all=await dbGetAll();
+  const existing=all.find(function(p){return p.name===name});
+  if(existing){
+    currentProjectId=existing.id;
+    files=result;
+    await dbUpsertProject({id:existing.id,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:existing.createdAt});
+    if($('status'))$('status').textContent='Updated existing project "'+name+'" with '+files.length+' files.';
+  }else{
+    currentProjectId=Date.now().toString();
+    files=result;
+    await dbUpsertProject({id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now()});
+    if($('status'))$('status').textContent='Created new project "'+name+'" with '+files.length+' files.';
+  }
   await renderProjectCards();
   populatePages();
   render();
-  showProjectsList();
 }
 
-async function importChanges(result){
-  if(!currentProjectId){alert('No project open');return}
-  const incoming=result.filter(function(f){return f.path&&!f.path.split('/').some(function(p){return p.startsWith('.')&&p!=='.well-known'})}).sort(function(a,b){return a.path.localeCompare(b.path)});
-  const map=new Map();
-  incoming.forEach(function(f){map.set(f.path,f)});
+/* ===== Folder / ZIP ===== */
+$('folderInput').addEventListener('change',async function(e){
+  const list=[].slice.call(e.target.files);if(!list.length)return;
+  const name=(list[0].webkitRelativePath||'').split('/')[0]||'Website';
+  if($('status'))$('status').textContent='Reading folder…';
+  const result=await Promise.all(list.map(async function(f){
+    return{path:(f.webkitRelativePath||f.name).split('/').slice(1).join('/')||f.name,name:f.name,size:f.size,type:f.type,blob:f,text:textExt.has(ext(f.name))?await f.text():null};
+  }));
+  await processIncoming(result,name);
+  e.target.value='';
+});
+
+$('changesFolderInput').addEventListener('change',async function(e){
+  const list=[].slice.call(e.target.files);if(!list.length)return;
+  if($('status'))$('status').textContent='Reading folder…';
+  const result=cleanIncoming(await Promise.all(list.map(async function(f){
+    return{path:(f.webkitRelativePath||f.name).split('/').slice(1).join('/')||f.name,name:f.name,size:f.size,type:f.type,blob:f,text:textExt.has(ext(f.name))?await f.text():null};
+  })));
+  const map=new Map();result.forEach(function(f){map.set(f.path,f)});
   let updated=0,added=0;
   files.forEach(function(f){
     if(map.has(f.path)){
@@ -119,50 +191,66 @@ async function importChanges(result){
   });
   map.forEach(function(f){files.push(f);added++});
   files.sort(function(a,b){return a.path.localeCompare(b.path)});
-  const name=$('detailProjectName')?$('detailProjectName').textContent:'Project';
-  await dbUpsertProject({id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now()});
-  if($('detailStatus'))$('detailStatus').textContent='Changes imported: '+updated+' updated, '+added+' new.';
-  if($('detailFileCount'))$('detailFileCount').textContent=files.length+' files';
-  await openProjectDetail(currentProjectId);
+  const existing=(await dbGetAll()).find(function(p){return p.id===currentProjectId});
+  const name=existing?existing.name:'Project';
+  await dbUpsertProject({id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:existing?existing.createdAt:Date.now()});
+  if($('status'))$('status').textContent='Imported changes: '+updated+' updated, '+added+' new.';
+  await renderProjectCards();
+  populatePages();
+  render();
+  e.target.value='';
+});
+
+async function loadZipBlob(blob,fallbackName){
+  const z=await JSZip.loadAsync(blob);
+  let result=await Promise.all(Object.values(z.files).filter(function(x){return !x.dir}).map(async function(x){
+    const b=await x.async('blob');
+    return{path:x.name.replace(/^\/+/,''),name:base(x.name),size:b.size,type:b.type,blob:b,text:textExt.has(ext(x.name))?await b.text():null};
+  }));
+  const roots=Array.from(new Set(result.map(function(x){return x.path.split('/')[0]})));
+  if(roots.length===1&&result.every(function(x){return x.path.indexOf('/')!==-1})){result.forEach(function(x){x.path=x.path.slice(x.path.indexOf('/')+1)})}
+  return {result:result,name:fallbackName};
 }
-
-/* ===== Folder / ZIP pickers ===== */
-$('folderInput').addEventListener('change',async function(e){
-  const list=[].slice.call(e.target.files);if(!list.length)return;
-  const name=(list[0].webkitRelativePath||'').split('/')[0]||'Website';
-  const result=await Promise.all(list.map(async function(f){
-    return{path:(f.webkitRelativePath||f.name).split('/').slice(1).join('/')||f.name,name:f.name,size:f.size,type:f.type,blob:f,text:textExt.has(ext(f.name))?await f.text():null};
-  }));
-  await importNewFiles(result,name);
-  e.target.value='';
-});
-
-$('changesFolderInput').addEventListener('change',async function(e){
-  const list=[].slice.call(e.target.files);if(!list.length)return;
-  if($('detailStatus'))$('detailStatus').textContent='Reading folder…';
-  const result=await Promise.all(list.map(async function(f){
-    return{path:(f.webkitRelativePath||f.name).split('/').slice(1).join('/')||f.name,name:f.name,size:f.size,type:f.type,blob:f,text:textExt.has(ext(f.name))?await f.text():null};
-  }));
-  await importChanges(result);
-  e.target.value='';
-});
 
 $('zipInput').addEventListener('change',async function(e){
   const f=e.target.files[0];if(!f)return;
   if(!window.JSZip){if($('status'))$('status').textContent='ZIP library did not load.';return}
   if($('status'))$('status').textContent='Reading ZIP…';
   try{
-    const z=await JSZip.loadAsync(f);
-    let result=await Promise.all(Object.values(z.files).filter(function(x){return !x.dir}).map(async function(x){
-      const blob=await x.async('blob');
-      return{path:x.name.replace(/^\/+/,''),name:base(x.name),size:blob.size,type:blob.type,blob:blob,text:textExt.has(ext(x.name))?await blob.text():null};
-    }));
-    const roots=Array.from(new Set(result.map(function(x){return x.path.split('/')[0]})));
-    if(roots.length===1&&result.every(function(x){return x.path.indexOf('/')!==-1})){result.forEach(function(x){x.path=x.path.slice(x.path.indexOf('/')+1)})}
-    await importNewFiles(result,f.name.replace(/\.zip$/i,''));
+    const r=await loadZipBlob(f,f.name.replace(/\.zip$/i,''));
+    await processIncoming(r.result,r.name);
   }catch(err){if($('status'))$('status').textContent='Could not read this ZIP.'}
   e.target.value='';
 });
+
+/* ===== GitHub import ===== */
+async function githubImport(){
+  const raw=($('githubUrl').value||'').trim();
+  if(!raw){if($('githubStatus'))$('githubStatus').textContent='Paste a GitHub URL first.';return}
+  const m=raw.match(/github\.com\/([^\/\s]+)\/([^\/\s#?]+?)(?:\.git)?(?:\/tree\/([^\/\s#?]+))?\/?(?:[#?].*)?$/i);
+  if(!m){if($('githubStatus'))$('githubStatus').textContent='Invalid URL. Use github.com/owner/repo';return}
+  const owner=m[1],repo=m[2],branch=m[3];
+  const tries=branch?[branch]:['main','master'];
+  if($('githubStatus'))$('githubStatus').textContent='Downloading from GitHub…';
+  let ok=false;
+  for(const b of tries){
+    try{
+      const url='https://codeload.github.com/'+owner+'/'+repo+'/zip/refs/heads/'+b;
+      const res=await fetch(url);
+      if(!res.ok)continue;
+      const blob=await res.blob();
+      if($('githubStatus'))$('githubStatus').textContent='Extracting files…';
+      const r=await loadZipBlob(blob,repo);
+      await processIncoming(r.result,r.name);
+      if($('githubStatus'))$('githubStatus').textContent='Imported '+owner+'/'+repo+' ('+b+') — '+files.length+' files.';
+      if($('githubUrl'))$('githubUrl').value='';
+      ok=true;break;
+    }catch(err){console.warn(err)}
+  }
+  if(!ok){if($('githubStatus'))$('githubStatus').textContent='Download failed. Check the URL, branch, or CORS.'}
+}
+$('githubImportBtn').onclick=githubImport;
+$('githubUrl').addEventListener('keydown',function(e){if(e.key==='Enter')githubImport()});
 
 /* ===== Detail view buttons ===== */
 $('backToProjectsBtn').onclick=showProjectsList;
@@ -171,32 +259,27 @@ $('detailImportChangesBtn').onclick=function(){if(currentProjectId)$('changesFol
 $('detailBundleBtn').onclick=function(){showTab('bundle');render()};
 $('detailDeleteBtn').onclick=async function(){
   if(!currentProjectId)return;
-  if(!confirm('Delete this project permanently?'))return;
-  await dbDeleteProject(currentProjectId);
-  currentProjectId=null;files=[];
+  const p=(await dbGetAll()).find(function(x){return x.id===currentProjectId});
+  await cardDelete(currentProjectId,p?p.name:'this project');
   showProjectsList();
 };
 
-/* ===== Render (null-safe) ===== */
+/* ===== Render ===== */
 function render(){
   const pages=htmlPages();
   const setT=function(id,v){const el=$(id);if(el)el.textContent=v};
   const setD=function(id,v){const el=$(id);if(el)el.disabled=v};
-
-  const pname=$('detailProjectName')&&$('detailProjectName').textContent;
-  const fallback=currentProjectId?'Project':'No project loaded';
-
-  setT('homeProjectName',pname||fallback);
+  const pname=$('detailProjectName')?$('detailProjectName').textContent:'';
+  const fallback=currentProjectId?(pname||'Project'):'No project loaded';
+  setT('homeProjectName',fallback);
   setT('homeFileCount',files.length+' files');
-  setT('homeStatus',files.length?files.length+' files loaded. Open Projects to manage, Editor to modify.':'Go to Projects to import a website folder or ZIP.');
-  setT('bundleProjectName',pname||fallback);
+  setT('homeStatus',files.length?files.length+' files loaded. Open Projects to manage, Editor to modify.':'Go to Projects to import a website folder, ZIP, or GitHub repo.');
+  setT('bundleProjectName',fallback);
   setT('bundleFileCount',files.length+' files');
   setT('bundleStatus',files.length?'Ready to export '+files.length+' files.':'Import a project first.');
-
   setD('homeBundleBtn',!files.length);
   setD('homeOpenPreviewBtn',!pages.length);
   setD('bundleBtn',!files.length);
-
   populatePages();
 }
 
@@ -304,9 +387,10 @@ function showTab(name){
   if(name==='projects')showProjectsList();
 }
 
-/* ===== Home & misc buttons ===== */
+/* ===== Buttons ===== */
 $('homeProjectsBtn').onclick=function(){showTab('projects')};
 $('homePreviewBtn').onclick=function(){showTab('preview')};
+$('homeGithubBtn').onclick=function(){showTab('projects');setTimeout(function(){if($('githubUrl'))$('githubUrl').focus()},200)};
 $('homeBundleBtn').onclick=function(){exportBundle()};
 $('homeOpenPreviewBtn').onclick=function(){showTab('preview');if(currentPagePath)openPage(currentPagePath)};
 $('bundleBtn').onclick=exportBundle;

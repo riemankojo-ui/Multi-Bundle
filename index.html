@@ -4,7 +4,7 @@
 <header class="topbar"><div class="mark">MB</div><div class="brand"><b>MULTI <span>BUNDLE</span></b><small>Local website preview</small></div><button id="clearBtn" class="icon">↺</button></header>
 <main>
 <section id="homePage" class="tab-page">
- <section class="card hero"><label class="eyebrow">YOUR LOCAL WORKSPACE</label><h1>Build it. <span>Preview it.</span></h1><p>Keep your website files organized, create a TXT bundle, and preview static pages locally on your device.</p><div class="actions"><button id="homeProjectsBtn" class="btn primary">▣ Open Projects</button><button id="homePreviewBtn" class="btn secondary">◉ Open Preview</button></div></section>
+ <section class="card hero"><label class="eyebrow">YOUR LOCAL WORKSPACE</label><h1>Build it. <span>Preview it.</span></h1><p>Keep your website files organized, create a TXT bundle, and preview static pages locally on your device.</p><div class="actions"><button id="homeProjectsBtn" class="btn primary">▣ Open Projects</button><button id="homePreviewBtn" class="btn secondary">◉ Open Preview</button><button id="homeGithubBtn" class="btn secondary">🐙 GitHub</button></div></section>
  <section class="card"><label class="eyebrow">CURRENT PROJECT</label><div class="heading"><h2 id="homeProjectName">No project loaded</h2><span id="homeFileCount" class="pill">0 files</span></div><p id="homeStatus">Go to Projects to import a website folder or ZIP.</p><div class="actions"><button id="homeBundleBtn" class="btn primary" disabled>⇩ Create TXT bundle</button><button id="homeOpenPreviewBtn" class="btn secondary" disabled>▶ Preview website</button></div></section>
  <section class="card note-card"><b>ℹ️ Local workspace</b><p>Best for static HTML, CSS, JavaScript, and images. Server-side features like PHP and databases need a real server. Keep your original files safe.</p></section>
 </section>
@@ -14,13 +14,25 @@
     <section class="card">
       <label class="eyebrow">PROJECTS</label>
       <h1>Your <span>Projects</span></h1>
-      <p>Import a website folder or ZIP. Your files are saved on this device.</p>
+      <p>Import a website folder, ZIP, or GitHub repo. Your files are saved on this device.</p>
       <div class="actions">
         <label class="btn primary">📁 New project<input id="folderInput" type="file" webkitdirectory directory multiple hidden></label>
         <label class="btn secondary">📦 Import ZIP<input id="zipInput" type="file" accept=".zip,application/zip" hidden></label>
       </div>
       <div class="status" id="status">Choose a folder or ZIP to start a new project.</div>
     </section>
+
+    <section class="card">
+      <label class="eyebrow">GITHUB</label>
+      <h2>Import from GitHub</h2>
+      <p>Paste a repo URL. Example: <code>github.com/user/repo</code></p>
+      <div class="gh-row">
+        <input id="githubUrl" type="text" placeholder="https://github.com/owner/repo" autocomplete="off">
+        <button id="githubImportBtn" class="btn primary">⇩ Import</button>
+      </div>
+      <div class="status" id="githubStatus">Public repos only. Branch defaults to main (falls back to master).</div>
+    </section>
+
     <section class="card">
       <div class="heading">
         <div><label class="eyebrow">SAVED PROJECTS</label><h2>All projects</h2></div>

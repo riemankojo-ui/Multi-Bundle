@@ -196,7 +196,8 @@ function exportBundle(){
 }
 
 function showTab(name){
-['home','projects','bundle','preview','editor','backups'].forEach(...)
+['home','projects','bundle','preview','editor','backups'].forEach(p=>{
+    const el=$(p+'Page');
     const el=$(p+'Page');
     if(el)el.hidden=(p!==name);
   });

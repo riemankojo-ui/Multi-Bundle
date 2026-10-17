@@ -119,6 +119,12 @@ code{background:#101115;padding:2px 6px;border-radius:4px;font-size:12px;color:#
 .primary{background:var(--red);color:#fff}
 .secondary{background:#282930;color:#f5f5f7;border:1px solid #3b3c44}
 .btn:disabled{opacity:.35;cursor:not-allowed}
+.btn-sm{
+  padding:8px 12px!important;
+  font-size:11px!important;
+  min-height:32px;
+  border-radius:8px;
+}
 
 /* ========== Layout helpers ========== */
 .heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
@@ -443,11 +449,6 @@ body.editor-full main{padding:0}
 .update-row .upd-time{font-size:10px;color:var(--muted);white-space:nowrap}
 
 /* ========== Snapshots ========== */
-.save-now-btn{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  font-size:13px;padding:14px 16px;margin-bottom:12px;width:100%;
-}
-.save-now-btn svg{flex-shrink:0}
 .snapshots-list{max-height:400px;overflow:auto}
 .snapshot-row{
   display:flex;align-items:center;gap:10px;padding:10px 4px;

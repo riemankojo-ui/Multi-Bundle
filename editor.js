@@ -178,10 +178,8 @@ async function saveFile(){
   const f=files.find(function(x){return x.path===currentPath});
   if(!f)return;
 
-  /* Detect if text actually changed */
   const changed=(ta.value!==originalText);
   if(!changed){
-    /* Nothing to save — no history, no notification */
     dirty=false;
     status.textContent=currentPath;
     toast('No changes to save');

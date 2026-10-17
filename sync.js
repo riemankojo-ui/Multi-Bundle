@@ -1,48 +1,67 @@
 /* sync.js — Google login + Firestore-backed project storage */
 (function () {
-  if (!window.__fb) return; // Wait for Firebase to load
-  const { auth, db, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc } = window.__fb;
+  if (typeof firebase === 'undefined') {
+    console.error("Firebase failed to load.");
+    return;
+  }
 
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const loginGate = document.getElementById("loginGate");
+  const gateBtn = document.getElementById("gateLoginBtn");
+  
   let cloudUser = null;
 
-  window.getCloudUser = () => cloudUser;
-  window.isCloudSignedIn = () => !!cloudUser;
+  // Add click event to the big Google button on the gate
+  if (gateBtn) {
+    gateBtn.onclick = async function () {
+      gateBtn.innerHTML = 'Signing in...';
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      try {
+        await auth.signInWithRedirect(provider);
+      } catch (e) {
+        if (window.showToast) window.showToast(e.message, "error");
+        gateBtn.innerHTML = 'Continue with Google';
+      }
+    };
+  }
 
-  onAuthStateChanged(auth, async (user) => {
+  // Check if we just came back from a redirect login
+auth.getRedirectResult().catch(function(error) {
+  if (window.showToast) window.showToast(error.message, "error");
+  if (gateBtn) gateBtn.innerHTML = 'Continue with Google';
+});
+
+// Listen for login/logout
+auth.onAuthStateChanged(async (user) => {
     cloudUser = user;
     renderAuthUi(user);
 
     if (user) {
+      if (loginGate) loginGate.style.display = "none"; // Hide the gate
       await migrateLocalToCloud(user.uid);
       if (typeof window.__refreshProjects === "function") window.__refreshProjects();
+    } else {
+      if (loginGate) loginGate.style.display = "flex"; // Show the gate
     }
   });
 
-  window.signInWithGoogle = async function () {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (e) {
-      if (window.showToast) window.showToast(e.message, "error");
-    }
-  };
-
   window.signOutGoogle = async function () {
-    await signOut(auth);
+    await auth.signOut();
   };
 
   function projectsDoc(uid) {
-    return doc(db, "users", uid, "data", "projects");
+    return db.collection("users").doc(uid).collection("data").doc("projects");
   }
 
   async function cloudGetProjects(uid) {
-    const snap = await getDoc(projectsDoc(uid));
-    return snap.exists() ? snap.data().projects || [] : null;
+    const snap = await projectsDoc(uid).get();
+    return snap.exists ? snap.data().projects || [] : null;
   }
 
   async function cloudSetProjects(uid, projects) {
-    await setDoc(projectsDoc(uid), { projects, updatedAt: Date.now() });
+    await projectsDoc(uid).set({ projects, updatedAt: Date.now() });
   }
 
   async function migrateLocalToCloud(uid) {
@@ -80,21 +99,17 @@
     if (user) {
       box.innerHTML = `
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <img src="${user.photoURL || ""}" alt="" style="width:38px;height:38px;border-radius:50%;flex-shrink:0;">
-          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">
+          <img src="${user.photoURL || ""}" style="width:38px;height:38px;border-radius:50%;">
+          <div style="flex:1;min-width:0;">
             <b style="overflow-wrap:anywhere;">${user.displayName || "Signed in"}</b>
-            <small style="font-size:11px;color:var(--muted);overflow-wrap:anywhere;">${user.email || ""}</small>
+            <small style="font-size:11px;color:var(--muted);display:block;overflow-wrap:anywhere;">${user.email || ""}</small>
           </div>
           <button class="btn secondary" id="authOutBtn" style="padding:8px 12px;font-size:11px;">Sign out</button>
         </div>
       `;
       document.getElementById("authOutBtn").onclick = () => window.signOutGoogle();
     } else {
-      box.innerHTML = `
-        <button class="btn primary" id="authInBtn" style="width:100%">Continue with Google</button>
-        <p class="note" style="margin:8px 0 0">Sign in to keep your projects across devices.</p>
-      `;
-      document.getElementById("authInBtn").onclick = () => window.signInWithGoogle();
+      box.innerHTML = `<p class="note">Not signed in.</p>`;
     }
   }
 })();

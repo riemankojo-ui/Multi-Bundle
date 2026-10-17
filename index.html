@@ -240,7 +240,14 @@
   <div class="editor-shell" id="editorShell">
     <div class="editor-toolbar">
       <div class="et-row et-file-row">
-        <select id="editorFileSelect" class="editor-file-select"></select>
+       <select id="editorFileSelect" class="editor-file-select"></select>
+        <button id="editorThemeBtn" class="editor-btn small" title="Editor colors" aria-label="Editor colors"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg></button>
+        <div id="editorThemeCard" class="editor-theme-card">
+          <button data-th="lb" class="eth-opt"><i style="background:#1c1d22"></i>Light Black</button>
+          <button data-th="pw" class="eth-opt"><i style="background:#f5f5f3"></i>Pure White</button>
+          <button data-th="sb" class="eth-opt"><i style="background:#000000"></i>Solid Black</button>
+          <button data-th="sw" class="eth-opt"><i style="background:#ffffff"></i>Solid White</button>
+        </div>
       </div>
       <div class="et-row et-actions">
         <button id="editorNewBtn" class="editor-btn" title="New file">

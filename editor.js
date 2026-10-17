@@ -213,7 +213,9 @@ function refreshFileList(){
   const cf=cur?tf.find(function(f){return f.path===cur}):null;
   if(cf&&pid===window.__edPid){fileSelect.value=cur;if(!dirty&&cf.text!==originalText)loadFile(cur);return}
   window.__edPid=pid;
-  if(tf[0])loadFile(tf[0].path);
+  let want='';try{const sf=JSON.parse(localStorage.getItem('mb_file')||'null');if(sf&&sf.pid===pid)want=sf.path}catch(e){}
+  const pick=tf.find(function(f){return f.path===want})||tf[0];
+  if(pick)loadFile(pick.path);
 }
 function loadFile(path){
   const f=files.find(function(x){return x.path===path});if(!f||f.text==null)return;
@@ -221,6 +223,7 @@ function loadFile(path){
   undoStack=[f.text];redoStack=[];updateBtns();
   updateGutter();updateCursor();refreshHighlight();
   status.textContent=path;fileSelect.value=path;
+  try{localStorage.setItem('mb_file',JSON.stringify({pid:(typeof currentProjectId!=='undefined'?currentProjectId:''),path:path}))}catch(e){}
   renderPreview();
 }
 function markDirty(){dirty=true;status.textContent=currentPath+' •'}
@@ -301,5 +304,20 @@ if(editorPage){
   obs.observe(editorPage,{attributes:true,attributeFilter:['hidden']});
 }
 
+const themeBtn=$('editorThemeBtn'),themeCard=$('editorThemeCard');
+function applyEdTheme(t){
+  ['lb','pw','sb','sw'].forEach(function(k){shell.classList.remove('th-'+k)});
+  if(t)shell.classList.add('th-'+t);
+  if(themeCard)themeCard.querySelectorAll('[data-th]').forEach(function(b){b.classList.toggle('on',b.dataset.th===t)});
+  try{localStorage.setItem('mb_edtheme',t||'')}catch(e){}
+}
+if(themeBtn&&themeCard){
+  themeBtn.onclick=function(e){e.stopPropagation();themeCard.classList.toggle('open')};
+  themeCard.onclick=function(e){e.stopPropagation()};
+  themeCard.querySelectorAll('[data-th]').forEach(function(b){b.onclick=function(){applyEdTheme(b.dataset.th);themeCard.classList.remove('open')}});
+  document.addEventListener('click',function(){themeCard.classList.remove('open')});
+  let savedTheme='';try{savedTheme=localStorage.getItem('mb_edtheme')||''}catch(e){}
+  applyEdTheme(savedTheme);
+}
 updateGutter();refreshFileList();refreshHighlight();
 })();

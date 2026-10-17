@@ -15,6 +15,7 @@ document.addEventListener('click',function(e){
   const bd=document.getElementById('drawerBackdrop');
   if(drawer)drawer.classList.remove('open');
   if(bd)bd.classList.remove('open');
+   try{localStorage.setItem('mb_nav',JSON.stringify({tab:name,pid:currentProjectId}))}catch(e){}
   if(name==='projects'&&typeof showProjectsList==='function')showProjectsList();
   if(name==='updates'&&typeof setUpdatesTab==='function')setUpdatesTab(window.__updatesMode||'github');
 },true);
@@ -183,6 +184,16 @@ async function openProjectDetail(id){
   if($('projectsListView'))$('projectsListView').hidden=true;
   if($('projectDetailView'))$('projectDetailView').hidden=false;
   populatePages();render();renderProjectCards();
+(async function restoreNav(){
+  try{
+    const nav=JSON.parse(localStorage.getItem('mb_nav')||'null');if(!nav||!nav.tab||nav.tab==='home')return;
+    let loaded=false;
+    if(nav.pid){const p=await loadProjectIntoMemory(nav.pid);if(p){render();loaded=true}}
+    if((nav.tab==='editor'||nav.tab==='preview')&&!loaded)return;
+    showTab(nav.tab);
+    if(nav.tab==='preview'){const first=htmlPages()[0];if(first)openPage(first.path)}
+  }catch(e){}
+})();
 }
 function showProjectsList(){if($('projectsListView'))$('projectsListView').hidden=false;if($('projectDetailView'))$('projectDetailView').hidden=true;renderProjectCards()}
 
@@ -493,6 +504,7 @@ function showTab(name){
   });
   document.querySelectorAll('.bottom span').forEach(function(s){s.classList.toggle('selected',s.dataset.tab===name)});
   document.querySelectorAll('.drawer-nav a').forEach(function(a){a.classList.toggle('selected',a.dataset.tab===name)});
+   try{localStorage.setItem('mb_nav',JSON.stringify({tab:name,pid:currentProjectId}))}catch(e){}
   if(name==='projects')showProjectsList();
   if(name==='updates'&&typeof setUpdatesTab==='function')setUpdatesTab(window.__updatesMode||'github');
 }

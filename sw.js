@@ -1,6 +1,6 @@
 /* Multi Bundle Service Worker — v8 */
-const CACHE='multibundle-v19';
-const ASSETS=['/','/index.html','/style.css','/app.js','/editor.js','/settings.js',js','/manifest.json','/logo.png'];
+const CACHE='multibundle-v20';
+const ASSETS=['/','/index.html','/style.css','/app.js','/editor.js',''/settings.js','/publish.js',',js','/manifest.json','/logo.png'];
 
 self.addEventListener('install',function(e){
   self.skipWaiting();

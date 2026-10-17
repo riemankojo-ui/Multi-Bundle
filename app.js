@@ -60,9 +60,18 @@ function showInfo(title,message){return showModal({icon:'i',title:title,message:
 window.showConfirm=showConfirm;window.showPrompt=showPrompt;window.showInfo=showInfo;
 
 const DB_NAME='multibundle',DB_STORE='project';
-function openDB(){return new Promise(function(res,rej){const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=function(){const db=r.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE)};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
-async function dbGetAll(){try{const db=await openDB();const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get('projects');const d=await new Promise(function(res){req.onsuccess=function(){res(req.result)};req.onerror=function(){res(null)}});return d||[]}catch(e){return[]}}
-async function dbSetAll(arr){try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,'projects');await new Promise(function(res){tx.oncomplete=res})}catch(e){console.warn(e)}}
+let __dbp=null;
+function openDB(){if(!__dbp){__dbp=openDBRaw();__dbp.catch(function(){__dbp=null})}return __dbp}
+function openDBRaw(){return new Promise(function(res,rej){const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=function(){const db=r.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE)};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
+let __projCache=null;
+async function dbGetAll(){if(__projCache)return __projCache;const r=await dbGetAllRaw();__projCache=r;return r}
+async function dbGetAllRaw(){try{const db=await openDB();const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get('projects');const d=await new Promise(function(res){req.onsuccess=function(){res(req.result)};req.onerror=function(){res(null)}});return d||[]}catch(e){return[]}}
+let __saveTimer=null;
+function __flushProjects(){clearTimeout(__saveTimer);__saveTimer=null;if(__projCache)return dbSetAllNow(__projCache);return Promise.resolve()}
+async function dbSetAll(arr){__projCache=arr;clearTimeout(__saveTimer);__saveTimer=setTimeout(__flushProjects,500)}
+window.addEventListener('pagehide',function(){if(__saveTimer)__flushProjects()});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&__saveTimer)__flushProjects()});
+async function dbSetAllNow(arr){try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,'projects');await new Promise(function(res){tx.oncomplete=res})}catch(e){console.warn(e)}}
 async function dbUpsertProject(p){const all=await dbGetAll();const i=all.findIndex(function(x){return x.id===p.id});if(i>=0)all[i]=p;else all.unshift(p);await dbSetAll(all)}
 async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all.filter(function(x){return x.id!==id}))}
 
@@ -121,6 +130,7 @@ if($('drawerGithub'))$('drawerGithub').onclick=function(){closeDrawer();setTimeo
 if($('drawerClear'))$('drawerClear').onclick=function(){closeDrawer();if($('clearBtn'))$('clearBtn').click()};
 
 async function renderProjectCards(){
+  const pg=$('projectsPage');if(pg&&pg.hidden){dbGetAll();return}
   const all=await dbGetAll();const box=$('projectCards');if(!box)return;
   if($('projectCount'))$('projectCount').textContent=all.length+' / '+PROJECT_LIMIT;
   if(!all.length){box.innerHTML='<div class="pc-empty">No saved projects yet.<br>Import a folder or ZIP to create one.</div>';return}
@@ -171,6 +181,9 @@ async function cardDelete(id,name){
 }
 
 async function openProjectDetail(id){
+  if($('projectsListView'))$('projectsListView').hidden=true;
+  if($('projectDetailView'))$('projectDetailView').hidden=false;
+  if($('detailStatus'))$('detailStatus').textContent='Opening…';
   const p=await loadProjectIntoMemory(id);if(!p)return;
   if($('detailFileCount'))$('detailFileCount').textContent=files.length+' files';
   if($('detailStatus'))$('detailStatus').textContent='Loaded '+files.length+' files.';
@@ -183,7 +196,7 @@ async function openProjectDetail(id){
   }
   if($('projectsListView'))$('projectsListView').hidden=true;
   if($('projectDetailView'))$('projectDetailView').hidden=false;
-  populatePages();render();renderProjectCards();
+  populatePages();render();
 (async function restoreNav(){
   try{
     const nav=JSON.parse(localStorage.getItem('mb_nav')||'null');if(!nav||!nav.tab||nav.tab==='home')return;

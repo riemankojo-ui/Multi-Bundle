@@ -383,11 +383,11 @@
   </span>
 </nav>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+<script>
   const firebaseConfig = {
     apiKey: "AIzaSyBsZ-4kET9GM99MdSpaaHbqUdaFtOFApjo",
     authDomain: "multi-bundle-app.firebaseapp.com",
@@ -397,12 +397,8 @@
     appId: "1:426558428895:web:0f4dd87cb8afd2b3843b6a",
     measurementId: "G-NRLM5GB7N8"
   };
-
-  const app  = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db   = getFirestore(app);
-
-  window.__fb = { auth, db, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc };
+  
+  firebase.initializeApp(firebaseConfig);
 </script>
 
 <script src="sync.js"></script>

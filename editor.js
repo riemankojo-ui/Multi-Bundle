@@ -228,7 +228,7 @@ function renderPreview(){
   if(!currentPath)return;
   const loader=$('editorPreviewLoader');
   if(loader)loader.classList.add('show');
-  previewFrame.onload=function(){if(loader)loader.classList.remove('show');previewFrame.onload=null};
+  previewFrame.onload=function(){if(loader)loader.classList.remove('show');previewFrame.onload=null};clearTimeout(window.__pvLT);window.__pvLT=setTimeout(function(){if(loader)loader.classList.remove('show')},2500);
   previewFrame.srcdoc=(typeof htmlRewrite==='function')?htmlRewrite(ta.value,currentPath):ta.value;
 }
 $('editorPreviewRefresh').onclick=renderPreview;

@@ -472,7 +472,7 @@ function openPage(path){
   if($('previewPath'))$('previewPath').textContent=f.path;
   if(f.text==null){if($('placeholder'))$('placeholder').hidden=false;return}
   const frame=$('frame'),loader=$('previewLoader');if(loader)loader.classList.add('show');if($('placeholder'))$('placeholder').hidden=true;
-  frame.hidden=false;frame.onload=function(){if(loader)loader.classList.remove('show');frame.onload=null};
+  frame.hidden=false;frame.onload=function(){if(loader)loader.classList.remove('show');frame.onload=null};setTimeout(function(){if(loader)loader.classList.remove('show')},2500);
   frame.srcdoc=htmlRewrite(f.text,f.path);if($('refreshBtn'))$('refreshBtn').disabled=false;
 }
 

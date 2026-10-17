@@ -113,19 +113,39 @@ ta.addEventListener('keydown',function(e){
 });
 
 function openSearch(){searchBar.classList.add('open');searchInput.focus();searchInput.select()}
-function closeSearch(){searchBar.classList.remove('open');matches=[];matchIndex=-1;updateSearchCount()}
+function closeSearch(){searchBar.classList.remove('open');matches=[];matchIndex=-1;updateSearchCount();paintMatches()}
 function runSearch(){
- while((i=t.indexOf(n,i))!==-1){matches.push(i);matchLens.push(n.length);i+=n.length}
+  const q=searchInput.value;matches=[];matchLens=[];matchIndex=-1;
+  const gl=q.match(/^:(\d+)$/);if(gl){goToLine(parseInt(gl[1],10));searchCount.textContent='line '+gl[1];return}
+  if(q){const t=ta.value.toLowerCase(),n=q.toLowerCase();let i=0;
+    while((i=t.indexOf(n,i))!==-1){matches.push(i);matchLens.push(n.length);i+=n.length}
     if(!matches.length&&/\s/.test(q.trim())){
       try{const re=new RegExp(q.trim().split(/\s+/).map(function(w){return w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}).join('\\s+'),'gi');let m;
         while((m=re.exec(ta.value))!==null){matches.push(m.index);matchLens.push(m[0].length);if(m[0].length===0)re.lastIndex++}}catch(e){}
     }}
-  if(q){const t=ta.value.toLowerCase(),n=q.toLowerCase();let i=0;
-    while((i=t.indexOf(n,i))!==-1){matches.push(i);i+=n.length}}
   updateSearchCount();
-  if(matches.length){matchIndex=0;selectMatch()}
+  if(matches.length){matchIndex=0;selectMatch()}else paintMatches();
 }
 function updateSearchCount(){searchCount.textContent=matches.length?(matchIndex+1)+'/'+matches.length:'0/0'}
+function paintMatches(){
+  if(!(window.CSS&&CSS.highlights&&window.Highlight))return;
+  try{
+    CSS.highlights.delete('srch-all');CSS.highlights.delete('srch');
+    if(!matches.length)return;
+    const nodes=[];let acc=0;const w=document.createTreeWalker(hl,NodeFilter.SHOW_TEXT);let nd;
+    while((nd=w.nextNode())){nodes.push({n:nd,a:acc});acc+=nd.nodeValue.length}
+    function loc(p,end){for(let i=0;i<nodes.length;i++){const o=nodes[i],L=o.n.nodeValue.length;if(end?p<=o.a+L:p<o.a+L)return [o.n,p-o.a]}return null}
+    const all=[];let cur=null;
+    matches.forEach(function(s,i){
+      if(i>300&&i!==matchIndex)return;
+      const a=loc(s,false),b=loc(s+(matchLens[i]||0),true);if(!a||!b)return;
+      const r=new Range();r.setStart(a[0],a[1]);r.setEnd(b[0],b[1]);
+      if(i===matchIndex)cur=r;else all.push(r);
+    });
+    if(all.length)CSS.highlights.set('srch-all',new Highlight(...all));
+    if(cur)CSS.highlights.set('srch',new Highlight(cur));
+  }catch(e){}
+}
 function goToLine(n){
   const lines=ta.value.split('\n');n=Math.max(1,Math.min(n,lines.length));
   let pos=0;for(let i=0;i<n-1;i++)pos+=lines[i].length+1;
@@ -162,7 +182,7 @@ function selectMatch(){
   if(matchIndex<0||matchIndex>=matches.length)return;
    const s=matches[matchIndex],en=s+(matchLens[matchIndex]||searchInput.value.length);
   ta.setSelectionRange(s,en);
-  scrollToPosition(s);
+   scrollToPosition(s);paintMatches();
   updateSearchCount();
 }
 searchInput.addEventListener('input',runSearch);
@@ -194,6 +214,7 @@ function refreshFileList(){
   if(cf&&pid===window.__edPid){fileSelect.value=cur;if(!dirty&&cf.text!==originalText)loadFile(cur);return}
   window.__edPid=pid;
   if(tf[0])loadFile(tf[0].path);
+}
 function loadFile(path){
   const f=files.find(function(x){return x.path===path});if(!f||f.text==null)return;
   currentPath=path;ta.value=f.text;originalText=f.text;dirty=false;

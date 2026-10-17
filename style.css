@@ -292,6 +292,8 @@ iframe{width:100%;height:430px;background:#0d0e12;border:0;border-radius:9px;dis
 .editor-hl .tk-fn{color:var(--fn)}
 .editor-hl .tk-tag{color:var(--tag)}
 .editor-hl .tk-attr{color:var(--attr)}
+::highlight(srch-all){background:rgba(255,200,50,0.28)}
+::highlight(srch){background:#ffcc33;color:#000}
 
 /* ========== Editor full-screen preview ========== */
 .editor-preview-pane{

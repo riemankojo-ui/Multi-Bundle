@@ -188,6 +188,9 @@ async function saveFile(){
   if(typeof window.saveCurrentProject==='function'){
     try{
       await window.saveCurrentProject();
+      if(typeof window.logHistory==='function'){
+        window.logHistory({type:'edit',path:currentPath,note:'Edited file'});
+      }
       status.textContent=currentPath+' ✓ Saved';
       toast('Saved','success');
       setTimeout(function(){status.textContent=currentPath},1500);
@@ -204,7 +207,7 @@ fileSelect.addEventListener('change',async function(e){
 });
 $('editorSaveBtn').onclick=saveFile;
 $('editorNewBtn').onclick=async function(){
-  const name=await promptFn('New file', '', {message:'Enter a file path, e.g. pages/about.html',icon:'📄'});
+  const name=await promptFn('New file','',{message:'Enter a file path, e.g. pages/about.html',icon:'📄'});
   if(!name||!name.trim())return;
   const p=name.trim();
   if(files.find(function(f){return f.path===p})){toast('File already exists','error');return}
@@ -213,10 +216,11 @@ $('editorNewBtn').onclick=async function(){
   refreshFileList();loadFile(p);
   if(typeof render==='function')render();
   if(typeof window.saveCurrentProject==='function')window.saveCurrentProject();
+  if(typeof window.logHistory==='function')window.logHistory({type:'new',path:p,note:'Created file'});
   toast('Created '+p,'success');
 };
 
-/* ===== Preview (no flash) ===== */
+/* ===== Preview ===== */
 function renderPreview(){
   if(!currentPath)return;
   const loader=$('editorPreviewLoader');

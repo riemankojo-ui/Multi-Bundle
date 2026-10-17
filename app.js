@@ -6,7 +6,7 @@ document.addEventListener('click',function(e){
   if(!el)return;
   const name=el.dataset.tab;
   if(!name)return;
-  ['home','projects','bundle','preview','editor','backups','github'].forEach(function(p){
+  ['home','projects','bundle','preview','editor','backups','github','updates'].forEach(function(p){
     const page=document.getElementById(p+'Page');
     if(page)page.hidden=(p!==name);
   });
@@ -21,6 +21,7 @@ document.addEventListener('click',function(e){
   if(drawer)drawer.classList.remove('open');
   if(bd)bd.classList.remove('open');
   if(name==='projects'&&typeof showProjectsList==='function')showProjectsList();
+  if(name==='updates'&&typeof setUpdatesTab==='function')setUpdatesTab(window.__updatesMode||'github');
 },true);
 
 let files=[],urls=[],currentPagePath='',urlCache=new Map();
@@ -35,7 +36,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const size=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':(n/1048576).toFixed(1)+' MB';
 const mimeMap={html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',mjs:'text/javascript',json:'application/json',webmanifest:'application/manifest+json',txt:'text/plain',md:'text/plain',xml:'application/xml',svg:'image/svg+xml',csv:'text/csv',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',avif:'image/avif',bmp:'image/bmp',ico:'image/x-icon',woff:'font/woff',woff2:'font/woff2',ttf:'font/ttf',otf:'font/otf',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',mp4:'video/mp4',webm:'video/webm',pdf:'application/pdf'};
 
-/* ===== Toast & Modal helpers ===== */
+/* ===== Toast & Modal ===== */
 function showToast(msg,type){
   const root=$('toastRoot');if(!root)return;
   const t=document.createElement('div');
@@ -44,8 +45,7 @@ function showToast(msg,type){
   root.appendChild(t);
   setTimeout(function(){
     t.style.transition='opacity .2s,transform .2s';
-    t.style.opacity='0';
-    t.style.transform='translateY(-10px)';
+    t.style.opacity='0';t.style.transform='translateY(-10px)';
     setTimeout(function(){t.remove()},220);
   },2400);
 }
@@ -59,26 +59,21 @@ function showModal(opts){
     icon.textContent=opts.icon||'?';
     title.textContent=opts.title||'';
     msg.textContent=opts.message||'';
-    if(opts.input){
-      inp.hidden=false;
-      inp.value=opts.inputValue||'';
-      inp.placeholder=opts.inputPlaceholder||'';
-    }else{inp.hidden=true}
+    if(opts.input){inp.hidden=false;inp.value=opts.inputValue||'';inp.placeholder=opts.inputPlaceholder||''}
+    else inp.hidden=true;
     ok.textContent=opts.confirmText||'OK';
     cancel.textContent=opts.cancelText||'Cancel';
     cancel.hidden=!!opts.hideCancel;
     root.hidden=false;
     setTimeout(function(){if(opts.input)inp.focus()},80);
-
     function done(val){
-      root.hidden=true;
-      ok.onclick=null;cancel.onclick=null;
+      root.hidden=true;ok.onclick=null;cancel.onclick=null;
       document.removeEventListener('keydown',onKey);
       resolve(val);
     }
     function onKey(e){
       if(e.key==='Enter'&&opts.input){e.preventDefault();done(inp.value)}
-      else if(e.key==='Escape'){done(null)}
+      else if(e.key==='Escape')done(null);
     }
     ok.onclick=function(){done(opts.input?inp.value:true)};
     cancel.onclick=function(){done(null)};
@@ -87,35 +82,14 @@ function showModal(opts){
 }
 function showConfirm(message,opts){
   opts=opts||{};
-  return showModal({
-    icon:opts.icon||'⚠',
-    title:opts.title||'Confirm',
-    message:message,
-    confirmText:opts.confirmText||'OK',
-    cancelText:opts.cancelText||'Cancel'
-  }).then(function(r){return r!==null});
+  return showModal({icon:opts.icon||'⚠',title:opts.title||'Confirm',message:message,confirmText:opts.confirmText||'OK',cancelText:opts.cancelText||'Cancel'}).then(function(r){return r!==null});
 }
 function showPrompt(title,defaultValue,opts){
   opts=opts||{};
-  return showModal({
-    icon:opts.icon||'✎',
-    title:title,
-    message:opts.message||'',
-    input:true,
-    inputValue:defaultValue||'',
-    inputPlaceholder:opts.placeholder||'',
-    confirmText:opts.confirmText||'OK',
-    cancelText:opts.cancelText||'Cancel'
-  });
+  return showModal({icon:opts.icon||'✎',title:title,message:opts.message||'',input:true,inputValue:defaultValue||'',inputPlaceholder:opts.placeholder||'',confirmText:opts.confirmText||'OK',cancelText:opts.cancelText||'Cancel'});
 }
 function showInfo(title,message){
-  return showModal({
-    icon:'ℹ',
-    title:title,
-    message:message,
-    hideCancel:true,
-    confirmText:'Got it'
-  });
+  return showModal({icon:'ℹ',title:title,message:message,hideCancel:true,confirmText:'Got it'});
 }
 window.showConfirm=showConfirm;
 window.showPrompt=showPrompt;
@@ -139,6 +113,40 @@ function timeAgo(ts){
   const h=Math.floor(m/60);if(h<24)return h+' hr ago';
   const d=Math.floor(h/24);return d+' day'+(d>1?'s':'')+' ago';
 }
+function timeAgoLong(ts){
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60)return 'just now';
+  const m=Math.floor(s/60);if(m<60)return m+' min ago';
+  const h=Math.floor(m/60);if(h<24)return h+' hr ago';
+  const d=Math.floor(h/24);if(d<30)return d+' day'+(d>1?'s':'')+' ago';
+  return new Date(ts).toLocaleDateString();
+}
+
+/* ===== History ===== */
+async function logHistory(entry){
+  if(!currentProjectId)return;
+  const all=await dbGetAll();
+  const p=all.find(function(x){return x.id===currentProjectId});
+  if(!p)return;
+  p.history=p.history||[];
+  p.history.unshift(Object.assign({ts:Date.now()},entry));
+  if(p.history.length>200)p.history.length=200;
+  await dbSetAll(all);
+}
+window.logHistory=logHistory;
+
+async function markGithubSource(repo,branch){
+  if(!currentProjectId)return;
+  const all=await dbGetAll();
+  const p=all.find(function(x){return x.id===currentProjectId});
+  if(!p)return;
+  p.source='github';
+  p.githubRepo=repo;
+  p.githubBranch=branch;
+  p.lastImport=Date.now();
+  await dbSetAll(all);
+}
+window.markGithubSource=markGithubSource;
 
 /* ===== File helpers ===== */
 function fileBlob(f){const t=mimeMap[ext(f.path)]||f.type||'application/octet-stream';const src=f.blob||new Blob([f.text||'']);return src.type===t?src:new Blob([src],{type:t})}
@@ -154,7 +162,6 @@ function findFile(p){p=p.replace(/^\.\//,'').replace(/^\//,'');return files.find
 function makeUrl(blob){const u=URL.createObjectURL(blob);urls.push(u);return u}
 function htmlPages(){return files.filter(function(f){return ['html','htm'].includes(ext(f.path))}).sort(function(a,b){return a.path.localeCompare(b.path)})}
 
-/* ===== Current project name ===== */
 function currentProjectName(){return window.__currentProjectName||'No project loaded'}
 function setCurrentProjectName(n){
   window.__currentProjectName=n||'No project loaded';
@@ -170,7 +177,12 @@ async function saveCurrentProject(){
     name:existing?existing.name:currentProjectName(),
     files:serializeFiles(),
     savedAt:Date.now(),
-    createdAt:existing?existing.createdAt:Date.now()
+    createdAt:existing?existing.createdAt:Date.now(),
+    history:existing?existing.history:[],
+    source:existing?existing.source:undefined,
+    githubRepo:existing?existing.githubRepo:undefined,
+    githubBranch:existing?existing.githubBranch:undefined,
+    lastImport:existing?existing.lastImport:undefined
   });
   await renderProjectCards();
 }
@@ -184,10 +196,7 @@ if($('drawerClose'))$('drawerClose').onclick=closeDrawer;
 if($('drawerBackdrop'))$('drawerBackdrop').onclick=closeDrawer;
 if($('drawerNewProject'))$('drawerNewProject').onclick=function(){closeDrawer();if($('folderInput'))$('folderInput').click()};
 if($('drawerImportZip'))$('drawerImportZip').onclick=function(){closeDrawer();if($('zipInput'))$('zipInput').click()};
-if($('drawerGithub'))$('drawerGithub').onclick=function(){
-  closeDrawer();
-  setTimeout(function(){showTab('github')},50);
-};
+if($('drawerGithub'))$('drawerGithub').onclick=function(){closeDrawer();setTimeout(function(){showTab('github')},50)};
 if($('drawerClear'))$('drawerClear').onclick=function(){closeDrawer();if($('clearBtn'))$('clearBtn').click()};
 
 /* ===== Project cards ===== */
@@ -293,7 +302,8 @@ async function processIncoming(result,defaultName){
     currentProjectId=existing.id;
     setCurrentProjectName(trimmed);
     files=result;
-    await dbUpsertProject({id:existing.id,name:trimmed,files:serializeFiles(),savedAt:Date.now(),createdAt:existing.createdAt});
+    const updated=Object.assign({},existing,{files:serializeFiles(),savedAt:Date.now()});
+    await dbUpsertProject(updated);
     showToast('Updated "'+trimmed+'" with '+files.length+' files','success');
   }else{
     if(all.length>=PROJECT_LIMIT){
@@ -303,9 +313,13 @@ async function processIncoming(result,defaultName){
     currentProjectId=Date.now().toString();
     setCurrentProjectName(trimmed);
     files=result;
-    await dbUpsertProject({id:currentProjectId,name:trimmed,files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now()});
+    await dbUpsertProject({
+      id:currentProjectId,name:trimmed,files:serializeFiles(),
+      savedAt:Date.now(),createdAt:Date.now(),history:[]
+    });
     showToast('Created "'+trimmed+'" with '+files.length+' files','success');
   }
+  await logHistory({type:'import',fileCount:files.length,note:'Imported '+files.length+' files'});
   await renderProjectCards();
   populatePages();
   render();
@@ -340,8 +354,9 @@ if($('changesFolderInput'))$('changesFolderInput').addEventListener('change',asy
   const existing=(await dbGetAll()).find(function(p){return p.id===currentProjectId});
   const name=existing?existing.name:currentProjectName();
   setCurrentProjectName(name);
-  await dbUpsertProject({id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:existing?existing.createdAt:Date.now()});
+  await dbUpsertProject(Object.assign({},existing,{id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now()}));
   showToast('Imported: '+updated+' updated, '+added+' new','success');
+  await logHistory({type:'import',note:updated+' updated, '+added+' new'});
   await renderProjectCards();
   populatePages();
   render();
@@ -431,8 +446,7 @@ async function loadRepoList(){
       if(arr.length<100)break;
       page++;
     }
-    ghRepos=all;
-    renderRepoList();
+    ghRepos=all;renderRepoList();
   }catch(e){
     list.innerHTML='<div style="padding:16px;color:#ff8a8a;font-size:12px">Could not load repos.</div>';
   }
@@ -489,7 +503,9 @@ async function importRepo(fullName,branch,isPublic){
     }));
     const clean=result.filter(function(x){return x});
     await processIncoming(clean,repo);
+    await markGithubSource(fullName,bn);
     statusFn('Imported '+fullName+' — '+clean.length+' files.');
+    showToast('Imported '+repo+' from GitHub','success');
   }catch(e){statusFn('Import failed: '+e.message)}
 }
 
@@ -501,7 +517,7 @@ if($('ghRepoSearch'))$('ghRepoSearch').addEventListener('input',renderRepoList);
 function handlePublicUrl(){
   const raw=($('ghPublicUrl').value||'').trim();
   if(!raw){setGhPublicStatus('Paste a URL.');return}
-  const m=raw.match(/github\.com\/([^\/\s]+)\/([^\/\s#?]+?)(?:\.git)?(?:\/tree\/([^\/\s#?]+))?\/?(?:[#?].*)?$/i);
+  const m=raw.match(/github\.com\/([^\/\s]+)\/([^\/\s#?]+?)(?:\.git)?(?:\/(?:tree|commit)\/([^\/\s#?]+))?\/?(?:[#?].*)?$/i);
   if(!m){setGhPublicStatus('Invalid URL.');return}
   importRepo(m[1]+'/'+m[2].replace(/\.git$/,''),m[3]||'main',true);
 }
@@ -584,7 +600,6 @@ function cssRewrite(css,path,depth){
   return css.replace(/url\(\s*(['"]?)(.*?)\1\s*\)/gi,function(m,q,u){return 'url("'+assetUrl(path,u)+'")'});
 }
 
-/* Script injected into every previewed page: intercept link clicks */
 const LINK_INTERCEPTOR='(function(){'+
   'function intercept(e){'+
     'var t=e.target;'+
@@ -605,18 +620,13 @@ const LINK_INTERCEPTOR='(function(){'+
 function htmlRewrite(html,path){
   const doc=new DOMParser().parseFromString(html,'text/html');
   if(!doc.head){const h=doc.createElement('head');doc.documentElement.insertBefore(h,doc.documentElement.firstChild)}
-
-  /* color-scheme meta prevents white flash */
   const meta=doc.createElement('meta');
   meta.setAttribute('name','color-scheme');
   meta.setAttribute('content','dark');
   doc.head.insertBefore(meta,doc.head.firstChild);
-
-  /* Dark base style injected FIRST */
   const base=doc.createElement('style');
   base.textContent='html{background:#0d0e12}body{background:#0d0e12;color:#f7f7f8;margin:0}';
   doc.head.insertBefore(base,doc.head.firstChild);
-
   doc.querySelectorAll('link[href]').forEach(function(el){
     const rel=(el.getAttribute('rel')||'').toLowerCase();if(rel.indexOf('stylesheet')===-1)return;
     const href=el.getAttribute('href');const f=relative(path,href);
@@ -643,16 +653,13 @@ function htmlRewrite(html,path){
       });
     });
   }
-  /* Inject link interceptor at the end of body */
   const s=doc.createElement('script');
   s.textContent=LINK_INTERCEPTOR;
   if(doc.body)doc.body.appendChild(s);else doc.documentElement.appendChild(s);
-
   return '<!doctype html>'+doc.documentElement.outerHTML;
 }
 window.htmlRewrite=htmlRewrite;
 
-/* Handle link navigation from inside preview iframe */
 window.addEventListener('message',function(e){
   if(!e.data||e.data.type!=='mb-nav')return;
   const href=e.data.href;
@@ -670,15 +677,11 @@ function openPage(path){
   if($('pageSelect'))$('pageSelect').value=f.path;
   if($('previewPath'))$('previewPath').textContent=f.path;
   if(f.text==null){if($('placeholder'))$('placeholder').hidden=false;return}
-
   const frame=$('frame'),loader=$('previewLoader');
   if(loader)loader.classList.add('show');
   if($('placeholder'))$('placeholder').hidden=true;
   frame.hidden=false;
-  frame.onload=function(){
-    if(loader)loader.classList.remove('show');
-    frame.onload=null;
-  };
+  frame.onload=function(){if(loader)loader.classList.remove('show');frame.onload=null};
   frame.srcdoc=htmlRewrite(f.text,f.path);
   if($('refreshBtn'))$('refreshBtn').disabled=false;
 }
@@ -700,7 +703,7 @@ function exportBundle(){
 }
 
 function showTab(name){
-  ['home','projects','bundle','preview','editor','backups','github'].forEach(function(p){
+  ['home','projects','bundle','preview','editor','backups','github','updates'].forEach(function(p){
     const el=$(p+'Page');if(el)el.hidden=(p!==name);
   });
   document.querySelectorAll('.bottom span').forEach(function(s){
@@ -710,8 +713,129 @@ function showTab(name){
     a.classList.toggle('selected',a.dataset.tab===name);
   });
   if(name==='projects')showProjectsList();
+  if(name==='updates'&&typeof setUpdatesTab==='function')setUpdatesTab(window.__updatesMode||'github');
 }
 window.showTab=showTab;
+
+/* ===== Updates page ===== */
+window.__updatesMode='github';
+
+function setUpdatesTab(mode){
+  window.__updatesMode=mode;
+  if($('updatesTabGithub'))$('updatesTabGithub').classList.toggle('active',mode==='github');
+  if($('updatesTabLocal'))$('updatesTabLocal').classList.toggle('active',mode==='local');
+  if($('updatesGithubSection'))$('updatesGithubSection').hidden=(mode!=='github');
+  if($('updatesLocalSection'))$('updatesLocalSection').hidden=(mode!=='local');
+  if($('updatesListView'))$('updatesListView').hidden=false;
+  if($('updatesDetailView'))$('updatesDetailView').hidden=true;
+  renderUpdatesList();
+}
+window.setUpdatesTab=setUpdatesTab;
+
+async function renderUpdatesList(){
+  const all=await dbGetAll();
+
+  if(window.__updatesMode==='github'){
+    const g=all.filter(function(p){return p.source==='github'});
+    if($('updatesGithubCount'))$('updatesGithubCount').textContent=g.length;
+    const box=$('updatesGithubList');
+    if(!box)return;
+    if(!g.length){box.innerHTML='<div class="pc-empty">No GitHub projects yet.<br>Import one from the GitHub tab.</div>';return}
+    box.innerHTML=g.map(function(p){
+      const edits=countDrafts(p);
+      const badge=edits?'<span class="up-badge">'+edits+' draft'+(edits===1?'':'s')+'</span>':'<span class="up-badge clean">Clean</span>';
+      return '<div class="updates-proj" data-id="'+esc(p.id)+'">'+
+        '<div class="up-icon">🐙</div>'+
+        '<div class="up-info"><div class="up-name">'+esc(p.name)+'</div>'+
+        '<div class="up-meta">'+esc(p.githubRepo||'')+' · '+esc(p.githubBranch||'main')+'</div></div>'+
+        badge+
+      '</div>';
+    }).join('');
+    box.querySelectorAll('.updates-proj').forEach(function(el){
+      el.onclick=function(){openUpdatesDetail(el.dataset.id,'github')};
+    });
+  }else{
+    if($('updatesLocalCount'))$('updatesLocalCount').textContent=all.length;
+    const box=$('updatesLocalList');
+    if(!box)return;
+    if(!all.length){box.innerHTML='<div class="pc-empty">No projects yet.</div>';return}
+    box.innerHTML=all.map(function(p){
+      const h=p.history||[];
+      return '<div class="updates-proj" data-id="'+esc(p.id)+'">'+
+        '<div class="up-icon">'+(p.source==='github'?'🐙':'💾')+'</div>'+
+        '<div class="up-info"><div class="up-name">'+esc(p.name)+'</div>'+
+        '<div class="up-meta">'+h.length+' change'+(h.length===1?'':'s')+' · '+(h[0]?timeAgoLong(h[0].ts):'no activity')+'</div></div>'+
+      '</div>';
+    }).join('');
+    box.querySelectorAll('.updates-proj').forEach(function(el){
+      el.onclick=function(){openUpdatesDetail(el.dataset.id,'local')};
+    });
+  }
+}
+window.renderUpdatesList=renderUpdatesList;
+
+function countDrafts(p){
+  if(!p.history)return 0;
+  const since=p.lastImport||0;
+  return p.history.filter(function(h){return h.type==='edit'&&h.ts>since}).length;
+}
+
+async function openUpdatesDetail(projectId,mode){
+  const all=await dbGetAll();
+  const p=all.find(function(x){return x.id===projectId});
+  if(!p)return;
+
+  if($('updatesDetailName'))$('updatesDetailName').textContent=p.name;
+
+  let rows=[];
+  if(mode==='github'){
+    const since=p.lastImport||0;
+    rows=(p.history||[]).filter(function(h){return h.ts>since&&h.type==='edit'});
+    if($('updatesDetailEyebrow'))$('updatesDetailEyebrow').textContent='DRAFTED CHANGES';
+    if($('updatesDetailNote')){
+      $('updatesDetailNote').textContent=rows.length
+        ? rows.length+' file'+(rows.length===1?'':'s')+' edited since last GitHub import.'
+        : 'No local changes since the last GitHub import.';
+    }
+  }else{
+    rows=(p.history||[]).slice(0,20);
+    if($('updatesDetailEyebrow'))$('updatesDetailEyebrow').textContent='FULL HISTORY';
+    if($('updatesDetailNote'))$('updatesDetailNote').textContent=(p.history||[]).length+' total change'+((p.history||[]).length===1?'':'s')+' (showing last 20).';
+  }
+
+  if($('updatesDetailCount'))$('updatesDetailCount').textContent=rows.length+' change'+(rows.length===1?'':'s');
+
+  const list=$('updatesDetailList');
+  if(list){
+    if(!rows.length){
+      list.innerHTML='<div class="pc-empty">Nothing to show here.</div>';
+    }else{
+      const icons={import:'↓',edit:'✎',new:'+',delete:'🗑',rename:'↻'};
+      list.innerHTML=rows.slice(0,20).map(function(h){
+        const t=h.type||'edit';
+        return '<div class="update-row">'+
+          '<div class="upd-icon '+t+'">'+(icons[t]||'•')+'</div>'+
+          '<div class="upd-info">'+
+            '<div class="upd-path">'+esc(h.path||h.note||'—')+'</div>'+
+            '<div class="upd-note">'+esc(h.note||'')+'</div>'+
+          '</div>'+
+          '<div class="upd-time">'+timeAgoLong(h.ts)+'</div>'+
+        '</div>';
+      }).join('');
+    }
+  }
+
+  if($('updatesListView'))$('updatesListView').hidden=true;
+  if($('updatesDetailView'))$('updatesDetailView').hidden=false;
+}
+
+if($('updatesTabGithub'))$('updatesTabGithub').onclick=function(){setUpdatesTab('github')};
+if($('updatesTabLocal'))$('updatesTabLocal').onclick=function(){setUpdatesTab('local')};
+if($('updatesBackBtn'))$('updatesBackBtn').onclick=function(){
+  if($('updatesListView'))$('updatesListView').hidden=false;
+  if($('updatesDetailView'))$('updatesDetailView').hidden=true;
+  renderUpdatesList();
+};
 
 /* ===== Buttons ===== */
 if($('homeProjectsBtn'))$('homeProjectsBtn').onclick=function(){showTab('projects')};

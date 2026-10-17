@@ -18,12 +18,13 @@ async function gh(method,path,body){
     body:body?JSON.stringify(body):undefined
   });
   var data=null;try{data=await r.json()}catch(e){}
-  if(!r.ok){var err=new Error((data&&data.message)||('HTTP '+r.status));err.status=r.status;throw err}
+  if(!r.ok){var err=new Error((data&&data.message)||('HTTP '+r.status));err.status=r.status;err.where=method+' '+path;throw err}
   return data;
 }
 function explain(e,write){
+  if(e&&e.status===-2)return 'Your token is missing the repo permission. It only has: '+(e.have&&e.have.length?e.have.join(', '):'nothing')+'. Open github.com/settings/tokens, tap your token, tick repo, then tap Update token.';
   if(e&&e.status===-1)return 'Your token can read this repo but cannot write to it. Make sure the token has the repo box ticked and was created by an account that owns this repo or is a collaborator.';
-  if(write&&e&&e.status===404)return 'GitHub refused the upload. This usually means your token cannot write to this repo. Check that it has the repo box ticked and belongs to the repo owner or a collaborator.';
+  if(write&&e&&e.status===404)return 'GitHub refused the upload. This usually means your token cannot write to this repo. Check that it has the repo box ticked and belongs to the repo owner or a collaborator.'+detail(e);
   if(e&&e.status===401)return 'GitHub rejected your token. Sign in again in the GitHub tab.';
   if(e&&e.status===403)return 'GitHub refused access ('+e.message+'). Your token needs the repo scope, and the branch may be protected.';
   if(e&&e.status===404)return 'Repo or branch not found. For private repos your token needs access to it.';
@@ -31,6 +32,7 @@ function explain(e,write){
   if(e&&e.status===422)return 'GitHub changed while publishing, or the branch is protected. Tap Check changes and try again.';
   return (e&&e.message)||'Something went wrong';
 }
+function detail(e){return (e&&e.where)?' [GitHub said: '+e.message+' at '+e.where+']':''}
 
 /* ---------- hashing (same as git hash-object) ---------- */
 async function sha1blob(bytes){
@@ -50,6 +52,12 @@ function b64(bytes){var s='',C=0x8000;for(var i=0;i<bytes.length;i+=C)s+=String.
 async function computeScan(repo,branch,p,fl){
   var info=await gh('GET','/repos/'+repo);
   if(info.permissions&&info.permissions.push===false){var pe=new Error('no write access');pe.status=-1;throw pe}
+  var ur=await fetch('https://api.github.com/user',{headers:{'Authorization':'Bearer '+token(),'Accept':'application/vnd.github+json'}});
+  var sc=ur.headers.get('x-oauth-scopes');
+  if(sc!==null){
+    var have=sc.split(',').map(function(x){return x.trim()}).filter(Boolean);
+    if(have.indexOf('repo')===-1&&!(info.private===false&&have.indexOf('public_repo')!==-1)){var se=new Error('missing scope');se.status=-2;se.have=have;throw se}
+  }
   var br=brPath(branch);
   var ref=await gh('GET','/repos/'+repo+'/git/ref/heads/'+br);
   var headSha=ref.object.sha;
@@ -159,7 +167,7 @@ async function runPublish(){
     var d=$('pbDone');if(d)d.onclick=closeSheet;
     toast('Published to GitHub','success');
     S.busy=false;
-}catch(e){S.busy=false;setStatus('');setNote(explain(e,true),'bad');updateGo()}
+  }catch(e){S.busy=false;setStatus('');setNote(explain(e,true),'bad');updateGo()}
 }
 function settingsRepo(){try{return JSON.parse(localStorage.getItem('mb_deploy_'+pid())||'null')||{}}catch(e){return {}}}
 async function openSheet(){

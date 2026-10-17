@@ -1,5 +1,5 @@
-/* Multi Bundle Service Worker — v3 (network-first) */
-const CACHE='multibundle-v3';
+/* Multi Bundle Service Worker — v4 */
+const CACHE='multibundle-v4';
 const ASSETS=[
   '/',
   '/index.html',
@@ -41,20 +41,16 @@ self.addEventListener('fetch',function(e){
   var url;
   try{url=new URL(e.request.url)}catch(err){return}
   if(url.origin!==location.origin)return;
-
-  /* Never cache API or cross-origin CDN requests */
   if(url.pathname.indexOf('/api/')===0)return;
 
   e.respondWith(
     fetch(e.request).then(function(res){
-      /* Cache successful same-origin GETs */
       if(res&&res.status===200&&res.type==='basic'){
         var copy=res.clone();
         caches.open(CACHE).then(function(c){c.put(e.request,copy)});
       }
       return res;
     }).catch(function(){
-      /* Offline fallback */
       return caches.match(e.request).then(function(r){
         if(r)return r;
         if(e.request.mode==='navigate')return caches.match('/index.html');

@@ -746,4 +746,13 @@ if($('clearBtn'))$('clearBtn').onclick=async function(){
 };
 
 document.querySelectorAll('.bottom span').forEach(function(s){s.onclick=function(){showTab(s.dataset.tab)}});
+window.dbGetAll = dbGetAll;
+window.dbSetAll = dbSetAll;
+
+window.__refreshProjects = async function() {
+  __projCache = null; 
+  await renderProjectCards();
+  render();
+};
+
 render();renderProjectCards();

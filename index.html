@@ -82,6 +82,11 @@
 
 <main>
 <section id="homePage" class="tab-page">
+<section class="card" id="authCard">
+  <label class="eyebrow">ACCOUNT</label>
+  <h2>Cloud Sync</h2>
+  <div id="authBox" style="margin-top:10px;"></div>
+</section>
  <section class="card hero"><label class="eyebrow">YOUR LOCAL WORKSPACE</label><h1>Build it. <span>Preview it.</span></h1><p>Keep your website files organized, create a TXT bundle, and preview static pages locally on your device.</p><div class="actions"><button id="homeProjectsBtn" class="btn primary">Open Projects</button><button id="homePreviewBtn" class="btn secondary">Open Preview</button></div></section>
  <section class="card"><label class="eyebrow">CURRENT PROJECT</label><div class="heading"><h2 id="homeProjectName">No project loaded</h2><span id="homeFileCount" class="pill">0 files</span></div><p id="homeStatus">Go to Projects to import a website folder or ZIP.</p><div class="actions"><button id="homeBundleBtn" class="btn primary" disabled>Create TXT bundle</button><button id="homeOpenPreviewBtn" class="btn secondary" disabled>Preview website</button></div></section>
  <section class="card note-card"><b>Local workspace</b><p>Best for static HTML, CSS, JavaScript, and images. Server-side features like PHP and databases need a real server. Keep your original files safe.</p></section>
@@ -366,6 +371,29 @@
   </span>
 </nav>
 
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBsZ-4kET9GM99MdSpaaHbqUdaFtOFApjo",
+    authDomain: "multi-bundle-app.firebaseapp.com",
+    projectId: "multi-bundle-app",
+    storageBucket: "multi-bundle-app.firebasestorage.app",
+    messagingSenderId: "426558428895",
+    appId: "1:426558428895:web:0f4dd87cb8afd2b3843b6a",
+    measurementId: "G-NRLM5GB7N8"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  window.__fb = { auth, db, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc };
+</script>
+
+<script src="sync.js"></script>
 <script src="app.js"></script>
 <script src="editor.js"></script>
 <script src="settings.js"></script>

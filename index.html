@@ -406,5 +406,12 @@
 <script src="editor.js"></script>
 <script src="settings.js"></script>
 <script src="publish.js"></script>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})})}</script>
+<!-- Service worker disabled for testing -->
+<script>
+  if('serviceWorker' in navigator){ 
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      for(let reg of regs){ reg.unregister(); }
+    }); 
+  }
+</script>
 </body></html>

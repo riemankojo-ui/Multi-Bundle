@@ -1,7 +1,8 @@
-/* sync.js — Google login + Firestore-backed project storage */
+/* sync.js — Google login + Firestore */
 (function () {
+  // Check if Firebase loaded
   if (typeof firebase === 'undefined') {
-    console.error("Firebase failed to load.");
+    alert("Error: Firebase library failed to load. Check your internet connection.");
     return;
   }
 
@@ -12,104 +13,67 @@
   
   let cloudUser = null;
 
-  // Add click event to the big Google button on the gate
+  // Google Login Button Click
   if (gateBtn) {
     gateBtn.onclick = async function () {
-      gateBtn.innerHTML = 'Signing in...';
+      gateBtn.innerHTML = 'Connecting...';
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
+      
       try {
-        await auth.signInWithRedirect(provider);
+        // Use Popup (works best on desktop/incognito)
+        await auth.signInWithPopup(provider);
       } catch (e) {
-        if (window.showToast) window.showToast(e.message, "error");
+        // Show exact error if it fails
+        alert("Login Error!\n\nCode: " + e.code + "\nMessage: " + e.message);
         gateBtn.innerHTML = 'Continue with Google';
       }
     };
   }
 
-  // Check if we just came back from a redirect login
-auth.getRedirectResult().catch(function(error) {
-  if (window.showToast) window.showToast(error.message, "error");
-  if (gateBtn) gateBtn.innerHTML = 'Continue with Google';
-});
-
-// Listen for login/logout
-auth.onAuthStateChanged(async (user) => {
+  // Watch for Login/Logout
+  auth.onAuthStateChanged(async (user) => {
     cloudUser = user;
-    renderAuthUi(user);
-
+    
     if (user) {
-      if (loginGate) loginGate.style.display = "none"; // Hide the gate
-      await migrateLocalToCloud(user.uid);
+      if (loginGate) loginGate.style.display = "none"; 
       if (typeof window.__refreshProjects === "function") window.__refreshProjects();
     } else {
-      if (loginGate) loginGate.style.display = "flex"; // Show the gate
+      if (loginGate) loginGate.style.display = "flex"; 
     }
   });
 
-  window.signOutGoogle = async function () {
-    await auth.signOut();
-  };
-
-  function projectsDoc(uid) {
-    return db.collection("users").doc(uid).collection("data").doc("projects");
-  }
-
-  async function cloudGetProjects(uid) {
-    const snap = await projectsDoc(uid).get();
-    return snap.exists ? snap.data().projects || [] : null;
-  }
-
-  async function cloudSetProjects(uid, projects) {
-    await projectsDoc(uid).set({ projects, updatedAt: Date.now() });
-  }
-
-  async function migrateLocalToCloud(uid) {
-    const existing = await cloudGetProjects(uid);
-    if (existing && existing.length) return; 
-
-    if (typeof window.__idbGetAll === 'function') {
-      const local = await window.__idbGetAll();
-      if (local && local.length) {
-        await cloudSetProjects(uid, local);
-      }
-    }
-  }
-
+  // Database Sync
   const originalGetAll = window.dbGetAll;
   const originalSetAll = window.dbSetAll;
-  window.__idbGetAll = originalGetAll;
 
   window.dbGetAll = async function () {
     if (!cloudUser) return originalGetAll();
-    const projects = await cloudGetProjects(cloudUser.uid);
-    return projects || [];
+    const snap = await db.collection("users").doc(cloudUser.uid).collection("data").doc("projects").get();
+    return snap.exists ? snap.data().projects || [] : [];
   };
 
   window.dbSetAll = async function (projects) {
     if (!cloudUser) return originalSetAll(projects);
-    await cloudSetProjects(cloudUser.uid, projects);
+    await db.collection("users").doc(cloudUser.uid).collection("data").doc("projects").set({ projects, updatedAt: Date.now() });
     try { await originalSetAll(projects); } catch (e) {}
   };
 
-  function renderAuthUi(user) {
+  // Update Home Screen Card
+  window.signOutGoogle = async function () { await auth.signOut(); };
+  auth.onAuthStateChanged((user) => {
     const box = document.getElementById("authBox");
     if (!box) return;
-
     if (user) {
       box.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
           <img src="${user.photoURL || ""}" style="width:38px;height:38px;border-radius:50%;">
-          <div style="flex:1;min-width:0;">
-            <b style="overflow-wrap:anywhere;">${user.displayName || "Signed in"}</b>
-            <small style="font-size:11px;color:var(--muted);display:block;overflow-wrap:anywhere;">${user.email || ""}</small>
+          <div style="flex:1;">
+            <b>${user.displayName || "Signed in"}</b>
+            <small style="display:block;color:gray;">${user.email}</small>
           </div>
-          <button class="btn secondary" id="authOutBtn" style="padding:8px 12px;font-size:11px;">Sign out</button>
-        </div>
-      `;
-      document.getElementById("authOutBtn").onclick = () => window.signOutGoogle();
-    } else {
-      box.innerHTML = `<p class="note">Not signed in.</p>`;
+          <button class="btn secondary" onclick="window.signOutGoogle()">Sign out</button>
+        </div>`;
     }
-  }
+  });
 })();

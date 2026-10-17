@@ -303,7 +303,7 @@ iframe{width:100%;height:430px;background:#0d0e12;border:0;border-radius:9px;dis
   font-size:10px;font-weight:800;letter-spacing:1px;color:var(--muted);
 }
 .editor-preview-wrap{position:relative;flex:1;background:#0d0e12;display:flex;min-height:0}
-.editor-preview-wrap #editorPreviewFrame{flex:1;width:100%;border:0;background:#0d0e12}
+.editor-preview-wrap #editorPreviewFrame{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:0;background:#0d0e12}
 .editor-preview-wrap .preview-loader{border-radius:0}
 
 .editor-statusbar{
@@ -447,7 +447,12 @@ body.editor-full main{padding:0}
 .update-row .upd-path{font-weight:700;color:#eef0f3;overflow-wrap:anywhere}
 .update-row .upd-note{font-size:10px;color:var(--muted);margin-top:3px}
 .update-row .upd-time{font-size:10px;color:var(--muted);white-space:nowrap}
-
+.update-row{background:#17181c;border:1px solid #25262c;border-radius:10px;padding:9px 10px;margin-bottom:6px;gap:9px}
+.update-row .upd-icon{width:auto;height:auto;background:transparent}
+.update-row .upd-icon::before{width:8px;height:8px}
+.update-row .upd-path{font-weight:600;font-size:12px}
+.upd-save{background:transparent;color:#cfe0ff;border:1px solid #3c4a68;border-radius:6px;padding:4px 9px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
+.upd-save:active{background:#2f3a52}
 /* ========== Snapshots ========== */
 .snapshots-list{max-height:400px;overflow:auto}
 .snapshot-row{

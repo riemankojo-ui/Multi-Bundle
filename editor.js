@@ -193,7 +193,7 @@ async function saveFile(){
     try{
       await window.saveCurrentProject();
       if(typeof window.logHistory==='function'){
-        window.logHistory({type:'edit',path:currentPath,note:'Edited file'});
+        window.logHistory({type:'edit',path:currentPath,note:'Edited file',text:f.text.length<300000?f.text:undefined});
       }
       status.textContent=currentPath+' Saved';
       toast('Saved','success');

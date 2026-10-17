@@ -74,8 +74,7 @@ function timeAgoLong(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return
 async function logHistory(entry){
   if(!currentProjectId)return;
   const all=await dbGetAll();const p=all.find(function(x){return x.id===currentProjectId});if(!p)return;
-  p.history=p.history||[];p.history.unshift(Object.assign({ts:Date.now()},entry));
-  if(p.history.length>200)p.history.length=200;await dbSetAll(all);
+   p.history=p.history||[];p.history.unshift(Object.assign({ts:Date.now()},entry));p.history.forEach(function(h,i){if(i>=20)delete h.text}); if(p.history.length>200)p.history.length=200;await dbSetAll(all);
 }
 window.logHistory=logHistory;
 
@@ -567,14 +566,36 @@ async function openUpdatesDetail(projectId,mode){
         return '<div class="update-row">'+
           '<div class="upd-icon '+t+'"></div>'+
           '<div class="upd-info"><div class="upd-path">'+esc(h.path||h.note||'—')+'</div><div class="upd-note">'+esc(h.note||'')+'</div></div>'+
-          '<div class="upd-time">'+timeAgoLong(h.ts)+'</div></div>';
+         '<div class="upd-time">'+timeAgoLong(h.ts)+'</div>'+(typeof h.text==='string'&&h.path?'<button class="upd-save" data-ts="'+h.ts+'">Save</button>':'')+'</div>';
       }).join('');
     }
   }
+  if(list)list.querySelectorAll('.upd-save').forEach(function(b){b.onclick=function(){saveFileBack(p.id,Number(b.dataset.ts))}});
   renderSnapshotsSection(p);
   if($('updatesListView'))$('updatesListView').hidden=true;
   if($('updatesDetailView'))$('updatesDetailView').hidden=false;
 }
+
+async function saveFileBack(projectId,ts){
+  const all=await dbGetAll();const p=all.find(function(x){return x.id===projectId});if(!p)return;
+  const h=(p.history||[]).find(function(x){return x.ts===ts});
+  if(!h||typeof h.text!=='string'||!h.path){showToast('This update has no saved copy','error');return}
+  const ok=await showConfirm('Put this version of '+h.path+' back into the project?',{title:'Save file back',confirmText:'Save',cancelText:'Cancel'});
+  if(!ok)return;
+  const f=p.files.find(function(x){return x.path===h.path});
+  if(f){f.text=h.text;f.blob=null;f.size=h.text.length}
+  else p.files.push({path:h.path,name:h.path.split('/').pop(),size:h.text.length,type:'text/plain',blob:null,text:h.text});
+  p.savedAt=Date.now();
+  p.history.unshift({ts:Date.now(),type:'edit',path:h.path,note:'Saved back from update',text:h.text});
+  await dbSetAll(all);
+  if(currentProjectId===projectId){files=deserializeFiles(p.files)}
+  await renderProjectCards();
+  if(typeof populatePages==='function')populatePages();
+  if(typeof render==='function')render();
+  showToast('Saved '+h.path+' back to project','success');
+  openUpdatesDetail(projectId,window.__updatesMode||'local');
+}
+window.saveFileBack=saveFileBack;
 
 async function restoreSnapshot(projectId,ts){
   const all=await dbGetAll();const p=all.find(function(x){return x.id===projectId});if(!p||!p.snapshots)return;

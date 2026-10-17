@@ -167,6 +167,29 @@ function replaceAll(){
   for(let i=matches.length-1;i>=0;i--){v=v.slice(0,matches[i])+rv+v.slice(matches[i]+(matchLens[i]||0))}
   ta.value=v;edited();runSearch();toast('Replaced '+n,'success');
 }
+async function cutMatch(){
+  const g=searchInput.value.match(/^:(\d+)$/);
+  let s,e;
+  if(g){
+    const lines=ta.value.split('\n');const n=Math.max(1,Math.min(parseInt(g[1],10),lines.length));
+    s=0;for(let i=0;i<n-1;i++)s+=lines[i].length+1;
+    e=s+lines[n-1].length+(n<lines.length?1:0);
+  }else{
+    if(!matches.length||matchIndex<0){toast('Search first, then tap Cut','error');return}
+    s=matches[matchIndex];e=s+(matchLens[matchIndex]||0);
+  }
+  const piece=ta.value.slice(s,e);
+  try{
+    if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(piece);
+    else{const t=document.createElement('textarea');t.value=piece;t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t)}
+  }catch(err){}
+  ta.value=ta.value.slice(0,s)+ta.value.slice(e);
+  edited();runSearch();
+  const k=matches.findIndex(function(p){return p>=s});
+  if(matches.length){matchIndex=k<0?0:k;selectMatch()}
+  toast('Cut '+piece.length+' characters','success');
+}
+if($('editorCutBtn'))$('editorCutBtn').onclick=cutMatch;
 if($('editorReplaceOne'))$('editorReplaceOne').onclick=replaceOne;
 if($('editorReplaceAll'))$('editorReplaceAll').onclick=replaceAll;
 function scrollToPosition(pos){

@@ -21,7 +21,9 @@ async function gh(method,path,body){
   if(!r.ok){var err=new Error((data&&data.message)||('HTTP '+r.status));err.status=r.status;throw err}
   return data;
 }
-function explain(e){
+function explain(e,write){
+  if(e&&e.status===-1)return 'Your token can read this repo but cannot write to it. Make sure the token has the repo box ticked and was created by an account that owns this repo or is a collaborator.';
+  if(write&&e&&e.status===404)return 'GitHub refused the upload. This usually means your token cannot write to this repo. Check that it has the repo box ticked and belongs to the repo owner or a collaborator.';
   if(e&&e.status===401)return 'GitHub rejected your token. Sign in again in the GitHub tab.';
   if(e&&e.status===403)return 'GitHub refused access ('+e.message+'). Your token needs the repo scope, and the branch may be protected.';
   if(e&&e.status===404)return 'Repo or branch not found. For private repos your token needs access to it.';
@@ -46,6 +48,8 @@ function b64(bytes){var s='',C=0x8000;for(var i=0;i<bytes.length;i+=C)s+=String.
 
 /* ---------- core logic ---------- */
 async function computeScan(repo,branch,p,fl){
+  var info=await gh('GET','/repos/'+repo);
+  if(info.permissions&&info.permissions.push===false){var pe=new Error('no write access');pe.status=-1;throw pe}
   var br=brPath(branch);
   var ref=await gh('GET','/repos/'+repo+'/git/ref/heads/'+br);
   var headSha=ref.object.sha;
@@ -155,7 +159,7 @@ async function runPublish(){
     var d=$('pbDone');if(d)d.onclick=closeSheet;
     toast('Published to GitHub','success');
     S.busy=false;
-  }catch(e){S.busy=false;setStatus('');setNote(explain(e),'bad');updateGo()}
+}catch(e){S.busy=false;setStatus('');setNote(explain(e,true),'bad');updateGo()}
 }
 function settingsRepo(){try{return JSON.parse(localStorage.getItem('mb_deploy_'+pid())||'null')||{}}catch(e){return {}}}
 async function openSheet(){

@@ -27,7 +27,7 @@ document.addEventListener('click',function(e){
 let files=[],urls=[],currentPagePath='',urlCache=new Map();
 let currentProjectId=null;
 let ghToken='';
-const PROJECT_LIMIT=4;
+const PROJECT_LIMIT=10;
 
 const textExt=new Set(['html','htm','css','js','mjs','json','txt','md','xml','svg','php','py','sql','yaml','yml','toml','csv','webmanifest','ts','jsx','tsx']);
 const ext=p=>(p.split('.').pop()||'').toLowerCase();
@@ -66,15 +66,8 @@ function showModal(opts){
     cancel.hidden=!!opts.hideCancel;
     root.hidden=false;
     setTimeout(function(){if(opts.input)inp.focus()},80);
-    function done(val){
-      root.hidden=true;ok.onclick=null;cancel.onclick=null;
-      document.removeEventListener('keydown',onKey);
-      resolve(val);
-    }
-    function onKey(e){
-      if(e.key==='Enter'&&opts.input){e.preventDefault();done(inp.value)}
-      else if(e.key==='Escape')done(null);
-    }
+    function done(val){root.hidden=true;ok.onclick=null;cancel.onclick=null;document.removeEventListener('keydown',onKey);resolve(val)}
+    function onKey(e){if(e.key==='Enter'&&opts.input){e.preventDefault();done(inp.value)}else if(e.key==='Escape')done(null)}
     ok.onclick=function(){done(opts.input?inp.value:true)};
     cancel.onclick=function(){done(null)};
     document.addEventListener('keydown',onKey);
@@ -82,14 +75,14 @@ function showModal(opts){
 }
 function showConfirm(message,opts){
   opts=opts||{};
-  return showModal({icon:opts.icon||'⚠',title:opts.title||'Confirm',message:message,confirmText:opts.confirmText||'OK',cancelText:opts.cancelText||'Cancel'}).then(function(r){return r!==null});
+  return showModal({icon:opts.icon||'!',title:opts.title||'Confirm',message:message,confirmText:opts.confirmText||'OK',cancelText:opts.cancelText||'Cancel'}).then(function(r){return r!==null});
 }
 function showPrompt(title,defaultValue,opts){
   opts=opts||{};
-  return showModal({icon:opts.icon||'✎',title:title,message:opts.message||'',input:true,inputValue:defaultValue||'',inputPlaceholder:opts.placeholder||'',confirmText:opts.confirmText||'OK',cancelText:opts.cancelText||'Cancel'});
+  return showModal({icon:opts.icon||'?',title:title,message:opts.message||'',input:true,inputValue:defaultValue||'',inputPlaceholder:opts.placeholder||'',confirmText:opts.confirmText||'OK',cancelText:opts.cancelText||'Cancel'});
 }
 function showInfo(title,message){
-  return showModal({icon:'ℹ',title:title,message:message,hideCancel:true,confirmText:'Got it'});
+  return showModal({icon:'i',title:title,message:message,hideCancel:true,confirmText:'Got it'});
 }
 window.showConfirm=showConfirm;
 window.showPrompt=showPrompt;
@@ -148,6 +141,26 @@ async function markGithubSource(repo,branch){
 }
 window.markGithubSource=markGithubSource;
 
+/* ===== Project logo detection ===== */
+function detectProjectLogo(files){
+  const candidates=[
+    'logo.png','logo.svg','logo.jpg','logo.jpeg','logo.webp',
+    'favicon.ico','favicon.png','favicon.svg',
+    'icon.png','icon.svg','icon.jpg',
+    'assets/logo.png','assets/logo.svg','assets/icon.png',
+    'img/logo.png','img/logo.svg','img/icon.png',
+    'images/logo.png','images/icon.png',
+    'public/logo.png','public/favicon.ico','public/icon.png',
+    'static/logo.png','static/icon.png',
+    'src/assets/logo.png','src/assets/icon.png'
+  ];
+  for(const c of candidates){
+    const match=files.find(function(f){return f.path.toLowerCase()===c.toLowerCase()});
+    if(match)return match.path;
+  }
+  return null;
+}
+
 /* ===== File helpers ===== */
 function fileBlob(f){const t=mimeMap[ext(f.path)]||f.type||'application/octet-stream';const src=f.blob||new Blob([f.text||'']);return src.type===t?src:new Blob([src],{type:t})}
 function clearUrls(){urls.forEach(function(u){URL.revokeObjectURL(u)});urls=[];urlCache.clear()}
@@ -172,18 +185,13 @@ async function saveCurrentProject(){
   if(!currentProjectId||!files.length)return;
   const all=await dbGetAll();
   const existing=all.find(function(p){return p.id===currentProjectId});
-  await dbUpsertProject({
+  await dbUpsertProject(Object.assign({},existing,{
     id:currentProjectId,
     name:existing?existing.name:currentProjectName(),
     files:serializeFiles(),
     savedAt:Date.now(),
-    createdAt:existing?existing.createdAt:Date.now(),
-    history:existing?existing.history:[],
-    source:existing?existing.source:undefined,
-    githubRepo:existing?existing.githubRepo:undefined,
-    githubBranch:existing?existing.githubBranch:undefined,
-    lastImport:existing?existing.lastImport:undefined
-  });
+    createdAt:existing?existing.createdAt:Date.now()
+  }));
   await renderProjectCards();
 }
 window.saveCurrentProject=saveCurrentProject;
@@ -206,17 +214,28 @@ async function renderProjectCards(){
   if($('projectCount'))$('projectCount').textContent=all.length+' / '+PROJECT_LIMIT;
   if(!all.length){box.innerHTML='<div class="pc-empty">No saved projects yet.<br>Import a folder or ZIP to create one.</div>';return}
   box.innerHTML=all.map(function(p){
-    const initials=(p.name||'?').slice(0,2).toUpperCase();
     const active=(p.id===currentProjectId)?' active':'';
+    let iconHtml;
+    if(p.logo&&p.files){
+      const lf=p.files.find(function(f){return f.path===p.logo});
+      if(lf){
+        try{
+          const b=fileBlob(lf);
+          const u=URL.createObjectURL(b);
+          urls.push(u);
+          iconHtml='<div class="pc-icon pc-logo"><img src="'+u+'" alt=""></div>';
+        }catch(e){iconHtml='<div class="pc-icon">'+esc((p.name||'?').slice(0,2).toUpperCase())+'</div>'}
+      }else{iconHtml='<div class="pc-icon">'+esc((p.name||'?').slice(0,2).toUpperCase())+'</div>'}
+    }else{iconHtml='<div class="pc-icon">'+esc((p.name||'?').slice(0,2).toUpperCase())+'</div>'}
     return '<div class="project-card'+active+'" data-id="'+esc(p.id)+'">'+
-      '<div class="pc-top"><div class="pc-icon">'+esc(initials)+'</div>'+
+      '<div class="pc-top">'+iconHtml+
       '<div class="pc-info"><div class="pc-name">'+esc(p.name||'Untitled')+'</div>'+
       '<div class="pc-meta">'+p.files.length+' file'+(p.files.length===1?'':'s')+' · '+timeAgo(p.savedAt)+'</div></div></div>'+
       '<div class="pc-actions">'+
-      '<button class="pc-btn primary" data-act="preview">▶ Preview</button>'+
-      '<button class="pc-btn" data-act="edit" title="Edit code">✎</button>'+
-      '<button class="pc-btn" data-act="changes" title="Import changes">↻</button>'+
-      '<button class="pc-btn danger" data-act="delete" title="Delete">🗑</button>'+
+      '<button class="pc-btn primary" data-act="preview">Preview</button>'+
+      '<button class="pc-btn" data-act="edit" title="Edit code">Edit</button>'+
+      '<button class="pc-btn" data-act="changes" title="Import changes">Sync</button>'+
+      '<button class="pc-btn danger" data-act="delete" title="Delete">×</button>'+
       '</div></div>';
   }).join('');
   box.querySelectorAll('.project-card').forEach(function(card){
@@ -290,10 +309,11 @@ async function processIncoming(result,defaultName){
 
   const name=await showPrompt('Name this project',defaultName||'My project',{
     message:'Give your project a name. If a project with this name exists, it will be updated.',
-    icon:'📁'
+    icon:'+'
   });
   if(!name||!name.trim())return;
   const trimmed=name.trim();
+  const logo=detectProjectLogo(result);
 
   const all=await dbGetAll();
   const existing=all.find(function(p){return p.name===trimmed});
@@ -302,9 +322,8 @@ async function processIncoming(result,defaultName){
     currentProjectId=existing.id;
     setCurrentProjectName(trimmed);
     files=result;
-    const updated=Object.assign({},existing,{files:serializeFiles(),savedAt:Date.now()});
-    await dbUpsertProject(updated);
-    showToast('Updated "'+trimmed+'" with '+files.length+' files','success');
+    await dbUpsertProject(Object.assign({},existing,{files:serializeFiles(),savedAt:Date.now(),logo:logo||existing.logo}));
+    showToast('Updated "'+trimmed+'"','success');
   }else{
     if(all.length>=PROJECT_LIMIT){
       showInfo('Project limit reached','You can only have '+PROJECT_LIMIT+' projects. Delete one to make room.');
@@ -313,11 +332,8 @@ async function processIncoming(result,defaultName){
     currentProjectId=Date.now().toString();
     setCurrentProjectName(trimmed);
     files=result;
-    await dbUpsertProject({
-      id:currentProjectId,name:trimmed,files:serializeFiles(),
-      savedAt:Date.now(),createdAt:Date.now(),history:[]
-    });
-    showToast('Created "'+trimmed+'" with '+files.length+' files','success');
+    await dbUpsertProject({id:currentProjectId,name:trimmed,files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now(),history:[],logo:logo});
+    showToast('Created "'+trimmed+'"','success');
   }
   await logHistory({type:'import',fileCount:files.length,note:'Imported '+files.length+' files'});
   await renderProjectCards();
@@ -353,9 +369,10 @@ if($('changesFolderInput'))$('changesFolderInput').addEventListener('change',asy
   files.sort(function(a,b){return a.path.localeCompare(b.path)});
   const existing=(await dbGetAll()).find(function(p){return p.id===currentProjectId});
   const name=existing?existing.name:currentProjectName();
+  const logo=detectProjectLogo(files);
   setCurrentProjectName(name);
-  await dbUpsertProject(Object.assign({},existing,{id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now()}));
-  showToast('Imported: '+updated+' updated, '+added+' new','success');
+  await dbUpsertProject(Object.assign({},existing,{id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now(),logo:logo||(existing&&existing.logo)}));
+  showToast('Synced: '+updated+' updated, '+added+' new','success');
   await logHistory({type:'import',note:updated+' updated, '+added+' new'});
   await renderProjectCards();
   populatePages();
@@ -458,7 +475,7 @@ function renderRepoList(){
   if(!filtered.length){list.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px;text-align:center">No repos found.</div>';return}
   list.innerHTML=filtered.map(function(r){
     return '<div class="gh-repo" data-full="'+esc(r.full_name)+'" data-branch="'+esc(r.default_branch||'main')+'">'+
-      '<div class="gh-repo-info"><div class="gh-repo-name">'+esc(r.name)+'</div><div class="gh-repo-meta">'+esc(r.owner.login)+' · '+(r.language||'—')+' · ⭐ '+r.stargazers_count+'</div></div>'+
+      '<div class="gh-repo-info"><div class="gh-repo-name">'+esc(r.name)+'</div><div class="gh-repo-meta">'+esc(r.owner.login)+' · '+(r.language||'—')+' · '+r.stargazers_count+' stars</div></div>'+
       (r.private?'<span class="gh-badge private">Private</span>':'<span class="gh-badge">Public</span>')+
     '</div>';
   }).join('');
@@ -505,7 +522,7 @@ async function importRepo(fullName,branch,isPublic){
     await processIncoming(clean,repo);
     await markGithubSource(fullName,bn);
     statusFn('Imported '+fullName+' — '+clean.length+' files.');
-    showToast('Imported '+repo+' from GitHub','success');
+    showToast('Imported '+repo,'success');
   }catch(e){statusFn('Import failed: '+e.message)}
 }
 
@@ -719,6 +736,7 @@ window.showTab=showTab;
 
 /* ===== Updates page ===== */
 window.__updatesMode='github';
+let __updatesCurrentProject=null;
 
 function setUpdatesTab(mode){
   window.__updatesMode=mode;
@@ -745,7 +763,9 @@ async function renderUpdatesList(){
       const edits=countDrafts(p);
       const badge=edits?'<span class="up-badge">'+edits+' draft'+(edits===1?'':'s')+'</span>':'<span class="up-badge clean">Clean</span>';
       return '<div class="updates-proj" data-id="'+esc(p.id)+'">'+
-        '<div class="up-icon">🐙</div>'+
+        '<div class="up-icon">'+
+          '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>'+
+        '</div>'+
         '<div class="up-info"><div class="up-name">'+esc(p.name)+'</div>'+
         '<div class="up-meta">'+esc(p.githubRepo||'')+' · '+esc(p.githubBranch||'main')+'</div></div>'+
         badge+
@@ -762,7 +782,10 @@ async function renderUpdatesList(){
     box.innerHTML=all.map(function(p){
       const h=p.history||[];
       return '<div class="updates-proj" data-id="'+esc(p.id)+'">'+
-        '<div class="up-icon">'+(p.source==='github'?'🐙':'💾')+'</div>'+
+        '<div class="up-icon">'+(p.source==='github'
+          ?'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>'
+          :'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
+        )+'</div>'+
         '<div class="up-info"><div class="up-name">'+esc(p.name)+'</div>'+
         '<div class="up-meta">'+h.length+' change'+(h.length===1?'':'s')+' · '+(h[0]?timeAgoLong(h[0].ts):'no activity')+'</div></div>'+
       '</div>';
@@ -772,7 +795,6 @@ async function renderUpdatesList(){
     });
   }
 }
-window.renderUpdatesList=renderUpdatesList;
 
 function countDrafts(p){
   if(!p.history)return 0;
@@ -781,6 +803,7 @@ function countDrafts(p){
 }
 
 async function openUpdatesDetail(projectId,mode){
+  __updatesCurrentProject=projectId;
   const all=await dbGetAll();
   const p=all.find(function(x){return x.id===projectId});
   if(!p)return;
@@ -810,11 +833,10 @@ async function openUpdatesDetail(projectId,mode){
     if(!rows.length){
       list.innerHTML='<div class="pc-empty">Nothing to show here.</div>';
     }else{
-      const icons={import:'↓',edit:'✎',new:'+',delete:'🗑',rename:'↻'};
       list.innerHTML=rows.slice(0,20).map(function(h){
         const t=h.type||'edit';
         return '<div class="update-row">'+
-          '<div class="upd-icon '+t+'">'+(icons[t]||'•')+'</div>'+
+          '<div class="upd-icon '+t+'"></div>'+
           '<div class="upd-info">'+
             '<div class="upd-path">'+esc(h.path||h.note||'—')+'</div>'+
             '<div class="upd-note">'+esc(h.note||'')+'</div>'+
@@ -824,9 +846,105 @@ async function openUpdatesDetail(projectId,mode){
       }).join('');
     }
   }
+  renderSnapshotsSection(p);
 
   if($('updatesListView'))$('updatesListView').hidden=true;
   if($('updatesDetailView'))$('updatesDetailView').hidden=false;
+}
+
+/* ===== Snapshots ===== */
+async function restoreSnapshot(projectId,ts){
+  const all=await dbGetAll();
+  const p=all.find(function(x){return x.id===projectId});
+  if(!p||!p.snapshots)return;
+  const snap=p.snapshots.find(function(s){return s.ts===ts});
+  if(!snap)return;
+
+  p.snapshots.unshift({
+    ts:Date.now(),label:'Before restore',
+    files:p.files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})
+  });
+  if(p.snapshots.length>20)p.snapshots.length=20;
+
+  p.files=snap.files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}});
+  p.savedAt=Date.now();
+  await dbSetAll(all);
+
+  if(currentProjectId===projectId){
+    files=deserializeFiles(p.files);
+    setCurrentProjectName(p.name);
+  }
+  await renderProjectCards();
+  populatePages();
+  render();
+  showToast('Restored from '+new Date(snap.ts).toLocaleString(),'success');
+  openUpdatesDetail(projectId,window.__updatesMode||'local');
+}
+window.restoreSnapshot=restoreSnapshot;
+
+async function deleteSnapshot(projectId,ts){
+  const all=await dbGetAll();
+  const p=all.find(function(x){return x.id===projectId});
+  if(!p||!p.snapshots)return;
+  p.snapshots=p.snapshots.filter(function(s){return s.ts!==ts});
+  await dbSetAll(all);
+  openUpdatesDetail(projectId,window.__updatesMode||'local');
+}
+window.deleteSnapshot=deleteSnapshot;
+
+async function saveSnapshotNow(){
+  if(!__updatesCurrentProject){showToast('Open a project first','error');return}
+  const all=await dbGetAll();
+  const p=all.find(function(x){return x.id===__updatesCurrentProject});
+  if(!p){showToast('Project not found','error');return}
+  let srcFiles;
+  if(p.id===currentProjectId&&files.length)srcFiles=serializeFiles();
+  else srcFiles=p.files;
+  p.snapshots=p.snapshots||[];
+  p.snapshots.unshift({
+    ts:Date.now(),label:'Manual save',
+    files:srcFiles.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})
+  });
+  if(p.snapshots.length>20)p.snapshots.length=20;
+  await dbSetAll(all);
+  showToast('Snapshot saved','success');
+  openUpdatesDetail(p.id,window.__updatesMode||'local');
+}
+window.saveSnapshotNow=saveSnapshotNow;
+
+function renderSnapshotsSection(p){
+  const box=$('updatesSnapshotsList');
+  if(!box)return;
+  const snaps=p.snapshots||[];
+  if(!snaps.length){
+    box.innerHTML='<div class="pc-empty">No snapshots yet.<br>Tap <b>Save current state</b> above to create one.</div>';
+    return;
+  }
+  box.innerHTML=snaps.slice(0,20).map(function(s){
+    return '<div class="snapshot-row">'+
+      '<div class="snap-icon">'+
+        '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'+
+      '</div>'+
+      '<div class="snap-info">'+
+        '<div class="snap-label">'+esc(s.label||'Snapshot')+'</div>'+
+        '<div class="snap-meta">'+new Date(s.ts).toLocaleString()+' · '+s.files.length+' files</div>'+
+      '</div>'+
+      '<button class="snap-btn restore" data-ts="'+s.ts+'">Restore</button>'+
+      '<button class="snap-btn del" data-ts="'+s.ts+'">×</button>'+
+    '</div>';
+  }).join('');
+  box.querySelectorAll('.snap-btn.restore').forEach(function(b){
+    b.onclick=async function(){
+      const ok=await showConfirm('Restore this snapshot? Current state will be saved as a new snapshot first.',{title:'Restore snapshot',confirmText:'Restore',cancelText:'Cancel'});
+      if(ok)restoreSnapshot(p.id,Number(b.dataset.ts));
+    };
+  });
+  box.querySelectorAll('.snap-btn.del').forEach(function(b){
+    b.onclick=async function(){
+      const ok=await showConfirm('Delete this snapshot?',{title:'Delete snapshot',confirmText:'Delete',cancelText:'Keep'});
+      if(ok)deleteSnapshot(p.id,Number(b.dataset.ts));
+    };
+  });
 }
 
 if($('updatesTabGithub'))$('updatesTabGithub').onclick=function(){setUpdatesTab('github')};
@@ -836,6 +954,7 @@ if($('updatesBackBtn'))$('updatesBackBtn').onclick=function(){
   if($('updatesDetailView'))$('updatesDetailView').hidden=true;
   renderUpdatesList();
 };
+if($('updatesSaveNowBtn'))$('updatesSaveNowBtn').onclick=saveSnapshotNow;
 
 /* ===== Buttons ===== */
 if($('homeProjectsBtn'))$('homeProjectsBtn').onclick=function(){showTab('projects')};

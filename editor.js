@@ -8,13 +8,12 @@ const ta=$('editorTextarea'),gutter=$('editorGutter'),hl=$('editorHighlight'),
       previewFrame=$('editorPreviewFrame'),shell=$('editorShell'),
       editorPage=$('editorPage');
 let currentPath='',dirty=false,undoStack=[],redoStack=[],lastPush=0,
-    matches=[],matchIndex=-1;
+    matches=[],matchIndex=-1,originalText='';
 
 const toast=window.showToast||function(){};
 const promptFn=window.showPrompt||function(){return Promise.resolve(null)};
 const confirmFn=window.showConfirm||function(){return Promise.resolve(false)};
 
-/* ===== Syntax highlight ===== */
 function escHtml(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
 
 function highlightJS(code){
@@ -79,11 +78,9 @@ function refreshHighlight(){
   if(!hl)return;
   const v=ta.value;
   hl.innerHTML=highlightAll(v)+(v.endsWith('\n')?' ':'');
-  hl.scrollTop=ta.scrollTop;
-  hl.scrollLeft=ta.scrollLeft;
+  hl.scrollTop=ta.scrollTop;hl.scrollLeft=ta.scrollLeft;
 }
 
-/* ===== Line numbers ===== */
 function updateGutter(){
   const n=ta.value.split('\n').length;let s='';
   for(let i=1;i<=n;i++)s+=i+'\n';
@@ -95,7 +92,6 @@ ta.addEventListener('input',function(){updateGutter();refreshHighlight();pushHis
 ta.addEventListener('click',updateCursor);
 ta.addEventListener('keyup',updateCursor);
 
-/* ===== Undo / redo ===== */
 function pushHistory(force){
   const now=Date.now();
   if(!force&&now-lastPush<300)return;lastPush=now;
@@ -116,7 +112,6 @@ ta.addEventListener('keydown',function(e){
     ta.selectionStart=ta.selectionEnd=s+2;updateGutter();refreshHighlight();pushHistory(true);markDirty()}
 });
 
-/* ===== Search ===== */
 function openSearch(){searchBar.classList.add('open');searchInput.focus();searchInput.select()}
 function closeSearch(){searchBar.classList.remove('open');matches=[];matchIndex=-1;updateSearchCount()}
 function runSearch(){
@@ -154,14 +149,12 @@ $('editorSearchPrev').onclick=prevMatch;
 $('editorSearchClose').onclick=closeSearch;
 $('editorSearchBtn').onclick=function(){searchBar.classList.contains('open')?closeSearch():openSearch()};
 
-/* ===== Cursor ===== */
 function updateCursor(){
   const p=ta.selectionStart,b=ta.value.slice(0,p);
   const line=b.split('\n').length,col=p-b.lastIndexOf('\n');
   cursorInfo.textContent='Ln '+line+', Col '+col;
 }
 
-/* ===== File list ===== */
 function refreshFileList(){
   if(typeof files==='undefined')return;
   const tf=files.filter(function(f){return f.text!=null});
@@ -172,26 +165,39 @@ function refreshFileList(){
 }
 function loadFile(path){
   const f=files.find(function(x){return x.path===path});if(!f||f.text==null)return;
-  currentPath=path;ta.value=f.text;dirty=false;
+  currentPath=path;ta.value=f.text;originalText=f.text;dirty=false;
   undoStack=[f.text];redoStack=[];updateBtns();
   updateGutter();updateCursor();refreshHighlight();
   status.textContent=path;fileSelect.value=path;
   renderPreview();
 }
 function markDirty(){dirty=true;status.textContent=currentPath+' •'}
+
 async function saveFile(){
   if(!currentPath)return;
   const f=files.find(function(x){return x.path===currentPath});
   if(!f)return;
+
+  /* Detect if text actually changed */
+  const changed=(ta.value!==originalText);
+  if(!changed){
+    /* Nothing to save — no history, no notification */
+    dirty=false;
+    status.textContent=currentPath;
+    toast('No changes to save');
+    return;
+  }
+
   f.text=ta.value;f.blob=null;dirty=false;
-  status.textContent=currentPath+' ✓';
+  originalText=ta.value;
+  status.textContent=currentPath+' •';
   if(typeof window.saveCurrentProject==='function'){
     try{
       await window.saveCurrentProject();
       if(typeof window.logHistory==='function'){
         window.logHistory({type:'edit',path:currentPath,note:'Edited file'});
       }
-      status.textContent=currentPath+' ✓ Saved';
+      status.textContent=currentPath+' Saved';
       toast('Saved','success');
       setTimeout(function(){status.textContent=currentPath},1500);
     }catch(e){toast('Save failed','error')}
@@ -207,7 +213,7 @@ fileSelect.addEventListener('change',async function(e){
 });
 $('editorSaveBtn').onclick=saveFile;
 $('editorNewBtn').onclick=async function(){
-  const name=await promptFn('New file','',{message:'Enter a file path, e.g. pages/about.html',icon:'📄'});
+  const name=await promptFn('New file','',{message:'Enter a file path, e.g. pages/about.html'});
   if(!name||!name.trim())return;
   const p=name.trim();
   if(files.find(function(f){return f.path===p})){toast('File already exists','error');return}
@@ -220,15 +226,11 @@ $('editorNewBtn').onclick=async function(){
   toast('Created '+p,'success');
 };
 
-/* ===== Preview ===== */
 function renderPreview(){
   if(!currentPath)return;
   const loader=$('editorPreviewLoader');
   if(loader)loader.classList.add('show');
-  previewFrame.onload=function(){
-    if(loader)loader.classList.remove('show');
-    previewFrame.onload=null;
-  };
+  previewFrame.onload=function(){if(loader)loader.classList.remove('show');previewFrame.onload=null};
   previewFrame.srcdoc=(typeof htmlRewrite==='function')?htmlRewrite(ta.value,currentPath):ta.value;
 }
 $('editorPreviewRefresh').onclick=renderPreview;
@@ -238,7 +240,6 @@ ta.addEventListener('input',function(){
   if(/\.html?$/i.test(currentPath)){clearTimeout(window.__pvT);window.__pvT=setTimeout(renderPreview,600)}
 });
 
-/* ===== Fullscreen ===== */
 $('editorFullBtn').onclick=function(){
   const on=shell.classList.toggle('fullscreen');
   document.body.classList.toggle('editor-full',on);

@@ -4,43 +4,83 @@
 
 <header class="app-head">
   <button id="menuBtn" class="head-btn" aria-label="Menu">
-    <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
   </button>
   <div class="head-title">MULTI <span>BUNDLE</span></div>
-  <button id="clearBtn" class="head-btn" title="Clear">↺</button>
+  <button id="clearBtn" class="head-btn" title="Clear">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 10 9 10"/></svg>
+  </button>
 </header>
 
 <div id="drawerBackdrop" class="drawer-backdrop"></div>
 <aside id="drawer" class="drawer">
   <div class="drawer-head">
     <div class="drawer-logo"><span class="drawer-mark">MB</span><div><b>MULTI <span>BUNDLE</span></b><small>Local workspace</small></div></div>
-    <button id="drawerClose" class="drawer-x">×</button>
+    <button id="drawerClose" class="drawer-x" aria-label="Close">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
   </div>
   <nav class="drawer-nav">
-    <a data-tab="home">⌂ <span>Home</span></a>
-    <a data-tab="projects">▣ <span>Projects</span></a>
-    <a data-tab="editor">{ } <span>Editor</span></a>
-    <a data-tab="preview">◉ <span>Preview</span></a>
-    <a data-tab="bundle">▤ <span>Bundle</span></a>
-    <a data-tab="backups">⟲ <span>Backups</span></a>
-    <a data-tab="github">🐙 <span>GitHub</span></a>
-    <a data-tab="updates">⏱ <span>Last Updates</span></a>
+    <a data-tab="home">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Home</span>
+    </a>
+    <a data-tab="projects">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span>Projects</span>
+    </a>
+    <a data-tab="editor">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      <span>Editor</span>
+    </a>
+    <a data-tab="preview">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <span>Preview</span>
+    </a>
+    <a data-tab="bundle">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      <span>Bundle</span>
+    </a>
+    <a data-tab="backups">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+      <span>Backups</span>
+    </a>
+    <a data-tab="github">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      <span>GitHub</span>
+    </a>
+    <a data-tab="updates">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Last Updates</span>
+    </a>
   </nav>
   <div class="drawer-section">
     <label>TOOLS</label>
-    <button id="drawerNewProject">📁 New project</button>
-    <button id="drawerImportZip">📦 Import ZIP</button>
-    <button id="drawerGithub">🐙 Import from GitHub</button>
-    <button id="drawerClear">↺ Clear current project</button>
+    <button id="drawerNewProject">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      New project
+    </button>
+    <button id="drawerImportZip">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Import ZIP
+    </button>
+    <button id="drawerGithub">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      Import from GitHub
+    </button>
+    <button id="drawerClear">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 10 9 10"/></svg>
+      Clear current project
+    </button>
   </div>
   <div class="drawer-foot">Multi Bundle · Local preview · v1</div>
 </aside>
 
 <main>
 <section id="homePage" class="tab-page">
- <section class="card hero"><label class="eyebrow">YOUR LOCAL WORKSPACE</label><h1>Build it. <span>Preview it.</span></h1><p>Keep your website files organized, create a TXT bundle, and preview static pages locally on your device.</p><div class="actions"><button id="homeProjectsBtn" class="btn primary">▣ Open Projects</button><button id="homePreviewBtn" class="btn secondary">◉ Open Preview</button></div></section>
- <section class="card"><label class="eyebrow">CURRENT PROJECT</label><div class="heading"><h2 id="homeProjectName">No project loaded</h2><span id="homeFileCount" class="pill">0 files</span></div><p id="homeStatus">Go to Projects to import a website folder or ZIP.</p><div class="actions"><button id="homeBundleBtn" class="btn primary" disabled>⇩ Create TXT bundle</button><button id="homeOpenPreviewBtn" class="btn secondary" disabled>▶ Preview website</button></div></section>
- <section class="card note-card"><b>ℹ️ Local workspace</b><p>Best for static HTML, CSS, JavaScript, and images. Server-side features like PHP and databases need a real server. Keep your original files safe.</p></section>
+ <section class="card hero"><label class="eyebrow">YOUR LOCAL WORKSPACE</label><h1>Build it. <span>Preview it.</span></h1><p>Keep your website files organized, create a TXT bundle, and preview static pages locally on your device.</p><div class="actions"><button id="homeProjectsBtn" class="btn primary">Open Projects</button><button id="homePreviewBtn" class="btn secondary">Open Preview</button></div></section>
+ <section class="card"><label class="eyebrow">CURRENT PROJECT</label><div class="heading"><h2 id="homeProjectName">No project loaded</h2><span id="homeFileCount" class="pill">0 files</span></div><p id="homeStatus">Go to Projects to import a website folder or ZIP.</p><div class="actions"><button id="homeBundleBtn" class="btn primary" disabled>Create TXT bundle</button><button id="homeOpenPreviewBtn" class="btn secondary" disabled>Preview website</button></div></section>
+ <section class="card note-card"><b>Local workspace</b><p>Best for static HTML, CSS, JavaScript, and images. Server-side features like PHP and databases need a real server. Keep your original files safe.</p></section>
 </section>
 
 <section id="projectsPage" class="tab-page" hidden>
@@ -50,10 +90,10 @@
       <h1>Your <span>Projects</span></h1>
       <p>Import a website folder or ZIP. Your files are saved on this device.</p>
       <div class="actions">
-        <label class="btn primary">📁 New project<input id="folderInput" type="file" webkitdirectory directory multiple hidden></label>
-        <label class="btn secondary">📦 Import ZIP<input id="zipInput" type="file" accept=".zip,application/zip" hidden></label>
+        <label class="btn primary">New project<input id="folderInput" type="file" webkitdirectory directory multiple hidden></label>
+        <label class="btn secondary">Import ZIP<input id="zipInput" type="file" accept=".zip,application/zip" hidden></label>
       </div>
-      <div class="status" id="status">Choose a folder or ZIP to start a new project. Max 4 projects.</div>
+      <div class="status" id="status">Choose a folder or ZIP to start a new project. Max 10 projects.</div>
     </section>
 
     <section class="card">
@@ -73,10 +113,10 @@
         <span id="detailFileCount" class="pill">0 files</span>
       </div>
       <div class="actions">
-        <button id="detailEditBtn" class="btn primary">✎ Edit code</button>
-        <button id="detailImportChangesBtn" class="btn secondary">↻ Import changes</button>
-        <button id="detailBundleBtn" class="btn secondary">⇩ Bundle</button>
-        <button id="detailDeleteBtn" class="btn secondary">🗑 Delete</button>
+        <button id="detailEditBtn" class="btn primary">Edit code</button>
+        <button id="detailImportChangesBtn" class="btn secondary">Import changes</button>
+        <button id="detailBundleBtn" class="btn secondary">Bundle</button>
+        <button id="detailDeleteBtn" class="btn secondary">Delete</button>
       </div>
       <div class="status" id="detailStatus">Tap "Edit code" to modify files.</div>
     </section>
@@ -110,7 +150,7 @@
         <div class="gh-user-info"><b id="ghName">—</b><small id="ghLogin">—</small></div>
         <button id="githubLogoutBtn" class="btn secondary">Sign out</button>
       </div>
-      <input id="ghRepoSearch" class="gh-search" type="text" placeholder="🔍 Search your repos…" autocomplete="off">
+      <input id="ghRepoSearch" class="gh-search" type="text" placeholder="Search your repos…" autocomplete="off">
       <div id="ghRepoList" class="gh-repo-list"></div>
     </div>
   </section>
@@ -118,7 +158,7 @@
   <section class="card">
     <label class="eyebrow">PUBLIC REPO</label>
     <h2>Import by URL</h2>
-    <p>Works without signing in. Public repos only. Tip: also accepts /commit/SHA or /tree/branch.</p>
+    <p>Works without signing in. Public repos only. Also accepts /commit/SHA or /tree/branch.</p>
     <div class="gh-row">
       <input id="ghPublicUrl" type="text" placeholder="https://github.com/owner/repo" autocomplete="off">
       <button id="ghPublicBtn" class="btn primary">Import</button>
@@ -133,8 +173,14 @@
     <h1>Last <span>Updates</span></h1>
     <p>See recent changes to your projects.</p>
     <div class="updates-tabs">
-      <button id="updatesTabGithub" class="updates-tab active">🐙 GitHub</button>
-      <button id="updatesTabLocal" class="updates-tab">💾 Multi Bundle</button>
+      <button id="updatesTabGithub" class="updates-tab active">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="vertical-align:-3px;margin-right:6px"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+        GitHub
+      </button>
+      <button id="updatesTabLocal" class="updates-tab">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Multi Bundle
+      </button>
     </div>
   </section>
 
@@ -169,15 +215,26 @@
       <div class="heading"><label class="eyebrow">RECENT CHANGES</label></div>
       <div id="updatesDetailList" class="updates-list"></div>
     </section>
+    <section class="card">
+      <div class="heading">
+        <div><label class="eyebrow">SNAPSHOTS</label><h2>Rollback points</h2></div>
+        <span class="pill">max 20</span>
+      </div>
+      <button id="updatesSaveNowBtn" class="btn primary save-now-btn">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save current state as snapshot
+      </button>
+      <div id="updatesSnapshotsList" class="snapshots-list"></div>
+    </section>
   </div>
 </section>
 
 <section id="bundlePage" class="tab-page" hidden>
  <section class="card hero"><label class="eyebrow">BUNDLE CENTER</label><h1>TXT <span>Bundle</span></h1><p>Combine the text-based files from your current project into one readable TXT backup file.</p></section>
- <section class="card"><div class="heading"><div><label class="eyebrow">READY TO EXPORT</label><h2 id="bundleProjectName">No project loaded</h2></div><span id="bundleFileCount" class="pill">0 files</span></div><p id="bundleStatus">Import a project first from the Projects tab.</p><button id="bundleBtn" class="btn primary" disabled>⇩ Export TXT bundle</button><p class="note">Text files are included. Images, fonts, and other binary assets are represented by a note and are not embedded in the TXT file.</p></section>
+ <section class="card"><div class="heading"><div><label class="eyebrow">READY TO EXPORT</label><h2 id="bundleProjectName">No project loaded</h2></div><span id="bundleFileCount" class="pill">0 files</span></div><p id="bundleStatus">Import a project first from the Projects tab.</p><button id="bundleBtn" class="btn primary" disabled>Export TXT bundle</button><p class="note">Text files are included. Images, fonts, and other binary assets are represented by a note and are not embedded in the TXT file.</p></section>
 </section>
 
-<section id="previewPage" class="tab-page" hidden><div class="preview-top"><div><label class="eyebrow">LOCAL BROWSER</label><h1>Website <span>Preview</span></h1></div><button id="fullScreenBtn" class="btn primary">⛶ Full screen</button></div><section class="card"><div class="page-toolbar"><label for="pageSelect">PAGE</label><select id="pageSelect" disabled><option>No project loaded</option></select><button id="openPageBtn" class="btn secondary" disabled>Open page</button></div><div class="browser"><i></i><i></i><i></i><span id="previewPath">Your website will appear here</span><button id="refreshBtn" disabled>↻</button></div><div class="preview-wrap"><div id="previewLoader" class="preview-loader"><div class="spinner"></div></div><iframe id="frame" bgcolor="#0d0e12" title="Local website preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" hidden></iframe></div><p class="note">PHP, databases, server APIs, and some advanced module setups need a real server.</p><button id="backHomeBtn" class="btn secondary">← Home</button></section></section>
+<section id="previewPage" class="tab-page" hidden><div class="preview-top"><div><label class="eyebrow">LOCAL BROWSER</label><h1>Website <span>Preview</span></h1></div><button id="fullScreenBtn" class="btn primary">Full screen</button></div><section class="card"><div class="page-toolbar"><label for="pageSelect">PAGE</label><select id="pageSelect" disabled><option>No project loaded</option></select><button id="openPageBtn" class="btn secondary" disabled>Open page</button></div><div class="browser"><i></i><i></i><i></i><span id="previewPath">Your website will appear here</span><button id="refreshBtn" disabled>↻</button></div><div class="preview-wrap"><div id="previewLoader" class="preview-loader"><div class="spinner"></div></div><iframe id="frame" bgcolor="#0d0e12" title="Local website preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" hidden></iframe></div><p class="note">PHP, databases, server APIs, and some advanced module setups need a real server.</p><button id="backHomeBtn" class="btn secondary">← Home</button></section></section>
 
 <section id="editorPage" class="tab-page" hidden>
   <div class="editor-shell" id="editorShell">
@@ -188,7 +245,6 @@
       <div class="et-row et-actions">
         <button id="editorNewBtn" class="editor-btn" title="New file">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>New</span>
         </button>
         <button id="editorUndoBtn" class="editor-btn" disabled title="Undo">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/></svg>
@@ -201,14 +257,12 @@
         </button>
         <button id="editorPreviewBtn" class="editor-btn" title="Preview">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"/></svg>
-          <span>Preview</span>
         </button>
         <button id="editorFullBtn" class="editor-btn" title="Full screen">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 9 4 4 9 4"/><polyline points="20 9 20 4 15 4"/><polyline points="4 15 4 20 9 20"/><polyline points="20 15 20 20 15 20"/></svg>
         </button>
         <button id="editorSaveBtn" class="editor-btn primary" title="Save">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          <span>Save</span>
         </button>
       </div>
     </div>
@@ -248,7 +302,7 @@
   </div>
 </section>
 
-<section id="backupsPage" class="tab-page" hidden><section class="card"><label class="eyebrow">BACKUPS</label><h1>Safe <span>Backups</span></h1><p>Create a TXT bundle from the Bundle tab and save it somewhere safe. This prototype does not yet keep a backup history automatically.</p><button id="backupsBundleBtn" class="btn primary">⇩ Open Bundle</button></section></section>
+<section id="backupsPage" class="tab-page" hidden><section class="card"><label class="eyebrow">BACKUPS</label><h1>Safe <span>Backups</span></h1><p>Create a TXT bundle from the Bundle tab and save it somewhere safe. This prototype does not yet keep a backup history automatically.</p><button id="backupsBundleBtn" class="btn primary">Open Bundle</button></section></section>
 </main>
 
 <div id="toastRoot" class="toast-root"></div>

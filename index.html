@@ -210,6 +210,7 @@
         <span id="updatesDetailCount" class="pill">0</span>
       </div>
       <div id="updatesDetailNote" class="status">—</div>
+      <div id="ghRemoteBox" hidden style="margin-top:12px"></div>
     </section>
     <section class="card">
       <div class="heading"><label class="eyebrow">RECENT CHANGES</label></div>
@@ -266,11 +267,15 @@
       </div>
     </div>
     <div class="editor-searchbar" id="editorSearchBar">
-      <input id="editorSearchInput" class="editor-search-input" placeholder="Search in file…" />
+<textarea id="editorSearchInput" class="editor-search-input" rows="1" placeholder="Search, paste long text, or :45 for line"></textarea>
       <span id="editorSearchCount" class="editor-search-count">0/0</span>
       <button id="editorSearchPrev" class="editor-btn small">↑</button>
       <button id="editorSearchNext" class="editor-btn small">↓</button>
-      <button id="editorSearchClose" class="editor-btn small">✕</button>
+    <button id="editorSearchClose" class="editor-btn small">✕</button>
+      <div style="flex-basis:100%;height:0"></div>
+      <textarea id="editorReplaceInput" class="editor-search-input" rows="1" placeholder="Replace with…"></textarea>
+      <button id="editorReplaceOne" class="editor-btn small">Replace</button>
+      <button id="editorReplaceAll" class="editor-btn small">All</button>
     </div>
     <div class="editor-body">
       <div class="editor-pane">

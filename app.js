@@ -81,7 +81,7 @@ window.logHistory=logHistory;
 async function markGithubSource(repo,branch){
   if(!currentProjectId)return;
   const all=await dbGetAll();const p=all.find(function(x){return x.id===currentProjectId});if(!p)return;
-  p.source='github';p.githubRepo=repo;p.githubBranch=branch;p.lastImport=Date.now();await dbSetAll(all);
+  p.source='github';p.githubRepo=repo;p.githubBranch=branch;p.lastImport=Date.now();p.githubShas=window.__ghShas||null;await dbSetAll(all);
 }
 window.markGithubSource=markGithubSource;
 
@@ -309,7 +309,7 @@ async function importRepo(fullName,branch,isPublic){
   try{
     const r=await ghFetch('https://api.github.com/repos/'+owner+'/'+repo+'/git/trees/'+bn+'?recursive=1');
     if(!r.ok){statusFn('Could not list files.');return}
-    const tree=await r.json();const blobs=(tree.tree||[]).filter(function(x){return x.type==='blob'});
+    const tree=await r.json();const blobs=(tree.tree||[]).filter(function(x){return x.type==='blob'});window.__ghShas={};blobs.forEach(function(n){window.__ghShas[n.path]=n.sha});
     if(!blobs.length){statusFn('Repo has no files.');return}
     statusFn('Downloading '+blobs.length+' files…');let done=0;
     const result=await Promise.all(blobs.map(async function(node){
@@ -326,7 +326,7 @@ async function importRepo(fullName,branch,isPublic){
       }catch(e){return null}
     }));
     const clean=result.filter(function(x){return x});
-    await processIncoming(clean,repo);await markGithubSource(fullName,bn);
+    await processIncoming(clean,window.__ghPullName||repo);window.__ghPullName=null;await markGithubSource(fullName,bn);
     statusFn('Imported '+fullName+' — '+clean.length+' files.');showToast('Imported '+repo,'success');
   }catch(e){statusFn('Import failed: '+e.message)}
 }
@@ -542,6 +542,46 @@ async function renderUpdatesList(){
 }
 function countDrafts(p){if(!p.history)return 0;const since=p.lastImport||0;return p.history.filter(function(h){return h.type==='edit'&&h.ts>since}).length}
 
+async function gitBlobSha(bytes){
+  const pre=new TextEncoder().encode('blob '+bytes.length+'\0');
+  const all=new Uint8Array(pre.length+bytes.length);all.set(pre);all.set(bytes,pre.length);
+  const d=await crypto.subtle.digest('SHA-1',all);
+  return Array.from(new Uint8Array(d)).map(function(x){return x.toString(16).padStart(2,'0')}).join('');
+}
+async function checkGithubUpdates(p){
+  const r=await ghFetch('https://api.github.com/repos/'+p.githubRepo+'/git/trees/'+encodeURIComponent(p.githubBranch||'main')+'?recursive=1');
+  if(!r.ok)throw new Error('GitHub error '+r.status);
+  const tree=await r.json();const remote={};
+  (tree.tree||[]).forEach(function(n){if(n.type==='blob')remote[n.path]=n.sha});
+  let base=p.githubShas;
+  if(!base){
+    base={};
+    for(const f of p.files){
+      let b=null;
+      if(f.text!=null)b=new TextEncoder().encode(f.text);
+      else if(f.blob)b=new Uint8Array(await f.blob.arrayBuffer());
+      if(b)base[f.path]=await gitBlobSha(b);
+    }
+  }
+  const added=[],changed=[],removed=[];
+  Object.keys(remote).forEach(function(k){if(!(k in base))added.push(k);else if(base[k]!==remote[k])changed.push(k)});
+  Object.keys(base).forEach(function(k){if(!(k in remote))removed.push(k)});
+  return {added:added,changed:changed,removed:removed};
+}
+async function renderGhRemote(p,mode){
+  const box=$('ghRemoteBox');if(!box)return;
+  if(mode!=='github'||p.source!=='github'){box.hidden=true;return}
+  box.hidden=false;box.innerHTML='<div class="status">Checking GitHub…</div>';
+  try{
+    const r=await checkGithubUpdates(p);
+    const n=r.added.length+r.changed.length+r.removed.length;
+    if(!n){box.innerHTML='<div class="status">✓ Up to date with GitHub.</div>';return}
+    const names=r.changed.concat(r.added).slice(0,8).map(function(x){return '<div class="upd-path" style="font-size:12px;margin:3px 0">'+esc(x)+'</div>'}).join('');
+    box.innerHTML='<div class="status" style="color:#fff;font-weight:700">'+n+' file'+(n===1?'':'s')+' changed on GitHub</div>'+names+(n>8?'<div class="status">+ '+(n-8)+' more</div>':'')+'<button id="ghPullBtn" class="btn primary" style="margin-top:10px">Pull update</button>';
+    $('ghPullBtn').onclick=function(){window.__ghPullName=p.name;showTab('github');importRepo(p.githubRepo,p.githubBranch)};
+  }catch(e){box.innerHTML='<div class="status">Could not check GitHub: '+esc(e.message)+'</div>'}
+}
+
 async function openUpdatesDetail(projectId,mode){
   __updatesCurrentProject=projectId;
   const all=await dbGetAll();const p=all.find(function(x){return x.id===projectId});if(!p)return;
@@ -556,7 +596,8 @@ async function openUpdatesDetail(projectId,mode){
     if($('updatesDetailEyebrow'))$('updatesDetailEyebrow').textContent='FULL HISTORY';
     if($('updatesDetailNote'))$('updatesDetailNote').textContent=(p.history||[]).length+' total change'+((p.history||[]).length===1?'':'s')+' (showing last 20).';
   }
-  if($('updatesDetailCount'))$('updatesDetailCount').textContent=rows.length+' change'+(rows.length===1?'':'s');
+   if($('updatesDetailCount'))$('updatesDetailCount').textContent=rows.length+' change'+(rows.length===1?'':'s');
+  renderGhRemote(p,mode);
   const list=$('updatesDetailList');
   if(list){
     if(!rows.length){list.innerHTML='<div class="pc-empty">Nothing to show here.</div>';}

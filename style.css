@@ -247,6 +247,8 @@ iframe{width:100%;height:430px;background:#0d0e12;border:0;border-radius:9px;dis
   background:#121317;border-bottom:1px solid var(--line);
 }
 .editor-searchbar.open{display:flex}
+.editor-searchbar{flex-wrap:wrap}
+.editor-search-input{resize:none;box-sizing:border-box;height:40px;line-height:1.3;font-family:inherit}
 .editor-search-input{
   flex:1;min-width:0;background:#101115;color:#e6e6e8;
   border:1px solid var(--line);border-radius:10px;

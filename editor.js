@@ -8,7 +8,7 @@ const ta=$('editorTextarea'),gutter=$('editorGutter'),hl=$('editorHighlight'),
       previewFrame=$('editorPreviewFrame'),shell=$('editorShell'),
       editorPage=$('editorPage');
 let currentPath='',dirty=false,undoStack=[],redoStack=[],lastPush=0,
-    matches=[],matchIndex=-1,originalText='';
+    matches=[],matchLens=[],matchIndex=-1,originalText='';
 
 const toast=window.showToast||function(){};
 const promptFn=window.showPrompt||function(){return Promise.resolve(null)};
@@ -115,24 +115,52 @@ ta.addEventListener('keydown',function(e){
 function openSearch(){searchBar.classList.add('open');searchInput.focus();searchInput.select()}
 function closeSearch(){searchBar.classList.remove('open');matches=[];matchIndex=-1;updateSearchCount()}
 function runSearch(){
-  const q=searchInput.value;matches=[];matchIndex=-1;
+ while((i=t.indexOf(n,i))!==-1){matches.push(i);matchLens.push(n.length);i+=n.length}
+    if(!matches.length&&/\s/.test(q.trim())){
+      try{const re=new RegExp(q.trim().split(/\s+/).map(function(w){return w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}).join('\\s+'),'gi');let m;
+        while((m=re.exec(ta.value))!==null){matches.push(m.index);matchLens.push(m[0].length);if(m[0].length===0)re.lastIndex++}}catch(e){}
+    }}
   if(q){const t=ta.value.toLowerCase(),n=q.toLowerCase();let i=0;
     while((i=t.indexOf(n,i))!==-1){matches.push(i);i+=n.length}}
   updateSearchCount();
   if(matches.length){matchIndex=0;selectMatch()}
 }
 function updateSearchCount(){searchCount.textContent=matches.length?(matchIndex+1)+'/'+matches.length:'0/0'}
+function goToLine(n){
+  const lines=ta.value.split('\n');n=Math.max(1,Math.min(n,lines.length));
+  let pos=0;for(let i=0;i<n-1;i++)pos+=lines[i].length+1;
+  ta.setSelectionRange(pos,pos+lines[n-1].length);scrollToPosition(pos);updateCursor();
+}
+function focusSel(){const s=ta.selectionStart,e=ta.selectionEnd;ta.focus({preventScroll:true});ta.setSelectionRange(s,e)}
+function edited(){ta.dispatchEvent(new Event('input'));pushHistory(true)}
+function replaceOne(){
+  if(!matches.length||matchIndex<0){toast('No match to replace','error');return}
+  const rv=$('editorReplaceInput').value,s=matches[matchIndex],e=s+(matchLens[matchIndex]||0);
+  ta.value=ta.value.slice(0,s)+rv+ta.value.slice(e);
+  edited();runSearch();
+  const k=matches.findIndex(function(p){return p>=s+rv.length});
+  if(matches.length){matchIndex=k<0?0:k;selectMatch();focusSel()}
+}
+function replaceAll(){
+  if(!matches.length){toast('No match to replace','error');return}
+  const rv=$('editorReplaceInput').value;let v=ta.value;const n=matches.length;
+  for(let i=matches.length-1;i>=0;i--){v=v.slice(0,matches[i])+rv+v.slice(matches[i]+(matchLens[i]||0))}
+  ta.value=v;edited();runSearch();toast('Replaced '+n,'success');
+}
+if($('editorReplaceOne'))$('editorReplaceOne').onclick=replaceOne;
+if($('editorReplaceAll'))$('editorReplaceAll').onclick=replaceAll;
 function scrollToPosition(pos){
   const cs=getComputedStyle(ta);
   const lh=parseFloat(cs.lineHeight)||(parseFloat(cs.fontSize)*1.55)||20;
   const before=ta.value.slice(0,pos);
   const lineNum=before.split('\n').length;
   ta.scrollTop=Math.max(0,(lineNum-3)*lh);
+  const col=pos-before.lastIndexOf('\n')-1;ta.scrollLeft=Math.max(0,col*(parseFloat(cs.fontSize)||13)*0.6-ta.clientWidth/3);
   syncScroll();
 }
 function selectMatch(){
   if(matchIndex<0||matchIndex>=matches.length)return;
-  const s=matches[matchIndex],en=s+searchInput.value.length;
+   const s=matches[matchIndex],en=s+(matchLens[matchIndex]||searchInput.value.length);
   ta.setSelectionRange(s,en);
   scrollToPosition(s);
   updateSearchCount();
@@ -142,10 +170,10 @@ searchInput.addEventListener('keydown',function(e){
   if(e.key==='Enter'){e.preventDefault();e.shiftKey?prevMatch():nextMatch()}
   if(e.key==='Escape')closeSearch();
 });
-function nextMatch(){if(!matches.length)return;matchIndex=(matchIndex+1)%matches.length;selectMatch()}
+function nextMatch(){const g=searchInput.value.match(/^:(\d+)$/);if(g){goToLine(parseInt(g[1],10));return}if(!matches.length)return;matchIndex=(matchIndex+1)%matches.length;selectMatch()}
 function prevMatch(){if(!matches.length)return;matchIndex=(matchIndex-1+matches.length)%matches.length;selectMatch()}
-$('editorSearchNext').onclick=nextMatch;
-$('editorSearchPrev').onclick=prevMatch;
+$('editorSearchNext').onclick=function(){nextMatch();focusSel()};
+$('editorSearchPrev').onclick=function(){prevMatch();focusSel()};
 $('editorSearchClose').onclick=closeSearch;
 $('editorSearchBtn').onclick=function(){searchBar.classList.contains('open')?closeSearch():openSearch()};
 
@@ -161,8 +189,11 @@ function refreshFileList(){
   const cur=currentPath;fileSelect.innerHTML='';
   if(!tf.length){fileSelect.add(new Option('No project selected',''));return}
   tf.forEach(function(f){fileSelect.add(new Option(f.path,f.path))});
-  if(cur&&tf.find(function(f){return f.path===cur}))fileSelect.value=cur;
-}
+  const pid=(typeof currentProjectId!=='undefined')?currentProjectId:'';
+  const cf=cur?tf.find(function(f){return f.path===cur}):null;
+  if(cf&&pid===window.__edPid){fileSelect.value=cur;if(!dirty&&cf.text!==originalText)loadFile(cur);return}
+  window.__edPid=pid;
+  if(tf[0])loadFile(tf[0].path);
 function loadFile(path){
   const f=files.find(function(x){return x.path===path});if(!f||f.text==null)return;
   currentPath=path;ta.value=f.text;originalText=f.text;dirty=false;

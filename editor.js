@@ -88,13 +88,24 @@ function updateGutter(){
 }
 function syncScroll(){gutter.scrollTop=ta.scrollTop;hl.scrollTop=ta.scrollTop;hl.scrollLeft=ta.scrollLeft}
 ta.addEventListener('scroll',syncScroll);
-ta.addEventListener('input',function(){
-  updateGutter();refreshHighlight();pushHistory();markDirty();updateCursor();
-  try{
-    if(typeof currentProjectId!=='undefined' && currentProjectId && currentPath){
-      localStorage.setItem('mb_draft_'+currentProjectId+'_'+currentPath, ta.value);
-    }
-  }catch(e){}
+let typingTimer;
+ta.addEventListener('input', function() {
+  // These are fast and will update instantly
+  updateGutter(); 
+  updateCursor();
+  pushHistory(); 
+  markDirty();
+
+  // These are heavy, so we wait 300ms after you stop typing
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(function() {
+    refreshHighlight();
+    try{
+      if(typeof currentProjectId!=='undefined' && currentProjectId && currentPath){
+        localStorage.setItem('mb_draft_'+currentProjectId+'_'+currentPath, ta.value);
+      }
+    }catch(e){}
+  }, 300);
 });
 ta.addEventListener('click',updateCursor);
 ta.addEventListener('keyup',updateCursor);
@@ -354,7 +365,10 @@ $('editorPreviewRefresh').onclick=renderPreview;
 $('editorPreviewBtn').onclick=function(){renderPreview();$('editorPreviewPane').classList.add('open')};
 $('editorPreviewClose').onclick=function(){$('editorPreviewPane').classList.remove('open')};
 ta.addEventListener('input',function(){
-  if(/\.html?$/i.test(currentPath)){clearTimeout(window.__pvT);window.__pvT=setTimeout(renderPreview,600)}
+  if(/\.html?$/i.test(currentPath)){
+    clearTimeout(window.__pvT);
+    window.__pvT=setTimeout(renderPreview,1000); // Waits 1 full second
+  }
 });
 
 $('editorFullBtn').onclick=function(){

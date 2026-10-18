@@ -252,10 +252,13 @@
   cloudUser = user;
   
   // Hide the loading spinner and show the form
-  const gateLoading = document.getElementById('gateLoading');
-  const gateContent = document.getElementById('gateContent');
-  if (gateLoading) gateLoading.style.display = 'none';
-  if (gateContent) gateContent.style.display = 'block';
+const gateLoading = document.getElementById('gateLoading');
+const gateContent = document.getElementById('gateContent');
+if (gateLoading) gateLoading.style.display = 'none';
+if (gateContent) gateContent.style.display = 'block';
+
+// NEW: Unhide the app now that we know the login state
+document.body.classList.remove('auth-loading');
 
   const prof = profileOf(user);
   saveProfile(user);

@@ -1,5 +1,7 @@
 /* ========== Base ========== */
 .topbar{display:none!important}
+/* Hide the app completely while checking login */
+.auth-loading header, .auth-loading main, .auth-loading .bottom { display: none !important; }
 :root{
   --bg:#101114;--panel:#191a1f;--panel2:#24252b;--line:#303139;
   --text:#f7f7f8;--muted:#a2a3ad;--red:#f01424;--green:#5ed69a;

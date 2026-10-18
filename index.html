@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f01424"><title>Multi Bundle</title><link rel="stylesheet" href="style.css"><link rel="manifest" href="manifest.json"><link rel="icon" type="image/png" href="logo.png"><link rel="apple-touch-icon" href="logo.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Multi Bundle"><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script></head>
 <body>
@@ -60,6 +61,7 @@
   </nav>
   <div class="drawer-section">
     <label>TOOLS</label>
+    <div id="drawerAccount"></div>
     <button id="drawerNewProject">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
       New project
@@ -84,10 +86,10 @@
 <section id="homePage" class="tab-page">
 <section class="card" id="authCard">
   <label class="eyebrow">ACCOUNT</label>
-  <h2>Cloud Sync</h2>
+  <h2>Your account</h2>
   <div id="authBox" style="margin-top:10px;"></div>
 </section>
- <section class="card hero"><label class="eyebrow">YOUR LOCAL WORKSPACE</label><h1>Build it. <span>Preview it.</span></h1><p>Keep your website files organized, create a TXT bundle, and preview static pages locally on your device.</p><div class="actions"><button id="homeProjectsBtn" class="btn primary">Open Projects</button><button id="homePreviewBtn" class="btn secondary">Open Preview</button></div></section>
+ <section class="card hero"><label class="eyebrow" id="heroEyebrow">YOUR LOCAL WORKSPACE</label><h1>Build it. <span>Preview it.</span></h1><p>Keep your website files organized, create a TXT bundle, and preview static pages locally on your device.</p><div class="actions"><button id="homeProjectsBtn" class="btn primary">Open Projects</button><button id="homePreviewBtn" class="btn secondary">Open Preview</button></div></section>
  <section class="card"><label class="eyebrow">CURRENT PROJECT</label><div class="heading"><h2 id="homeProjectName">No project loaded</h2><span id="homeFileCount" class="pill">0 files</span></div><p id="homeStatus">Go to Projects to import a website folder or ZIP.</p><div class="actions"><button id="homeBundleBtn" class="btn primary" disabled>Create TXT bundle</button><button id="homeOpenPreviewBtn" class="btn secondary" disabled>Preview website</button></div></section>
  <section class="card note-card"><b>Local workspace</b><p>Best for static HTML, CSS, JavaScript, and images. Server-side features like PHP and databases need a real server. Keep your original files safe.</p></section>
 </section>
@@ -329,18 +331,37 @@
 </main>
 
 <!-- Full Screen Login Gate -->
-<div id="loginGate" style="position:fixed;inset:0;background:#0d0e12;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
-  <h1 style="margin:0 0 12px;font-size:42px;font-weight:900;letter-spacing:-1px;color:#fff;line-height:1.1;font-family:system-ui,-apple-system,sans-serif;">
-    Welcome to<br><span style="color:var(--red);">Multi Bundle</span>
-  </h1>
-  <p style="color:#a2a3ad;margin-bottom:40px;max-width:320px;font-size:15px;line-height:1.6;">
-    Your secure workspace for web projects. Sign in to sync your files across all your devices.
-  </p>
-  
-  <button id="gateLoginBtn" class="btn primary" style="padding:16px 24px;font-size:16px;width:100%;max-width:340px;display:flex;align-items:center;justify-content:center;gap:12px;border-radius:14px;box-shadow:0 8px 24px rgba(240,20,36,0.2);transition:all 0.2s;">
-    <svg viewBox="0 0 48 48" width="24" height="24"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-    Continue with Google
-  </button>
+<div id="loginGate" style="position:fixed;inset:0;background:#0d0e12;z-index:9999;display:none;flex-direction:column;align-items:center;padding:24px;text-align:center;overflow-y:auto;">
+  <div style="margin:auto 0;width:100%;max-width:340px;">
+    <h1 style="margin:0 0 12px;font-size:38px;font-weight:900;letter-spacing:-1px;color:#fff;line-height:1.1;font-family:system-ui,-apple-system,sans-serif;">
+      Welcome to<br><span style="color:var(--red);">Multi Bundle</span>
+    </h1>
+    <p style="color:#a2a3ad;margin:0 auto 26px;max-width:320px;font-size:14px;line-height:1.6;">
+      Your secure workspace for web projects. Each account gets its own private projects on this phone.
+    </p>
+
+    <button id="gateLoginBtn" class="g-btn g-google" type="button">
+      <svg viewBox="0 0 48 48" width="24" height="24"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <button id="gateGithubBtn" class="g-btn g-github" type="button">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      Continue with GitHub
+    </button>
+
+    <div class="g-or">or use email</div>
+
+    <div id="gateNameWrap" hidden><input id="gateName" class="g-input" type="text" placeholder="Your name" autocomplete="name"></div>
+    <input id="gateEmail" class="g-input" type="email" placeholder="Email" autocomplete="email" autocapitalize="off">
+    <input id="gatePassword" class="g-input" type="password" placeholder="Password" autocomplete="current-password">
+    <button id="gateEmailBtn" class="g-btn g-main" type="button">Sign in with email</button>
+
+    <div class="g-links">
+      <button id="gateModeBtn" class="g-link" type="button">New here? Create account</button>
+      <button id="gateForgot" class="g-link" type="button">Forgot password?</button>
+    </div>
+    <div id="gateMsg" class="g-msg"></div>
+  </div>
 </div>
 
 <div id="toastRoot" class="toast-root"></div>
@@ -388,7 +409,6 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <script>
   const firebaseConfig = {
@@ -409,6 +429,7 @@
 <script src="editor.js"></script>
 <script src="settings.js"></script>
 <script src="publish.js"></script>
+<script src="backups.js"></script>
 <!-- Service worker disabled for testing -->
 <script>
   if('serviceWorker' in navigator){ 
@@ -418,3 +439,4 @@
   }
 </script>
 </body></html>
+

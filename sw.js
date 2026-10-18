@@ -1,8 +1,8 @@
 /* Multi Bundle Service Worker — v8 */
-const CACHE='multibundle-v41';
+const CACHE='multibundle-v42';
 const ASSETS=['/','/index.html','/style.css','/app.js','/editor.js',''/settings.js','/publish.js',',js','/manifest.json','/logo.png'];
 
-self.addEventListener('install',function(e){
+self.addEventListener('insall',function(e){
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(function(c){return Promise.all(ASSETS.map(function(url){return c.add(url).catch(function(){})}))}));
 });

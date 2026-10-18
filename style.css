@@ -212,18 +212,27 @@ iframe{width:100%;height:430px;background:#0d0e12;border:0;border-radius:9px;dis
 
 /* ========== Editor toolbar ========== */
 .editor-toolbar{
-  display:flex;flex-direction:column;gap:8px;
-  padding:10px;background:#15161a;border-bottom:1px solid var(--line);
+  display:flex;flex-direction:column;gap:6px;
+  padding:6px;background:#15161a;border-bottom:1px solid var(--line);
 }
-.et-row{display:flex;gap:6px;align-items:center}
+.et-row{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  background:#1a1b20;
+  padding:6px;
+  border-radius:10px;
+  border:1px solid #2a2b32;
+  box-shadow:0 4px 10px rgba(0,0,0,0.2);
+}
 .et-file-row .editor-file-select{
   flex:1;min-width:0;background:#101115;color:#e6e6e8;
-  border:1px solid var(--line);border-radius:10px;
-  padding:12px 14px;font-size:13px;font-weight:600;outline:0;
+  border:1px solid var(--line);border-radius:8px;
+  padding:8px 12px;font-size:13px;font-weight:600;outline:0;
 }
 .et-file-row .editor-file-select:focus{border-color:var(--red)}
 .et-file-row{position:relative}
-.et-file-row #editorThemeBtn{height:42px;min-width:42px;flex-shrink:0;border-radius:10px}
+.et-file-row #editorThemeBtn{height:34px;min-width:34px;flex-shrink:0;border-radius:8px}
 .editor-theme-card{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:170px;padding:6px;background:#17181c;border:1px solid #2c2d34;border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
 .editor-theme-card.open{display:block}
 .eth-opt{display:flex;align-items:center;gap:10px;width:100%;padding:9px 8px;background:transparent;border:0;border-radius:8px;color:#e6e6e8;font-size:12px;font-weight:700;text-align:left;cursor:pointer;font-family:inherit}
@@ -244,14 +253,18 @@ iframe{width:100%;height:430px;background:#0d0e12;border:0;border-radius:9px;dis
 
 .editor-btn{
   flex:0 0 auto;
-  height:36px;
-  min-width:40px;
-  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:30px;
+  min-width:30px;
+  display:inline-flex;align-items:center;justify-content:center;gap:4px;
   background:#20222a;color:#e6e6e8;
-  border:1px solid #303139;border-radius:9px;
-  padding:0 11px;
-  font-size:12px;font-weight:700;cursor:pointer;
+  border:1px solid #303139;border-radius:6px;
+  padding:0 8px;
+  font-size:11px;font-weight:700;cursor:pointer;
   transition:background .12s,opacity .12s;
+}
+.editor-btn svg {
+  width: 14px !important;
+  height: 14px !important;
 }
 .editor-btn span{display:none!important}
 .editor-btn:active{background:#2a2c34}

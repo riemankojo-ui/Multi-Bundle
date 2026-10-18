@@ -124,12 +124,19 @@
     } catch (e) {}
   }
   async function afterGithub(res) {
-    const tok = res && res.credential && res.credential.accessToken;
-    if (tok && res.user) {
-      await saveGithubTokenFor(res.user.uid, tok);
-      if (typeof window.__reloadGithub === 'function') await window.__reloadGithub();
+  const tok = res && res.credential && res.credential.accessToken;
+  if (tok && res.user) {
+    await saveGithubTokenFor(res.user.uid, tok);
+    
+    // NEW: Save this token globally so the Projects tab can use it!
+    if (typeof ghToken !== 'undefined') {
+      ghToken = tok; 
     }
+    try { localStorage.setItem('mb_gh_active_token', tok); } catch(e) {}
+
+    if (typeof window.__reloadGithub === 'function') await window.__reloadGithub();
   }
+}
 
   // ---------- sign-in screen ----------
   function setMsg(t, ok) { const m = $('gateMsg'); if (!m) return; m.textContent = t || ''; m.style.color = ok ? '#3ddc84' : '#ff8a8a'; }

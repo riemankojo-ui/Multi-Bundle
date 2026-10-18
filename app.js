@@ -1,4 +1,3 @@
-
 const $=id=>document.getElementById(id);
 
 document.addEventListener('click',function(e){
@@ -24,6 +23,7 @@ document.addEventListener('click',function(e){
 let files=[],urls=[],currentPagePath='',urlCache=new Map();
 let currentProjectId=null;
 let ghToken='';
+try { ghToken = localStorage.getItem('mb_gh_active_token') || ''; } catch(e) {}
 const PROJECT_LIMIT=10;
 
 const textExt=new Set(['html','htm','css','js','mjs','json','txt','md','xml','svg','php','py','sql','yaml','yml','toml','csv','webmanifest','ts','jsx','tsx']);
@@ -82,28 +82,6 @@ async function dbGetAllRaw(){
     return d||[];
   }catch(e){return[]}
 }
-async function dbGetAllRawOld(){
-  // 1. If logged in to Google, get from Cloud
-  if (window.isCloudSignedIn && window.isCloudSignedIn()) {
-    try {
-      const user = window.getCloudUser();
-      const docRef = firebase.firestore().collection("users").doc(user.uid).collection("data").doc("projects");
-      const snap = await docRef.get();
-      const cloudProjects = snap.exists ? snap.data().projects || [] : [];
-      
-      // Save a backup to the phone immediately so the next refresh is instant
-      try{
-        const db=await openDB();
-        const tx=db.transaction(DB_STORE,'readwrite');
-        tx.objectStore(DB_STORE).put(cloudProjects,'projects');
-      }catch(e){}
-      
-      return cloudProjects;
-    } catch(e) { console.error("Cloud load error:", e); return []; }
-  }
-  // 2. If NOT logged in, use local phone storage
-  try{const db=await openDB();const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get('projects');const d=await new Promise(function(res){req.onsuccess=function(){res(req.result)};req.onerror=function(){res(null)}});return d||[]}catch(e){return[]}
-}
 let __saveTimer=null;
 function __flushProjects(){clearTimeout(__saveTimer);__saveTimer=null;if(__projCache)return dbSetAllNow(__projCache,__cacheUid);return Promise.resolve()}
 async function dbSetAll(arr){__projCache=arr;__cacheUid=__uid();clearTimeout(__saveTimer);__saveTimer=setTimeout(__flushProjects,500)}
@@ -112,18 +90,6 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
 async function dbSetAllNow(arr,uid){
   if(uid===undefined)uid=__uid();if(uid===null)return;
   try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,__key(uid));await new Promise(function(res){tx.oncomplete=res;tx.onerror=res;tx.onabort=res})}catch(e){console.warn(e)}
-}
-async function dbSetAllNowOld(arr){
-  // 1. If logged in to Google, save to Cloud
-  if (window.isCloudSignedIn && window.isCloudSignedIn()) {
-    try {
-      const user = window.getCloudUser();
-      const docRef = firebase.firestore().collection("users").doc(user.uid).collection("data").doc("projects");
-      await docRef.set({ projects: arr, updatedAt: Date.now() });
-    } catch(e) { console.error("Cloud save error:", e); }
-  }
-  // 2. Always save to local phone storage as a backup cache
-  try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,'projects');await new Promise(function(res){tx.oncomplete=res})}catch(e){console.warn(e)}
 }
 async function dbUpsertProject(p){const all=await dbGetAll();const i=all.findIndex(function(x){return x.id===p.id});if(i>=0)all[i]=p;else all.unshift(p);await dbSetAll(all)}
 async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all.filter(function(x){return x.id!==id}))}
@@ -216,16 +182,11 @@ async function renderProjectCards(){
       };
     });
     card.onclick=async function(e){
-  if(e.target.closest('.pc-btn')) return; // Ignore if clicking a button
-  
-  // Instantly move the blue highlight to this card
+  if(e.target.closest('.pc-btn')) return;
   box.querySelectorAll('.project-card').forEach(c => c.classList.remove('active'));
   card.classList.add('active');
-
   const p = await loadProjectIntoMemory(id);
   if(!p) return;
-  
-  // Update the Home screen and Preview dropdown
   if(typeof render==='function') render();
   if(typeof populatePages==='function') populatePages();
 };
@@ -237,23 +198,20 @@ async function loadProjectIntoMemory(id){
   currentProjectId=p.id;
   setCurrentProjectName(p.name);
   files=deserializeFiles(p.files);
-  
-  // SAVE THE PROJECT ID so it remembers on restart
   try { localStorage.setItem('mb_active_project', p.id); } catch(e) {}
-  
   return p;
 }
 async function cardPreview(id){
   const p=await loadProjectIntoMemory(id);if(!p)return;
   render();
-  await renderProjectCards(); // Updates the highlight!
+  await renderProjectCards();
   showTab('preview');
   const first=htmlPages()[0];if(first)openPage(first.path)
 }
 async function cardEdit(id){
   const p=await loadProjectIntoMemory(id);if(!p)return;
   render();
-  await renderProjectCards(); // Updates the highlight!
+  await renderProjectCards();
   showTab('editor')
 }
 async function cardChanges(id){const p=await loadProjectIntoMemory(id);if(!p)return;if($('changesFolderInput'))$('changesFolderInput').click()}
@@ -281,25 +239,12 @@ async function openProjectDetail(id){
       return '<div class="file-row"><div class="file-icon">'+esc(ext(f.path).slice(0,4).toUpperCase()||'FILE')+'</div><div class="file-meta"><div class="file-name">'+esc(base(f.path))+'</div><div class="file-path">'+esc(f.path)+'</div></div><div class="file-size">'+size(f.size||0)+'</div></div>';
     }).join('');
   }
-  if($('projectsListView'))$('projectsListView').hidden=true;
-  if($('projectDetailView'))$('projectDetailView').hidden=false;
   populatePages();render();
-(async function restoreNav(){
-  try{
-    const nav=JSON.parse(localStorage.getItem('mb_nav')||'null');if(!nav||!nav.tab||nav.tab==='home')return;
-    let loaded=false;
-    if(nav.pid){const p=await loadProjectIntoMemory(nav.pid);if(p){render();loaded=true}}
-    if((nav.tab==='editor'||nav.tab==='preview')&&!loaded)return;
-    showTab(nav.tab);
-    if(nav.tab==='preview'){const first=htmlPages()[0];if(first)openPage(first.path)}
-  }catch(e){}
-})();
 }
 function showProjectsList(){
   if($('projectsListView'))$('projectsListView').hidden=false;
   if($('projectDetailView'))$('projectDetailView').hidden=true;
   renderProjectCards();
-  // NEW: Load GitHub repos too
   loadGithubReposForProjects();
 }
 
@@ -371,6 +316,7 @@ function getToken(){return ghToken}
 async function saveToken(t){
   const uid = window.getCloudUser() ? window.getCloudUser().uid : 'local';
   ghToken=t;
+  try { localStorage.setItem('mb_gh_active_token', t); } catch(e) {}
   try{
     const db=await openDB();
     const tx=db.transaction(DB_STORE,'readwrite');
@@ -390,6 +336,7 @@ async function loadToken(){
 }
 async function clearToken(){
   const uid = window.getCloudUser() ? window.getCloudUser().uid : 'local';
+  try { localStorage.removeItem('mb_gh_active_token'); } catch(e) {}
   try{
     const db=await openDB();
     const tx=db.transaction(DB_STORE,'readwrite');
@@ -414,6 +361,7 @@ async function githubLogout(){
   if($('githubToken'))$('githubToken').value='';setGhStatus('Signed out.');showToast('Signed out');
 }
 async function showGithubLoggedIn(user){
+  setTimeout(function(){if(typeof loadGithubReposForProjects==='function')loadGithubReposForProjects()},0);
   if($('githubLoggedOut'))$('githubLoggedOut').hidden=true;if($('githubLoggedIn'))$('githubLoggedIn').hidden=false;
   if($('ghAvatar'))$('ghAvatar').src=user.avatar_url||'';if($('ghName'))$('ghName').textContent=user.name||user.login;
   if($('ghLogin'))$('ghLogin').textContent='@'+user.login;await loadRepoList();
@@ -909,15 +857,20 @@ async function restoreLastProject() {
 
 // Change the startup sequence:
 render();
+renderProjectCards();
+restoreLastProject().then(() => {
+  render(); // Re-render the home screen with the restored project
+  if (typeof window.__restoreEditor === 'function') window.__restoreEditor();
+});
+
 // --- NEW: GitHub Repos in Projects Tab ---
 async function loadGithubReposForProjects() {
   const section = $('ghProjectsSection');
   const box = $('ghProjectCards');
   if (!section || !box) return;
 
-  // Check if we are signed into GitHub
-  const token = typeof window.getToken === 'function' ? window.getToken() : '';
-  if (!token) {
+  // Check if we have a GitHub token
+  if (!ghToken) {
     section.hidden = true;
     return;
   }
@@ -926,9 +879,8 @@ async function loadGithubReposForProjects() {
   box.innerHTML = '<div style="color:var(--muted);font-size:12px;">Loading your GitHub repos...</div>';
 
   try {
-    // Fetch up to 10 recent repos
     const res = await fetch('https://api.github.com/user/repos?per_page=10&sort=updated', {
-      headers: { 'Authorization': 'Bearer ' + token }
+      headers: { 'Authorization': 'Bearer ' + ghToken }
     });
     
     if (!res.ok) throw new Error('Could not load repos');
@@ -954,7 +906,7 @@ async function loadGithubReposForProjects() {
           '</div>' +
         '</div>' +
         '<div class="pc-actions">' +
-          '<button class="pc-btn primary" style="width:100%;">Import to Multi Bundle</button>' +
+          '<button class="pc-btn primary" style="width:100%;">Import</button>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -964,19 +916,64 @@ async function loadGithubReposForProjects() {
   }
 }
 
-// Global function to handle the import
 window.importGithubRepoAsProject = async function(fullName, branch) {
   showToast('Downloading ' + fullName + '...');
-  // This triggers your existing GitHub import logic in app.js
   if (typeof importRepo === 'function') {
     await importRepo(fullName, branch);
-    // After import, refresh the view
     showProjectsList();
   }
 };
-renderProjectCards();
-restoreLastProject().then(() => {
-  render(); // Re-render the home screen with the restored project
-  if (typeof window.__restoreEditor === 'function') window.__restoreEditor();
-});
 
+// NEW: Connect GitHub from the GitHub Tab using OAuth
+if ($('ghOauthBtn')) {
+  $('ghOauthBtn').onclick = async function() {
+    const provider = new firebase.auth.GithubAuthProvider();
+    provider.addScope('repo');
+    try {
+      const res = await firebase.auth().signInWithPopup(provider);
+      
+      // Save the token globally so the Projects tab can see it
+      const tok = res.credential.accessToken;
+      ghToken = tok; 
+      try { localStorage.setItem('mb_gh_active_token', tok); } catch(e) {}
+
+      if (typeof saveToken === 'function') await saveToken(tok);
+      
+      showToast('GitHub linked successfully!', 'success');
+      await showGithubLoggedIn(res.user);
+      
+      // Instantly refresh the Projects tab
+      if (typeof showProjectsList === 'function') showProjectsList();
+      
+    } catch (e) {
+      showToast('Could not link GitHub: ' + e.message, 'error');
+    }
+  };
+}
+
+// NEW: Connect GitHub from the GitHub Tab using OAuth
+if ($('ghOauthBtn')) {
+  $('ghOauthBtn').onclick = async function() {
+    const provider = new firebase.auth.GithubAuthProvider();
+    provider.addScope('repo');
+    try {
+      const res = await firebase.auth().signInWithPopup(provider);
+      
+      // Save the token globally so the Projects tab can see it
+      const tok = res.credential.accessToken;
+      ghToken = tok; 
+      try { localStorage.setItem('mb_gh_active_token', tok); } catch(e) {}
+
+      if (typeof saveToken === 'function') await saveToken(tok);
+      
+      showToast('GitHub linked successfully!', 'success');
+      await showGithubLoggedIn(res.user);
+      
+      // Instantly refresh the Projects tab
+      if (typeof showProjectsList === 'function') showProjectsList();
+      
+    } catch (e) {
+      showToast('Could not link GitHub: ' + e.message, 'error');
+    }
+  };
+}

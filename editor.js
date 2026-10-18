@@ -88,7 +88,14 @@ function updateGutter(){
 }
 function syncScroll(){gutter.scrollTop=ta.scrollTop;hl.scrollTop=ta.scrollTop;hl.scrollLeft=ta.scrollLeft}
 ta.addEventListener('scroll',syncScroll);
-ta.addEventListener('input',function(){updateGutter();refreshHighlight();pushHistory();markDirty();updateCursor()});
+ta.addEventListener('input',function(){
+  updateGutter();refreshHighlight();pushHistory();markDirty();updateCursor();
+  try{
+    if(typeof currentProjectId!=='undefined' && currentProjectId && currentPath){
+      localStorage.setItem('mb_draft_'+currentProjectId+'_'+currentPath, ta.value);
+    }
+  }catch(e){}
+});
 ta.addEventListener('click',updateCursor);
 ta.addEventListener('keyup',updateCursor);
 
@@ -242,8 +249,16 @@ function refreshFileList(){
 }
 function loadFile(path){
   const f=files.find(function(x){return x.path===path});if(!f||f.text==null)return;
-  currentPath=path;ta.value=f.text;originalText=f.text;dirty=false;
-  undoStack=[f.text];redoStack=[];updateBtns();
+  currentPath=path;
+  
+  let savedText = f.text;
+  try{
+    const draft = localStorage.getItem('mb_draft_'+(typeof currentProjectId!=='undefined'?currentProjectId:'')+'_'+path);
+    if(draft !== null && draft !== undefined) savedText = draft;
+  }catch(e){}
+
+  ta.value=savedText;originalText=f.text;dirty=(savedText !== f.text);
+  undoStack=[savedText];redoStack=[];updateBtns();
   updateGutter();updateCursor();refreshHighlight();
   status.textContent=path;fileSelect.value=path;
   try{localStorage.setItem('mb_file',JSON.stringify({pid:(typeof currentProjectId!=='undefined'?currentProjectId:''),path:path}))}catch(e){}
@@ -265,8 +280,14 @@ async function saveFile(){
   }
 
   f.text=ta.value;f.blob=null;dirty=false;
-  originalText=ta.value;
-  status.textContent=currentPath+' •';
+originalText=ta.value;
+
+try{
+  if(typeof currentProjectId!=='undefined' && currentProjectId){
+    localStorage.removeItem('mb_draft_'+currentProjectId+'_'+currentPath);
+  }
+}catch(e){}
+status.textContent=currentPath+' •';
   if(typeof window.saveCurrentProject==='function'){
     try{
       toast('Saved','success');status.textContent=currentPath+' Saved';await window.saveCurrentProject();

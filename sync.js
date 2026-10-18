@@ -203,9 +203,15 @@
       } else {
         await auth.signInWithEmailAndPassword(email, pw);
       }
-    } catch (e) { setMsg(friendly(e)); }
-    setBusy(false);
+      } catch (e) { 
+    setMsg(friendly(e)); 
+    // Clear the inputs on error
+    if ($('gateEmail')) $('gateEmail').value = '';
+    if ($('gatePassword')) $('gatePassword').value = '';
+    if ($('gateName')) $('gateName').value = '';
   }
+  setBusy(false);
+}
 
   async function forgotPassword() {
     const email = (($('gateEmail') && $('gateEmail').value) || '').trim();
@@ -227,7 +233,20 @@
   }
 
   function wireGate() {
-    if ($('gateLoginBtn')) $('gateLoginBtn').onclick = googleLogin;
+  // Password Toggle
+  var toggleBtn = $('togglePasswordBtn');
+  if (toggleBtn) {
+    toggleBtn.onclick = function() {
+      var pw = $('gatePassword'), eyeO = $('eyeOpen'), eyeC = $('eyeClosed');
+      if (pw.type === 'password') {
+        pw.type = 'text'; eyeO.style.display = 'none'; eyeC.style.display = 'block';
+      } else {
+        pw.type = 'password'; eyeO.style.display = 'block'; eyeC.style.display = 'none';
+      }
+    };
+  }
+  
+  if ($('gateLoginBtn')) $('gateLoginBtn').onclick = googleLogin;
     if ($('gateGithubBtn')) $('gateGithubBtn').onclick = githubLogin;
     if ($('gateEmailBtn')) $('gateEmailBtn').onclick = emailSubmit;
     if ($('gateForgot')) $('gateForgot').onclick = forgotPassword;
@@ -305,8 +324,14 @@ document.body.classList.remove('auth-loading');
     signingOut = true;
     try {
       toast('Saving your projects\u2026');
-      if (typeof __flushProjects === 'function') await __flushProjects();
-      await auth.signOut();
+if (typeof __flushProjects === 'function') await __flushProjects();
+
+// Show the loading screen immediately
+if (loginGate) loginGate.style.display = "flex";
+if ($('gateLoading')) $('gateLoading').style.display = 'block';
+if ($('gateContent')) $('gateContent').style.display = 'none';
+
+await auth.signOut();
       toast('Signed out');
     } catch (e) {
       toast('Could not sign out. Try again.', 'error');

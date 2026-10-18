@@ -1,3 +1,4 @@
+
 const $=id=>document.getElementById(id);
 
 document.addEventListener('click',function(e){
@@ -64,8 +65,24 @@ let __dbp=null;
 function openDB(){if(!__dbp){__dbp=openDBRaw();__dbp.catch(function(){__dbp=null})}return __dbp}
 function openDBRaw(){return new Promise(function(res,rej){const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=function(){const db=r.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE)};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
 let __projCache=null;
-async function dbGetAll(){if(__projCache)return __projCache;const r=await dbGetAllRaw();__projCache=r;return r}
+async function dbGetAll(){const uid=__uid();if(__projCache&&__cacheUid===uid)return __projCache;if(__projCache&&__cacheUid!==uid&&__saveTimer)await __flushProjects();const r=await dbGetAllRaw();__projCache=r;__cacheUid=uid;return r}
+function __uid(){let u=null;try{u=window.getCloudUser&&window.getCloudUser()}catch(e){}if(u)return u.uid;return window.__authKnown?null:'local'}
+function __key(uid){return uid==='local'?'projects':'projects_'+uid}
+let __cacheUid=null;
 async function dbGetAllRaw(){
+  const uid=__uid();if(uid===null)return[];
+  try{
+    const db=await openDB();
+    function read(k){return new Promise(function(res){const req=db.transaction(DB_STORE,'readonly').objectStore(DB_STORE).get(k);req.onsuccess=function(){res(req.result)};req.onerror=function(){res(null)}})}
+    let d=await read(__key(uid));
+    if(!d&&uid!=='local'&&!localStorage.getItem('mb_legacy_claimed')){
+      const old=await read('projects');
+      if(old&&old.length){d=old;localStorage.setItem('mb_legacy_claimed',uid);const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(d,__key(uid))}
+    }
+    return d||[];
+  }catch(e){return[]}
+}
+async function dbGetAllRawOld(){
   // 1. If logged in to Google, get from Cloud
   if (window.isCloudSignedIn && window.isCloudSignedIn()) {
     try {
@@ -88,11 +105,15 @@ async function dbGetAllRaw(){
   try{const db=await openDB();const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get('projects');const d=await new Promise(function(res){req.onsuccess=function(){res(req.result)};req.onerror=function(){res(null)}});return d||[]}catch(e){return[]}
 }
 let __saveTimer=null;
-function __flushProjects(){clearTimeout(__saveTimer);__saveTimer=null;if(__projCache)return dbSetAllNow(__projCache);return Promise.resolve()}
-async function dbSetAll(arr){__projCache=arr;clearTimeout(__saveTimer);__saveTimer=setTimeout(__flushProjects,500)}
+function __flushProjects(){clearTimeout(__saveTimer);__saveTimer=null;if(__projCache)return dbSetAllNow(__projCache,__cacheUid);return Promise.resolve()}
+async function dbSetAll(arr){__projCache=arr;__cacheUid=__uid();clearTimeout(__saveTimer);__saveTimer=setTimeout(__flushProjects,500)}
 window.addEventListener('pagehide',function(){if(__saveTimer)__flushProjects()});
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&__saveTimer)__flushProjects()});
-async function dbSetAllNow(arr){
+async function dbSetAllNow(arr,uid){
+  if(uid===undefined)uid=__uid();if(uid===null)return;
+  try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,__key(uid));await new Promise(function(res){tx.oncomplete=res;tx.onerror=res;tx.onabort=res})}catch(e){console.warn(e)}
+}
+async function dbSetAllNowOld(arr){
   // 1. If logged in to Google, save to Cloud
   if (window.isCloudSignedIn && window.isCloudSignedIn()) {
     try {
@@ -810,10 +831,18 @@ window.loadToken = loadToken;
 window.clearToken = clearToken;
 window.getToken = getToken;
 
+window.__reloadGithub=async function(){
+  ghToken='';
+  if($('githubLoggedIn'))$('githubLoggedIn').hidden=true;if($('githubLoggedOut'))$('githubLoggedOut').hidden=false;
+  if($('githubToken'))$('githubToken').value='';
+  const t=await loadToken();
+  if(t){ghToken=t;try{const r=await fetch('https://api.github.com/user',{headers:{Authorization:'Bearer '+t}});if(r.ok){const u=await r.json();await showGithubLoggedIn(u)}}catch(e){}}
+};
 window.__refreshProjects = async function() {
-  __projCache = null; 
+  if(__saveTimer)await __flushProjects();__projCache = null;if(typeof window.__reloadGithub==='function')window.__reloadGithub(); 
   await renderProjectCards();
   render();
 };
 
 render();renderProjectCards();
+

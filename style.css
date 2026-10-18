@@ -38,6 +38,55 @@ main{max-width:1200px;margin:auto;padding:16px}
 .head-title span{color:var(--red)}
 
 /* ========== Drawer ========== */
+  position:sticky;top:0;z-index:60;
+  display:flex !important;align-items:center !important;gap:10px;
+  height:54px;padding:0 10px;
+  background:#15161a !important;border-bottom:1px solid var(--line);
+}
+.head-btn{
+  width:38px !important;height:38px !important;border-radius:10px;
+  background:#20222a !important;border:1px solid var(--line);color:#e6e6e8;
+  display:grid !important;place-items:center;flex-shrink:0;
+}
+.head-btn svg{width:20px;height:20px;stroke:currentColor;fill:none}
+.head-title{
+  flex:1;text-align:center;font-size:13px;font-weight:800;letter-spacing:.8px;color:#fff;
+}
+  position:sticky;top:0;z-index:60;
+  display:flex;align-items:center;gap:10px;
+  height:54px;padding:0 10px;
+  background:#15161a;border-bottom:1px solid var(--line);
+}
+.head-btn{
+  width:38px;height:38px;border-radius:10px;
+  background:#20222a;border:1px solid var(--line);color:#e6e6e8;
+  display:grid;place-items:center;flex-shrink:0;
+}
+.head-btn svg{width:20px;height:20px;stroke:currentColor;fill:none}
+.head-btn:active{background:#2a2c34}
+.head-title{
+  flex:1;text-align:center;font-size:13px;font-weight:800;letter-spacing:.8px;color:#fff;
+}
+.head-title span{color:var(--red)}
+  position:sticky;top:0;z-index:60;
+  display:flex;align-items:center;gap:10px;
+  height:54px;padding:0 10px;
+  background:#15161a;border-bottom:1px solid var(--line);
+}
+.auth-loading header, .auth-loading main, .auth-loading .bottom { display: none !important; }
+.head-btn{
+  width:38px;height:38px;border-radius:10px;
+  background:#20222a;border:1px solid var(--line);color:#e6e6e8;
+  display:grid;place-items:center;flex-shrink:0;
+}
+.head-btn svg{width:20px;height:20px;stroke:currentColor;fill:none}
+.head-btn:active{background:#2a2c34}
+.head-title{
+  flex:1;text-align:center;font-size:13px;font-weight:800;letter-spacing:.8px;color:#fff;
+}
+.head-title span{color:var(--red)}
+
+/* ========== Drawer ========== */
 .drawer-backdrop{
   position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:90;
   opacity:0;pointer-events:none;transition:opacity .2s;
@@ -183,6 +232,39 @@ iframe{width:100%;height:430px;background:#0d0e12;border:0;border-radius:9px;dis
 
 /* ========== Bottom nav ========== */
 .bottom{
+  position:fixed;bottom:0;left:0;right:0;height:78px;background:#17181c;
+  border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:stretch;
+  z-index:5;padding:4px 2px calc(4px + env(safe-area-inset-bottom,0px));
+}
+.bottom span{
+  min-width:0;flex:1;border:0;background:none;color:#858691;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  cursor:pointer;padding:6px 2px;border-radius:10px;
+  transition:background .15s,color .15s;
+  -webkit-tap-highlight-color: transparent; 
+  transform: none !important; 
+}
+.bottom span svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bottom small{font-size:9px;letter-spacing:.2px;font-weight:600}
+.bottom .selected{color:var(--red);background:rgba(240,20,36,.08)}
+@media(max-width:380px){.bottom span svg{width:20px;height:20px}.bottom small{font-size:8px}}
+
+/* ========== Editor shell ========== */
+  position:fixed;bottom:0;left:0;right:0;height:78px;background:#17181c;
+  border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:stretch;
+  z-index:5;padding:4px 2px calc(4px + env(safe-area-inset-bottom,0px));
+}
+.bottom span{
+  min-width:0;flex:1;border:0;background:none;color:#858691;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  cursor:pointer;padding:6px 2px;border-radius:10px;
+  transition:background .15s,color .15s;
+  -webkit-tap-highlight-color: transparent; 
+  transform: none !important; 
+}
+.bottom span svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bottom small{font-size:9px;letter-spacing:.2px;font-weight:600}
+.bottom .selected{color:var(--red);background:rgba(240,20,36,.08)}
   position:fixed;bottom:0;left:0;right:0;height:78px;background:#17181c;
   border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:stretch;
   z-index:5;padding:4px 2px calc(4px + env(safe-area-inset-bottom,0px));

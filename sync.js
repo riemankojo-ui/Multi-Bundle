@@ -192,18 +192,18 @@
     if (!email || !pw) { setMsg('Enter your email and password.'); return; }
     setBusy(true); setMsg('');
     try {
-      if (mode === 'signup') {
-        const name = (($('gateName') && $('gateName').value) || '').trim();
-        const cred = await auth.createUserWithEmailAndPassword(email, pw);
-        if (name) {
-          await cred.user.updateProfile({ displayName: name });
-          const u = auth.currentUser || cred.user;
-          saveProfile(u); showProfile(profileOf(u));
-        }
-      } else {
-        await auth.signInWithEmailAndPassword(email, pw);
+    if (mode === 'signup') {
+      const name = (($('gateName') && $('gateName').value) || '').trim();
+      const cred = await auth.createUserWithEmailAndPassword(email, pw);
+      if (name) {
+        await cred.user.updateProfile({ displayName: name });
+        const u = auth.currentUser || cred.user;
+        saveProfile(u); showProfile(profileOf(u));
       }
-      } catch (e) { 
+    } else {
+      await auth.signInWithEmailAndPassword(email, pw);
+    }
+  } catch (e) { 
     setMsg(friendly(e)); 
     // Clear the inputs on error
     if ($('gateEmail')) $('gateEmail').value = '';

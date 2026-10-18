@@ -391,4 +391,7 @@ if(themeBtn&&themeCard){
   applyEdTheme(savedTheme);
 }
 updateGutter();refreshFileList();refreshHighlight();
+window.__restoreEditor = function() {
+  if (typeof refreshFileList === 'function') refreshFileList();
+};
 })();

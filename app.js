@@ -221,7 +221,14 @@ async function renderProjectCards(){
 
 async function loadProjectIntoMemory(id){
   const all=await dbGetAll();const p=all.find(function(x){return x.id===id});if(!p)return null;
-  currentProjectId=p.id;setCurrentProjectName(p.name);files=deserializeFiles(p.files);return p;
+  currentProjectId=p.id;
+  setCurrentProjectName(p.name);
+  files=deserializeFiles(p.files);
+  
+  // SAVE THE PROJECT ID so it remembers on restart
+  try { localStorage.setItem('mb_active_project', p.id); } catch(e) {}
+  
+  return p;
 }
 async function cardPreview(id){const p=await loadProjectIntoMemory(id);if(!p)return;render();showTab('preview');const first=htmlPages()[0];if(first)openPage(first.path)}
 async function cardEdit(id){const p=await loadProjectIntoMemory(id);if(!p)return;render();showTab('editor')}
@@ -229,7 +236,10 @@ async function cardChanges(id){const p=await loadProjectIntoMemory(id);if(!p)ret
 async function cardDelete(id,name){
   const ok=await showConfirm('Delete "'+name+'" permanently? This cannot be undone.',{title:'Delete project',confirmText:'Delete',cancelText:'Keep'});
   if(!ok)return;await dbDeleteProject(id);
-  if(currentProjectId===id){currentProjectId=null;files=[];setCurrentProjectName('No project loaded')}
+if(currentProjectId===id){
+  currentProjectId=null;files=[];setCurrentProjectName('No project loaded');
+  try { localStorage.removeItem('mb_active_project'); } catch(e) {}
+}
   await renderProjectCards();render();showToast('Project deleted');
 }
 
@@ -821,7 +831,9 @@ if($('clearBtn'))$('clearBtn').onclick=async function(){
   if(!files.length)return;
   const ok=await showConfirm('Clear the current project from memory? Saved projects stay under Projects tab.',{title:'Clear project',confirmText:'Clear',cancelText:'Cancel'});
   if(!ok)return;
-  resetPreview();files=[];urls=[];currentPagePath='';currentProjectId=null;setCurrentProjectName('No project loaded');render();showTab('home');showToast('Cleared');
+  resetPreview();files=[];urls=[];currentPagePath='';currentProjectId=null;setCurrentProjectName('No project loaded');
+try { localStorage.removeItem('mb_active_project'); } catch(e) {}
+render();showTab('home');showToast('Cleared');
 };
 
 document.querySelectorAll('.bottom span').forEach(function(s){s.onclick=function(){showTab(s.dataset.tab)}});
@@ -845,4 +857,31 @@ window.__refreshProjects = async function() {
 };
 
 render();renderProjectCards();
+// NEW: Automatically restore the last opened project
+async function restoreLastProject() {
+  try {
+    const lastId = localStorage.getItem('mb_active_project');
+    if (!lastId) return;
+    
+    const all = await dbGetAll();
+    const p = all.find(x => x.id === lastId);
+    
+    if (p) {
+      currentProjectId = p.id;
+      setCurrentProjectName(p.name);
+      files = deserializeFiles(p.files);
+      populatePages(); // Updates the dropdown in Preview
+    } else {
+      localStorage.removeItem('mb_active_project'); // Clean up if project was deleted
+    }
+  } catch(e) {}
+}
+
+// Change the startup sequence:
+render();
+renderProjectCards();
+restoreLastProject().then(() => {
+  render(); // Re-render the home screen with the restored project
+  if (typeof window.__restoreEditor === 'function') window.__restoreEditor();
+});
 

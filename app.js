@@ -295,7 +295,13 @@ async function openProjectDetail(id){
   }catch(e){}
 })();
 }
-function showProjectsList(){if($('projectsListView'))$('projectsListView').hidden=false;if($('projectDetailView'))$('projectDetailView').hidden=true;renderProjectCards()}
+function showProjectsList(){
+  if($('projectsListView'))$('projectsListView').hidden=false;
+  if($('projectDetailView'))$('projectDetailView').hidden=true;
+  renderProjectCards();
+  // NEW: Load GitHub repos too
+  loadGithubReposForProjects();
+}
 
 function cleanIncoming(result){return result.filter(function(f){return f.path&&!f.path.split('/').some(function(p){return p.startsWith('.')&&p!=='.well-known'})}).sort(function(a,b){return a.path.localeCompare(b.path)})}
 
@@ -903,6 +909,71 @@ async function restoreLastProject() {
 
 // Change the startup sequence:
 render();
+// --- NEW: GitHub Repos in Projects Tab ---
+async function loadGithubReposForProjects() {
+  const section = $('ghProjectsSection');
+  const box = $('ghProjectCards');
+  if (!section || !box) return;
+
+  // Check if we are signed into GitHub
+  const token = typeof window.getToken === 'function' ? window.getToken() : '';
+  if (!token) {
+    section.hidden = true;
+    return;
+  }
+
+  section.hidden = false;
+  box.innerHTML = '<div style="color:var(--muted);font-size:12px;">Loading your GitHub repos...</div>';
+
+  try {
+    // Fetch up to 10 recent repos
+    const res = await fetch('https://api.github.com/user/repos?per_page=10&sort=updated', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    
+    if (!res.ok) throw new Error('Could not load repos');
+    const repos = await res.json();
+    
+    if (!repos.length) {
+      box.innerHTML = '<div style="color:var(--muted);font-size:12px;">No repos found on your account.</div>';
+      return;
+    }
+
+    if ($('ghProjectCount')) $('ghProjectCount').textContent = repos.length;
+
+    box.innerHTML = repos.map(function(r) {
+      const isPrivate = r.private;
+      return '<div class="project-card" onclick="importGithubRepoAsProject(\'' + esc(r.full_name) + '\', \'' + esc(r.default_branch) + '\')">' +
+        '<div class="pc-top">' +
+          '<div class="pc-icon" style="background:#24292f;color:#fff;">' +
+            '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>' +
+          '</div>' +
+          '<div class="pc-info">' +
+            '<div class="pc-name">' + esc(r.name) + '</div>' +
+            '<div class="pc-meta">' + (isPrivate ? 'Private' : 'Public') + ' · ' + (r.language || 'Code') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="pc-actions">' +
+          '<button class="pc-btn primary" style="width:100%;">Import to Multi Bundle</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+  } catch (e) {
+    box.innerHTML = '<div style="color:#ff8a8a;font-size:12px;">Could not load repos. Make sure you are signed in to GitHub.</div>';
+  }
+}
+
+// Global function to handle the import
+window.importGithubRepoAsProject = async function(fullName, branch) {
+  showToast('Downloading ' + fullName + '...');
+  // This triggers your existing GitHub import logic in app.js
+  if (typeof importRepo === 'function') {
+    await importRepo(fullName, branch);
+    // After import, refresh the view
+    showProjectsList();
+  }
+};
 renderProjectCards();
 restoreLastProject().then(() => {
   render(); // Re-render the home screen with the restored project

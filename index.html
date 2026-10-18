@@ -111,9 +111,19 @@
         <div><label class="eyebrow">SAVED PROJECTS</label><h2>All projects</h2></div>
         <span id="projectCount" class="pill">0</span>
       </div>
-      <div id="projectCards" class="project-cards"></div>
-    </section>
-  </div>
+          <div id="projectCards" class="project-cards"></div>
+  </section>
+
+  <!-- NEW: GitHub Repos Section -->
+  <section class="card" id="ghProjectsSection" hidden>
+    <div class="heading">
+      <div><label class="eyebrow">GITHUB REPOSITORIES</label><h2>From your account</h2></div>
+      <span id="ghProjectCount" class="pill">0</span>
+    </div>
+    <p class="note">Tap a repo to download its code directly into a new project.</p>
+    <div id="ghProjectCards" class="project-cards" style="margin-top:10px;"></div>
+  </section>
+</div>
 
   <div id="projectDetailView" hidden>
     <section class="card">

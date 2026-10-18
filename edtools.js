@@ -6,7 +6,7 @@
   if (!ta || !row || $('editorToolsBtn')) return;
   function toast(m, t) { if (window.showToast) window.showToast(m, t); }
 
-  /* ---------- pure text operations: (text, selStart, selEnd) -> {v, a, b} ---------- */
+  /* ---------- pure text operations ---------- */
   function lineRange(v, a, b) {
     var start = a > 0 ? v.lastIndexOf('\n', a - 1) + 1 : 0;
     var probe = (b > a && v.charAt(b - 1) === '\n') ? b - 1 : b;
@@ -43,7 +43,6 @@
     if (a === b) { var p = Math.max(r.start, a - removedFirst); return { v: nv, a: p, b: p }; }
     return { v: nv, a: r.start, b: r.start + nb.length };
   }
-  // Which comment style fits this spot? (HTML files can hold <script> and <style> blocks)
   function kindFor(v, pos, ext, firstLine) {
     ext = (ext || '').toLowerCase();
     if (ext === 'css' || ext === 'scss' || ext === 'less') return 'css';
@@ -92,10 +91,10 @@
   function ext() { var s = $('editorFileSelect'); var p = (s && s.value) || ''; var i = p.lastIndexOf('.'); return i < 0 ? '' : p.slice(i + 1); }
   function haveFile() { var s = $('editorFileSelect'); return !!(s && s.value) || ta.value.length > 0; }
   function applyOp(res) {
-  if (!res) return false;
-  ta.value = res.v;
-  ta.blur(); // Force keyboard down
-  ta.setSelectionRange(res.a, res.b);
+    if (!res) return false;
+    ta.value = res.v;
+    ta.blur(); // Force keyboard down
+    ta.setSelectionRange(res.a, res.b);
     ta.dispatchEvent(new Event('input', { bubbles: true }));
     return true;
   }
@@ -130,12 +129,11 @@
     num = Math.max(1, Math.min(num, n));
     var lines = ta.value.split('\n'), pos = 0;
     for (var i = 0; i < num - 1; i++) pos += lines[i].length + 1;
-    ta.blur(); // Force keyboard down
-ta.setSelectionRange(pos, pos + lines[num - 1].length);
+    ta.blur();
+    ta.setSelectionRange(pos, pos + lines[num - 1].length);
     ta.scrollTop = Math.max(0, (num - 3) * lineHeightPx()); ta.scrollLeft = 0;
   }
 
-  // text size
   var fs = 13;
   try { fs = parseInt(localStorage.getItem('mb_edfs'), 10) || 13; } catch (e) {}
   function setFs(n) {
@@ -147,9 +145,9 @@ ta.setSelectionRange(pos, pos + lines[num - 1].length);
 
   var ACTIONS = {
     all: function () { if (!haveFile()) return toast('Open a file first'); ta.blur(); ta.select(); },
-copy: function () { if (!ta.value) return toast('Nothing to copy'); var n = ta.value.split('\n').length; copyText(ta.value, 'Copied all ' + n + ' lines'); },
-top: function () { ta.blur(); ta.setSelectionRange(0, 0); ta.scrollTop = 0; ta.scrollLeft = 0; },
-last: function () { ta.blur(); var n = ta.value.length; ta.setSelectionRange(n, n); ta.scrollTop = ta.scrollHeight; ta.scrollLeft = 0; },
+    copy: function () { if (!ta.value) return toast('Nothing to copy'); var n = ta.value.split('\n').length; copyText(ta.value, 'Copied all ' + n + ' lines'); },
+    top: function () { ta.blur(); ta.setSelectionRange(0, 0); ta.scrollTop = 0; ta.scrollLeft = 0; },
+    last: function () { ta.blur(); var n = ta.value.length; ta.setSelectionRange(n, n); ta.scrollTop = ta.scrollHeight; ta.scrollLeft = 0; },
     line: goToLine,
     sel: function () { applyOp(selectLineOp(ta.value, ta.selectionStart, ta.selectionEnd)); },
     dup: function () { applyOp(dupOp(ta.value, ta.selectionStart, ta.selectionEnd)); scrollToCaret(); },
@@ -208,90 +206,131 @@ last: function () { ta.blur(); var n = ta.value.length; ta.setSelectionRange(n, 
     '<button data-a="ind">Indent</button><button data-a="out">Outdent</button>' +
     '<button data-a="undo">Undo</button></div>' +
     '<div class="et-size"><span>Text size</span><button data-a="fsm" aria-label="Smaller">A\u2212</button><b id="etFs">' + fs + '</b><button data-a="fsp" aria-label="Bigger">A+</button></div>';
-  row.appendChild(card);
+  
+  // APPEND TO BODY (Floats over everything)
+  document.body.appendChild(card); 
 
   function closeCard() { card.classList.remove('open'); }
+  
+  let isDragging = false;
+let initialX = 0, initialY = 0;
+let hasMoved = false;
+let savedLeft = 0, savedTop = 0;
 
-let isDragging = false;
-let startX = 0, startY = 0;
-let currentX = 0, currentY = 0;
-
-function openCard() {
+  function openCard() {
   var tc = $('editorThemeCard'); if (tc) tc.classList.remove('open');
   card.classList.add('open');
-  // Reset position when opened
-  currentX = 0; currentY = 0;
-  card.style.transform = 'translate(0px, 0px)';
   
-  var w = card.offsetWidth || 200, max = (row.clientWidth || 360) - w;
-  card.style.left = Math.max(0, Math.min(btn.offsetLeft, max)) + 'px';
+  if (hasMoved) {
+    // Use the saved position if dragged
+    card.style.left = savedLeft + 'px';
+    card.style.top = savedTop + 'px';
+  } else {
+    // Default position under the button
+    var rect = btn.getBoundingClientRect();
+    var cardWidth = 200;
+    var leftPos = Math.min(rect.left, window.innerWidth - cardWidth - 10);
+    card.style.left = leftPos + 'px';
+    card.style.top = (rect.bottom + 6) + 'px';
+  }
+  card.style.right = 'auto';
 }
 
-// --- DRAG LOGIC ---
-card.addEventListener('touchstart', function(e) {
-  if (e.target.closest('button')) return; // Don't drag if touching a button
-  isDragging = false;
-  startX = e.touches[0].clientX - currentX;
-  startY = e.touches[0].clientY - currentY;
-}, {passive: true});
-
-card.addEventListener('touchmove', function(e) {
-  if (e.target.closest('button')) return;
-  if (isDragging) e.preventDefault(); // Stops the screen from scrolling behind it
-  
-  const x = e.touches[0].clientX;
-  const y = e.touches[0].clientY;
-  if (Math.abs(x - (startX + currentX)) > 8 || Math.abs(y - (startY + currentY)) > 8) {
-    isDragging = true;
-  }
-  if (isDragging) {
-    currentX = x - startX;
-    currentY = y - startY;
-    // Added transition for a softer, smoother drag feel
-    card.style.transition = 'transform 0.05s linear';
-    card.style.transform = `translate(${currentX}px, ${currentY}px)`;
-    card.classList.add('ed-dragging');
-  }
-}, {passive: false});
-
-card.addEventListener('touchend', function() {
-  card.classList.remove('ed-dragging');
-  setTimeout(() => { isDragging = false; }, 100); // Small delay so click doesn't fire
-});
   btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
   btn.onclick = function (e) { e.stopPropagation(); if (card.classList.contains('open')) closeCard(); else openCard(); };
+  
   card.addEventListener('click', function (e) {
-  if (isDragging) return; // Don't trigger if the user was dragging
-  e.preventDefault(); 
-  e.stopPropagation();
-  var b = e.target.closest && e.target.closest('button[data-a]'); if (!b) return;
-  var a = b.dataset.a; 
-  // We removed closeCard() here so the menu stays open!
-  ACTIONS[a] && ACTIONS[a]();
+    if (isDragging) return; // Ignore clicks if dragging
+    e.preventDefault(); 
+    e.stopPropagation();
+    var b = e.target.closest && e.target.closest('button[data-a]'); if (!b) return;
+    var a = b.dataset.a; 
+    // Removed closeCard() here so the menu stays open!
+    ACTIONS[a] && ACTIONS[a]();
+  });
+
+  // --- SMOOTH DRAG LOGIC ---
+  card.addEventListener('touchstart', function(e) {
+    if (e.target.closest('button')) return; 
+    isDragging = false;
+    const rect = card.getBoundingClientRect();
+    initialX = e.touches[0].clientX - rect.left;
+    initialY = e.touches[0].clientY - rect.top;
+    card.style.transition = 'none'; 
+  }, {passive: true});
+
+  card.addEventListener('touchmove', function(e) {
+    if (e.target.closest('button')) return;
+    if (e.touches.length > 1) return;
+    
+    const x = e.touches[0].clientX;
+    const y = e.touches[0].clientY;
+    
+    if (!isDragging) {
+      if (Math.abs(x - (initialX + card.offsetLeft)) > 5 || Math.abs(y - (initialY + card.offsetTop)) > 5) {
+        isDragging = true;
+        card.classList.add('ed-dragging');
+      }
+    }
+    
+    if (isDragging) {
+      if (e.cancelable) e.preventDefault(); 
+      card.style.left = (x - initialX) + 'px';
+      card.style.top = (y - initialY) + 'px';
+    }
+  }, {passive: false});
+
+  card.addEventListener('touchend', function() {
+  if (isDragging) {
+    card.classList.remove('ed-dragging');
+    hasMoved = true;
+    savedLeft = parseInt(card.style.left, 10);
+    savedTop = parseInt(card.style.top, 10);
+    setTimeout(() => { isDragging = false; }, 50); 
+  }
 });
+
+// Reset position when you change files or close the editor tab
+var fileSelect = $('editorFileSelect');
+if (fileSelect) {
+  fileSelect.addEventListener('change', function() { hasMoved = false; });
+}
+var editorPage = $('editorPage');
+if (editorPage) {
+  const obs = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.attributeName === 'hidden' && editorPage.hidden) {
+        hasMoved = false;
+        closeCard();
+      }
+    });
+  });
+  obs.observe(editorPage, { attributes: true });
+}
+
   card.addEventListener('mousedown', function (e) { e.preventDefault(); });
   document.addEventListener('click', closeCard);
-  // opening the colors button or the publish sheet closes this card
+  
   if (theme) theme.addEventListener('click', closeCard, true);
   var pub = $('editorPublishBtn'); if (pub) pub.addEventListener('click', closeCard, true);
 
   var st = document.createElement('style'); st.id = 'edToolsStyle';
-st.textContent = [
-  '.et-file-row #editorToolsBtn{height:42px;min-width:42px;flex-shrink:0;border-radius:10px;background:#2a2d1f;color:#f5d76e;border-color:#4b4a2a}',
-  '.ed-tools-card{display:none;position:absolute;top:calc(100% + 6px);z-index:1000;width:200px;max-height:65vh;overflow-y:auto;padding:6px;background:#17181c;border:1px solid #2c2d34;border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.55);touch-action:none;}',
-  '.ed-tools-card.open{display:block}',
-  '.ed-tools-card .et-ttl{font-size:9px;font-weight:800;letter-spacing:1.2px;color:var(--red);text-transform:uppercase;margin:4px 4px 6px}',
-  '.ed-tools-card .et-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}',
-  '.ed-tools-card button{background:#20222a;color:#e5e6ea;border:1px solid #303139;border-radius:8px;padding:6px 4px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .14s ease,background .14s ease}',
-  '.ed-tools-card button:active{transform:scale(.95);background:#2d303a}',
-  '.ed-tools-card .et-size{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid #25262c}',
-  '.ed-tools-card .et-size span{flex:1;font-size:10px;font-weight:700;color:var(--muted)}',
-  '.ed-tools-card .et-size button{padding:4px 8px;font-size:10px}',
-  '.ed-tools-card .et-size b{min-width:16px;text-align:center;font-size:11px}',
-  '#editorShell{--ed-fs:13px}',
-  '#editorTextarea,#editorHighlight,#editorGutter{font-size:var(--ed-fs,13px)!important;line-height:calc(var(--ed-fs,13px) * 1.55)!important}',
-  '.ed-dragging{opacity:0.9;transform:scale(1.02)!important;box-shadow:0 20px 40px rgba(0,0,0,.8)!important}'
-].join('\n');
+  st.textContent = [
+    '.et-file-row #editorToolsBtn{height:42px;min-width:42px;flex-shrink:0;border-radius:10px;background:#2a2d1f;color:#f5d76e;border-color:#4b4a2a}',
+    '.ed-tools-card{display:none;position:fixed;z-index:9999;width:200px;max-height:65vh;overflow-y:auto;padding:6px;background:#17181c;border:1px solid #2c2d34;border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.55);touch-action:none;right:auto!important;bottom:auto!important;}',
+    '.ed-tools-card.open{display:block}',
+    '.ed-tools-card .et-ttl{font-size:9px;font-weight:800;letter-spacing:1.2px;color:var(--red);text-transform:uppercase;margin:4px 4px 6px}',
+    '.ed-tools-card .et-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}',
+    '.ed-tools-card button{background:#20222a;color:#e5e6ea;border:1px solid #303139;border-radius:8px;padding:6px 4px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .14s ease,background .14s ease}',
+    '.ed-tools-card button:active{transform:scale(.95);background:#2d303a}',
+    '.ed-tools-card .et-size{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid #25262c}',
+    '.ed-tools-card .et-size span{flex:1;font-size:10px;font-weight:700;color:var(--muted)}',
+    '.ed-tools-card .et-size button{padding:4px 8px;font-size:10px}',
+    '.ed-tools-card .et-size b{min-width:16px;text-align:center;font-size:11px}',
+    '#editorShell{--ed-fs:13px}',
+    '#editorTextarea,#editorHighlight,#editorGutter{font-size:var(--ed-fs,13px)!important;line-height:calc(var(--ed-fs,13px) * 1.55)!important}',
+    '.ed-dragging{opacity:0.9;transform:scale(1.02)!important;box-shadow:0 20px 40px rgba(0,0,0,.8)!important}'
+  ].join('\n');
   document.head.appendChild(st);
   setFs(fs);
 

@@ -72,7 +72,16 @@ async function dbGetAllRaw(){
       const user = window.getCloudUser();
       const docRef = firebase.firestore().collection("users").doc(user.uid).collection("data").doc("projects");
       const snap = await docRef.get();
-      return snap.exists ? snap.data().projects || [] : [];
+      const cloudProjects = snap.exists ? snap.data().projects || [] : [];
+      
+      // Save a backup to the phone immediately so the next refresh is instant
+      try{
+        const db=await openDB();
+        const tx=db.transaction(DB_STORE,'readwrite');
+        tx.objectStore(DB_STORE).put(cloudProjects,'projects');
+      }catch(e){}
+      
+      return cloudProjects;
     } catch(e) { console.error("Cloud load error:", e); return []; }
   }
   // 2. If NOT logged in, use local phone storage

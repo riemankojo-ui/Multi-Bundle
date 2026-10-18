@@ -1,6 +1,9 @@
 /* sync.js — Google login + UI Gate */
 (function () {
-  if (typeof firebase === 'undefined') return;
+  if (typeof firebase === 'undefined') {
+    alert("Firebase failed to load. Check index.html.");
+    return;
+  }
 
   const auth = firebase.auth();
   const loginGate = document.getElementById("loginGate");
@@ -11,36 +14,63 @@
   window.getCloudUser = () => cloudUser;
   window.isCloudSignedIn = () => !!cloudUser;
 
-  // 1. Login Button
+  // 1. SMART LOGIN (Tries Popup, falls back to Redirect if blocked)
   if (gateBtn) {
     gateBtn.onclick = async function () {
-      gateBtn.innerHTML = 'Connecting to Google...';
+      gateBtn.innerHTML = 'Connecting...';
       gateBtn.style.opacity = '0.7';
       document.body.style.backgroundColor = '#0d0e12';
       
       const provider = new firebase.auth.GoogleAuthProvider();
+      // This forces the account picker to appear even if you just signed out
       provider.setCustomParameters({ prompt: "select_account" });
       
       try {
-        await auth.signInWithRedirect(provider);
+        // Try Popup first (Best for desktop & fixes mobile loops)
+        await auth.signInWithPopup(provider);
       } catch (e) {
-        alert("Login Error:\n" + e.message);
-        gateBtn.innerHTML = 'Continue with Google';
-        gateBtn.style.opacity = '1';
+        // If popup is blocked by the phone, use redirect
+        if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
+          await auth.signInWithRedirect(provider);
+        } else {
+          alert("Login Error:\n" + e.message);
+          gateBtn.innerHTML = 'Continue with Google';
+          gateBtn.style.opacity = '1';
+        }
       }
     };
   }
 
-  // 2. Login State
+  // 2. Catch redirect errors if it had to fall back
+  auth.getRedirectResult().catch(function(error) {
+    if (error.code !== 'auth/redirect-cancelled-by-user') {
+      alert("Login Error:\n" + error.message);
+    }
+    if (gateBtn) {
+      gateBtn.innerHTML = 'Continue with Google';
+      gateBtn.style.opacity = '1';
+    }
+  });
+
+  // 3. Login State Watcher
   auth.onAuthStateChanged(async (user) => {
     cloudUser = user;
     renderAuthUi(user);
     
     if (user) {
+      // LOGGED IN
       if (loginGate) loginGate.style.display = "none"; 
+      
+      // Reset the button for next time
+      if (gateBtn) {
+        gateBtn.innerHTML = 'Continue with Google';
+        gateBtn.style.opacity = '1';
+      }
+
       if (typeof window.__refreshProjects === "function") window.__refreshProjects();
+      
     } else {
-      // WIPE EVERYTHING ON LOGOUT
+      // LOGGED OUT: Wipe the screen clean
       if (loginGate) loginGate.style.display = "flex"; 
       
       if (typeof files !== 'undefined') {
@@ -59,11 +89,19 @@
     }
   });
 
+  // 4. Sign Out Function
   window.signOutGoogle = async function () {
-    if (typeof window.clearToken === 'function') await window.clearToken();
-    await auth.signOut();
+    try {
+      if (typeof window.clearToken === 'function') {
+        await window.clearToken();
+      }
+      await auth.signOut();
+    } catch (e) {
+      console.error("Sign out error", e);
+    }
   };
 
+  // 5. Update Home Screen Card
   function renderAuthUi(user) {
     const box = document.getElementById("authBox");
     if (!box) return;

@@ -65,13 +65,36 @@ function openDB(){if(!__dbp){__dbp=openDBRaw();__dbp.catch(function(){__dbp=null
 function openDBRaw(){return new Promise(function(res,rej){const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=function(){const db=r.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE)};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
 let __projCache=null;
 async function dbGetAll(){if(__projCache)return __projCache;const r=await dbGetAllRaw();__projCache=r;return r}
-async function dbGetAllRaw(){try{const db=await openDB();const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get('projects');const d=await new Promise(function(res){req.onsuccess=function(){res(req.result)};req.onerror=function(){res(null)}});return d||[]}catch(e){return[]}}
+async function dbGetAllRaw(){
+  // 1. If logged in to Google, get from Cloud
+  if (window.isCloudSignedIn && window.isCloudSignedIn()) {
+    try {
+      const user = window.getCloudUser();
+      const docRef = firebase.firestore().collection("users").doc(user.uid).collection("data").doc("projects");
+      const snap = await docRef.get();
+      return snap.exists ? snap.data().projects || [] : [];
+    } catch(e) { console.error("Cloud load error:", e); return []; }
+  }
+  // 2. If NOT logged in, use local phone storage
+  try{const db=await openDB();const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get('projects');const d=await new Promise(function(res){req.onsuccess=function(){res(req.result)};req.onerror=function(){res(null)}});return d||[]}catch(e){return[]}
+}
 let __saveTimer=null;
 function __flushProjects(){clearTimeout(__saveTimer);__saveTimer=null;if(__projCache)return dbSetAllNow(__projCache);return Promise.resolve()}
 async function dbSetAll(arr){__projCache=arr;clearTimeout(__saveTimer);__saveTimer=setTimeout(__flushProjects,500)}
 window.addEventListener('pagehide',function(){if(__saveTimer)__flushProjects()});
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&__saveTimer)__flushProjects()});
-async function dbSetAllNow(arr){try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,'projects');await new Promise(function(res){tx.oncomplete=res})}catch(e){console.warn(e)}}
+async function dbSetAllNow(arr){
+  // 1. If logged in to Google, save to Cloud
+  if (window.isCloudSignedIn && window.isCloudSignedIn()) {
+    try {
+      const user = window.getCloudUser();
+      const docRef = firebase.firestore().collection("users").doc(user.uid).collection("data").doc("projects");
+      await docRef.set({ projects: arr, updatedAt: Date.now() });
+    } catch(e) { console.error("Cloud save error:", e); }
+  }
+  // 2. Always save to local phone storage as a backup cache
+  try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,'projects');await new Promise(function(res){tx.oncomplete=res})}catch(e){console.warn(e)}
+}
 async function dbUpsertProject(p){const all=await dbGetAll();const i=all.findIndex(function(x){return x.id===p.id});if(i>=0)all[i]=p;else all.unshift(p);await dbSetAll(all)}
 async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all.filter(function(x){return x.id!==id}))}
 
@@ -275,9 +298,35 @@ function setGhStatus(t){if($('githubStatus'))$('githubStatus').textContent=t}
 function setGhPublicStatus(t){if($('ghPublicStatus'))$('ghPublicStatus').textContent=t}
 function getToken(){return ghToken}
 
-async function saveToken(t){ghToken=t;try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(t,'githubToken');await new Promise(function(r){tx.oncomplete=r})}catch(e){}}
-async function loadToken(){try{const db=await openDB();const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get('githubToken');const t=await new Promise(function(r){req.onsuccess=function(){r(req.result)};req.onerror=function(){r(null)}});return t||''}catch(e){return''}}
-async function clearToken(){try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).delete('githubToken');await new Promise(function(r){tx.oncomplete=r})}catch(e){}}
+async function saveToken(t){
+  const uid = window.getCloudUser() ? window.getCloudUser().uid : 'local';
+  ghToken=t;
+  try{
+    const db=await openDB();
+    const tx=db.transaction(DB_STORE,'readwrite');
+    tx.objectStore(DB_STORE).put(t,'githubToken_'+uid);
+    await new Promise(function(r){tx.oncomplete=r});
+  }catch(e){}
+}
+async function loadToken(){
+  const uid = window.getCloudUser() ? window.getCloudUser().uid : 'local';
+  try{
+    const db=await openDB();
+    const tx=db.transaction(DB_STORE,'readonly');
+    const req=tx.objectStore(DB_STORE).get('githubToken_'+uid);
+    const t=await new Promise(function(r){req.onsuccess=function(){r(req.result)};req.onerror=function(){r(null)}});
+    return t||'';
+  }catch(e){return''}
+}
+async function clearToken(){
+  const uid = window.getCloudUser() ? window.getCloudUser().uid : 'local';
+  try{
+    const db=await openDB();
+    const tx=db.transaction(DB_STORE,'readwrite');
+    tx.objectStore(DB_STORE).delete('githubToken_'+uid);
+    await new Promise(function(r){tx.oncomplete=r});
+  }catch(e){}
+}
 
 async function ghFetch(url){const t=getToken();const headers={};if(t)headers.Authorization='Bearer '+t;return fetch(url,{headers:headers})}
 
@@ -748,6 +797,9 @@ if($('clearBtn'))$('clearBtn').onclick=async function(){
 document.querySelectorAll('.bottom span').forEach(function(s){s.onclick=function(){showTab(s.dataset.tab)}});
 window.dbGetAll = dbGetAll;
 window.dbSetAll = dbSetAll;
+window.loadToken = loadToken;
+window.clearToken = clearToken;
+window.getToken = getToken;
 
 window.__refreshProjects = async function() {
   __projCache = null; 

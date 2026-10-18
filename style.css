@@ -7,8 +7,9 @@
   --kw:#ff7ab2;--str:#9ce27b;--num:#ffa96b;--cmt:#6a6b74;--fn:#7ec8ff;--tag:#ff7ab2;--attr:#ffd479;
 }
 *{box-sizing:border-box}
+html { background-color: #0d0e12 !important; }
 body{
-  margin:0;background:var(--bg);color:var(--text);
+  margin:0;background-color:#0d0e12;color:var(--text);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   padding-bottom:92px;
 }

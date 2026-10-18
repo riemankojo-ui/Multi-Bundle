@@ -247,12 +247,19 @@
 
   // ---------- login state watcher ----------
   auth.onAuthStateChanged(async (user) => {
-    const previousUid = rememberedUid;
-    authKnown = true;
-    cloudUser = user;
-    const prof = profileOf(user);
-    saveProfile(user);
-    showProfile(prof);
+  const previousUid = rememberedUid;
+  authKnown = true;
+  cloudUser = user;
+  
+  // Hide the loading spinner and show the form
+  const gateLoading = document.getElementById('gateLoading');
+  const gateContent = document.getElementById('gateContent');
+  if (gateLoading) gateLoading.style.display = 'none';
+  if (gateContent) gateContent.style.display = 'block';
+
+  const prof = profileOf(user);
+  saveProfile(user);
+  showProfile(prof);
 
     if (user) {
       try { localStorage.setItem('mb_uid', user.uid); } catch (e) {}

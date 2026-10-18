@@ -331,8 +331,16 @@
 </main>
 
 <!-- Full Screen Login Gate -->
-<div id="loginGate" style="position:fixed;inset:0;background:#0d0e12;z-index:9999;display:none;flex-direction:column;align-items:center;padding:24px;text-align:center;overflow-y:auto;">
-  <div style="margin:auto 0;width:100%;max-width:340px;">
+<div id="loginGate" style="position:fixed;inset:0;background:#0d0e12;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;overflow-y:auto;">
+  
+  <!-- NEW LOADING SCREEN -->
+  <div id="gateLoading" style="color:#a2a3ad; font-size:16px; font-weight:bold;">
+    <div class="spinner" style="margin:0 auto 16px; width:36px; height:36px; border:3px solid #2a2c34; border-top-color:var(--red); border-radius:50%; animation:mb-spin .8s linear infinite;"></div>
+    Checking login...
+  </div>
+
+  <!-- HIDE THE LOGIN BUTTONS UNTIL CHECK IS DONE -->
+  <div id="gateContent" style="display:none; margin:auto 0;width:100%;max-width:340px;">
     <h1 style="margin:0 0 12px;font-size:38px;font-weight:900;letter-spacing:-1px;color:#fff;line-height:1.1;font-family:system-ui,-apple-system,sans-serif;">
       Welcome to<br><span style="color:var(--red);">Multi Bundle</span>
     </h1>

@@ -361,7 +361,6 @@ async function githubLogout(){
   if($('githubToken'))$('githubToken').value='';setGhStatus('Signed out.');showToast('Signed out');
 }
 async function showGithubLoggedIn(user){
-  setTimeout(function(){if(typeof loadGithubReposForProjects==='function')loadGithubReposForProjects()},0);
   if($('githubLoggedOut'))$('githubLoggedOut').hidden=true;if($('githubLoggedIn'))$('githubLoggedIn').hidden=false;
   if($('ghAvatar'))$('ghAvatar').src=user.avatar_url||'';if($('ghName'))$('ghName').textContent=user.name||user.login;
   if($('ghLogin'))$('ghLogin').textContent='@'+user.login;await loadRepoList();
@@ -869,7 +868,11 @@ async function loadGithubReposForProjects() {
   const box = $('ghProjectCards');
   if (!section || !box) return;
 
-  // Check if we have a GitHub token
+  // NEW: Check local storage if ghToken is empty
+  if (!ghToken) {
+    try { ghToken = localStorage.getItem('mb_gh_active_token') || ''; } catch(e) {}
+  }
+
   if (!ghToken) {
     section.hidden = true;
     return;
@@ -932,7 +935,6 @@ if ($('ghOauthBtn')) {
     try {
       const res = await firebase.auth().signInWithPopup(provider);
       
-      // Save the token globally so the Projects tab can see it
       const tok = res.credential.accessToken;
       ghToken = tok; 
       try { localStorage.setItem('mb_gh_active_token', tok); } catch(e) {}
@@ -942,35 +944,7 @@ if ($('ghOauthBtn')) {
       showToast('GitHub linked successfully!', 'success');
       await showGithubLoggedIn(res.user);
       
-      // Instantly refresh the Projects tab
-      if (typeof showProjectsList === 'function') showProjectsList();
-      
-    } catch (e) {
-      showToast('Could not link GitHub: ' + e.message, 'error');
-    }
-  };
-}
-
-// NEW: Connect GitHub from the GitHub Tab using OAuth
-if ($('ghOauthBtn')) {
-  $('ghOauthBtn').onclick = async function() {
-    const provider = new firebase.auth.GithubAuthProvider();
-    provider.addScope('repo');
-    try {
-      const res = await firebase.auth().signInWithPopup(provider);
-      
-      // Save the token globally so the Projects tab can see it
-      const tok = res.credential.accessToken;
-      ghToken = tok; 
-      try { localStorage.setItem('mb_gh_active_token', tok); } catch(e) {}
-
-      if (typeof saveToken === 'function') await saveToken(tok);
-      
-      showToast('GitHub linked successfully!', 'success');
-      await showGithubLoggedIn(res.user);
-      
-      // Instantly refresh the Projects tab
-      if (typeof showProjectsList === 'function') showProjectsList();
+      if (typeof loadGithubReposForProjects === 'function') loadGithubReposForProjects();
       
     } catch (e) {
       showToast('Could not link GitHub: ' + e.message, 'error');

@@ -933,7 +933,7 @@ if ($('ghOauthBtn')) {
     const provider = new firebase.auth.GithubAuthProvider();
     provider.addScope('repo');
     try {
-      const res = await firebase.auth().signInWithPopup(provider);
+      const res = await (firebase.auth().currentUser ? firebase.auth().currentUser.linkWithPopup(provider) : firebase.auth().signInWithPopup(provider));
       
       const tok = res.credential.accessToken;
       ghToken = tok; 

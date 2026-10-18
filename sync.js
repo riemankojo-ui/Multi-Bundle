@@ -182,13 +182,17 @@
     const provider = new firebase.auth.GithubAuthProvider();
     provider.addScope('repo');
     try {
-      const res = await auth.signInWithPopup(provider);
-      await afterGithub(res);
-    } catch (e) {
-      if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
-        try { await auth.signInWithRedirect(provider); return; } catch (e2) { setMsg(friendly(e2)); }
-      } else if (!quiet(e)) { setMsg(friendly(e)); }
-    }
+        const res = await auth.signInWithPopup(provider);
+  await afterGithub(res);
+} catch (e) {
+  if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
+    try { await auth.signInWithRedirect(provider); return; } catch (e2) { setMsg(friendly(e2)); }
+  } else if (e.code === 'auth/account-exists-with-different-credential') {
+    setMsg('You already have a Google account with this email. Please log in with Google, then go to the GitHub tab to link your repos.', false);
+  } else if (!quiet(e)) { 
+    setMsg(friendly(e)); 
+  }
+}
     setBusy(false);
   }
 

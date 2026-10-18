@@ -316,18 +316,34 @@ iframe{width:100%;height:430px;background:#0d0e12;border:0;border-radius:9px;dis
 .editor-hl,.editor-code #editorTextarea{
   position:absolute;inset:0;margin:0;
   padding:12px;
-  font-family:ui-monospace,Menlo,Consolas,monospace;
-  font-size:13px;line-height:1.55;tab-size:2;
-  white-space:pre;overflow:auto;
+  font-family:ui-monospace,Menlo,Consolas,monospace !important;
+  font-size:var(--ed-fs,13px) !important;
+  line-height:calc(var(--ed-fs,13px) * 1.55) !important;
+  tab-size:2 !important;
+  white-space:pre-wrap !important; 
+  word-break:break-all !important; /* Forces the exact same breaks */
+  letter-spacing: normal !important;
+  overflow-wrap: break-word !important;
   border:0;outline:0;background:transparent;
-  word-wrap:normal;
-  overscroll-behavior-y: contain; /* STOPS PULL-TO-REFRESH HERE */
+  overscroll-behavior-y: contain; 
 }
-.editor-hl{color:#e6e6e8;pointer-events:none;z-index:1;overflow:hidden;scrollbar-width:none}
+.editor-hl{
+  color:#e6e6e8;
+  pointer-events:none;
+  z-index:1;
+  overflow:hidden !important; /* Hides scrollbar so it doesn't misalign */
+  scrollbar-width:none;
+}
 .editor-hl::-webkit-scrollbar{display:none}
 .editor-code #editorTextarea{
-  color:transparent;caret-color:var(--red);z-index:2;resize:none;
-  -webkit-text-fill-color:transparent;
+  color: transparent !important;
+  caret-color: var(--red);
+  z-index: 2;
+  resize: none;
+  -webkit-text-fill-color: transparent !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-text-size-adjust: none !important; /* Stops mobile zooming from breaking it */
 }
 .editor-code #editorTextarea::placeholder{color:#5c5d66;-webkit-text-fill-color:#5c5d66}
 

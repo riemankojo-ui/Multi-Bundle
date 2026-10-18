@@ -94,8 +94,7 @@
   function applyOp(res) {
     if (!res) return false;
     ta.value = res.v;
-    ta.focus();
-    ta.setSelectionRange(res.a, res.b);
+ta.setSelectionRange(res.a, res.b);
     ta.dispatchEvent(new Event('input', { bubbles: true }));
     return true;
   }
@@ -130,7 +129,7 @@
     num = Math.max(1, Math.min(num, n));
     var lines = ta.value.split('\n'), pos = 0;
     for (var i = 0; i < num - 1; i++) pos += lines[i].length + 1;
-    ta.focus(); ta.setSelectionRange(pos, pos + lines[num - 1].length);
+    ta.setSelectionRange(pos, pos + lines[num - 1].length);
     ta.scrollTop = Math.max(0, (num - 3) * lineHeightPx()); ta.scrollLeft = 0;
   }
 
@@ -145,10 +144,10 @@
   }
 
   var ACTIONS = {
-    all: function () { if (!haveFile()) return toast('Open a file first'); ta.focus(); ta.select(); },
-    copy: function () { if (!ta.value) return toast('Nothing to copy'); var n = ta.value.split('\n').length; copyText(ta.value, 'Copied all ' + n + ' lines'); },
-    top: function () { ta.focus(); ta.setSelectionRange(0, 0); ta.scrollTop = 0; ta.scrollLeft = 0; },
-    last: function () { var n = ta.value.length; ta.focus(); ta.setSelectionRange(n, n); ta.scrollTop = ta.scrollHeight; ta.scrollLeft = 0; },
+    all: function () { if (!haveFile()) return toast('Open a file first'); ta.select(); },
+copy: function () { if (!ta.value) return toast('Nothing to copy'); var n = ta.value.split('\n').length; copyText(ta.value, 'Copied all ' + n + ' lines'); },
+top: function () { ta.setSelectionRange(0, 0); ta.scrollTop = 0; ta.scrollLeft = 0; },
+last: function () { var n = ta.value.length; ta.setSelectionRange(n, n); ta.scrollTop = ta.scrollHeight; ta.scrollLeft = 0; },
     line: goToLine,
     sel: function () { applyOp(selectLineOp(ta.value, ta.selectionStart, ta.selectionEnd)); },
     dup: function () { applyOp(dupOp(ta.value, ta.selectionStart, ta.selectionEnd)); scrollToCaret(); },

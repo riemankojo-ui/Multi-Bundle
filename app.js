@@ -215,7 +215,20 @@ async function renderProjectCards(){
         else if(act==='changes')cardChanges(id);else if(act==='delete')cardDelete(id,card.querySelector('.pc-name').textContent);
       };
     });
-    card.onclick=function(){openProjectDetail(id)};
+    card.onclick=async function(e){
+  if(e.target.closest('.pc-btn')) return; // Ignore if clicking a button
+  
+  // Instantly move the blue highlight to this card
+  box.querySelectorAll('.project-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+
+  const p = await loadProjectIntoMemory(id);
+  if(!p) return;
+  
+  // Update the Home screen and Preview dropdown
+  if(typeof render==='function') render();
+  if(typeof populatePages==='function') populatePages();
+};
   });
 }
 
@@ -230,8 +243,19 @@ async function loadProjectIntoMemory(id){
   
   return p;
 }
-async function cardPreview(id){const p=await loadProjectIntoMemory(id);if(!p)return;render();showTab('preview');const first=htmlPages()[0];if(first)openPage(first.path)}
-async function cardEdit(id){const p=await loadProjectIntoMemory(id);if(!p)return;render();showTab('editor')}
+async function cardPreview(id){
+  const p=await loadProjectIntoMemory(id);if(!p)return;
+  render();
+  await renderProjectCards(); // Updates the highlight!
+  showTab('preview');
+  const first=htmlPages()[0];if(first)openPage(first.path)
+}
+async function cardEdit(id){
+  const p=await loadProjectIntoMemory(id);if(!p)return;
+  render();
+  await renderProjectCards(); // Updates the highlight!
+  showTab('editor')
+}
 async function cardChanges(id){const p=await loadProjectIntoMemory(id);if(!p)return;if($('changesFolderInput'))$('changesFolderInput').click()}
 async function cardDelete(id,name){
   const ok=await showConfirm('Delete "'+name+'" permanently? This cannot be undone.',{title:'Delete project',confirmText:'Delete',cancelText:'Keep'});

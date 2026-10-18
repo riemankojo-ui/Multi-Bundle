@@ -88,24 +88,38 @@ function updateGutter(){
 }
 function syncScroll(){gutter.scrollTop=ta.scrollTop;hl.scrollTop=ta.scrollTop;hl.scrollLeft=ta.scrollLeft}
 ta.addEventListener('scroll',syncScroll);
-let typingTimer;
+let highlightTimer;
+let draftTimer;
+let lastLineCount = 0;
+
 ta.addEventListener('input', function() {
-  // These are fast and will update instantly
-  updateGutter(); 
+  // 1. FAST UPDATES (Instant, but light on the processor)
   updateCursor();
   pushHistory(); 
   markDirty();
 
-  // These are heavy, so we wait 300ms after you stop typing
-  clearTimeout(typingTimer);
-  typingTimer = setTimeout(function() {
+  // 2. SMART GUTTER (Only update line numbers if we actually added/removed a line)
+  const currentLines = ta.value.split('\n').length;
+  if (currentLines !== lastLineCount) {
+    updateGutter();
+    lastLineCount = currentLines;
+  }
+
+  // 3. DELAYED HIGHLIGHT (Wait 200ms after you stop typing to color the text)
+  clearTimeout(highlightTimer);
+  highlightTimer = setTimeout(function() {
     refreshHighlight();
+  }, 200);
+
+  // 4. DELAYED SAVE (Wait a full second before writing to phone storage)
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(function() {
     try{
       if(typeof currentProjectId!=='undefined' && currentProjectId && currentPath){
         localStorage.setItem('mb_draft_'+currentProjectId+'_'+currentPath, ta.value);
       }
     }catch(e){}
-  }, 300);
+  }, 1000);
 });
 ta.addEventListener('click',updateCursor);
 ta.addEventListener('keyup',updateCursor);
@@ -231,7 +245,8 @@ function scrollToPosition(pos){
   const before=ta.value.slice(0,pos);
   const lineNum=before.split('\n').length;
   ta.scrollTop=Math.max(0,(lineNum-3)*lh);
-  const col=pos-before.lastIndexOf('\n')-1;ta.scrollLeft=Math.max(0,col*(parseFloat(cs.fontSize)||13)*0.6-ta.clientWidth/3);
+  const col=pos-before.lastIndexOf('\n')-1;
+  ta.scrollLeft=Math.max(0,col*(parseFloat(cs.fontSize)||13)*0.6-ta.clientWidth/3);
   syncScroll();
 }
 function selectMatch(){
@@ -367,7 +382,11 @@ $('editorPreviewClose').onclick=function(){$('editorPreviewPane').classList.remo
 ta.addEventListener('input',function(){
   if(/\.html?$/i.test(currentPath)){
     clearTimeout(window.__pvT);
-    window.__pvT=setTimeout(renderPreview,1000); // Waits 1 full second
+    // Wait 1.5 seconds after you stop typing to refresh the preview
+    window.__pvT=setTimeout(function(){
+       // Only refresh if the editor is actually visible to save battery
+       if (!$('editorPage').hidden) renderPreview();
+    }, 1500); 
   }
 });
 

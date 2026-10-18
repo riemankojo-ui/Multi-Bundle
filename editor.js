@@ -7,7 +7,7 @@ const ta=$('editorTextarea'),gutter=$('editorGutter'),hl=$('editorHighlight'),
       searchCount=$('editorSearchCount'),
       previewFrame=$('editorPreviewFrame'),shell=$('editorShell'),
       editorPage=$('editorPage');
-let currentPath='',dirty=false,undoStack=[],redoStack=[],lastPush=0,
+let currentPath='',dirty=false,undoStack=[],redoStack=[],lastPush=0,fileHistories={},
     matches=[],matchLens=[],matchIndex=-1,originalText='';
 
 const toast=window.showToast||function(){};
@@ -21,7 +21,7 @@ function highlightJS(code){
   let out='',last=0,m;
   while((m=re.exec(code))!==null){
     out+=escHtml(code.slice(last,m.index));
-    const t=m[0];
+    const t=m[0]
     if(m[1])out+='<span class="tk-cmt">'+escHtml(t)+'</span>';
     else if(m[2])out+='<span class="tk-str">'+escHtml(t)+'</span>';
     else if(m[3])out+='<span class="tk-kw">'+escHtml(t)+'</span>';
@@ -105,11 +105,26 @@ function pushHistory(force){
   const v=ta.value;
   if(undoStack.length&&undoStack[undoStack.length-1]===v)return;
   undoStack.push(v);if(undoStack.length>200)undoStack.shift();
-  redoStack=[];updateBtns();
+redoStack=[];
+if(currentPath) fileHistories[currentPath] = { undo: undoStack.slice(), redo: [] };
+updateBtns();
 }
 function updateBtns(){undoBtn.disabled=undoStack.length<2;redoBtn.disabled=!redoStack.length}
-undoBtn.onclick=function(){if(undoStack.length<2)return;redoStack.push(undoStack.pop());ta.value=undoStack[undoStack.length-1];updateGutter();refreshHighlight();markDirty();updateBtns()};
-redoBtn.onclick=function(){if(!redoStack.length)return;const n=redoStack.pop();undoStack.push(n);ta.value=n;updateGutter();refreshHighlight();markDirty();updateBtns()};
+undoBtn.onclick=function(){
+  if(undoStack.length<2)return;
+  redoStack.push(undoStack.pop());
+  ta.value=undoStack[undoStack.length-1];
+  if(currentPath) fileHistories[currentPath] = { undo: undoStack.slice(), redo: redoStack.slice() };
+  updateGutter();refreshHighlight();markDirty();updateBtns()
+};
+redoBtn.onclick=function(){
+  if(!redoStack.length)return;
+  const n=redoStack.pop();
+  undoStack.push(n);
+  ta.value=n;
+  if(currentPath) fileHistories[currentPath] = { undo: undoStack.slice(), redo: redoStack.slice() };
+  updateGutter();refreshHighlight();markDirty();updateBtns()
+};
 ta.addEventListener('keydown',function(e){
   if((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey){e.preventDefault();undoBtn.click()}
   if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.key==='z'&&e.shiftKey))){e.preventDefault();redoBtn.click()}
@@ -258,7 +273,12 @@ function loadFile(path){
   }catch(e){}
 
   ta.value=savedText;originalText=f.text;dirty=(savedText !== f.text);
-  undoStack=[savedText];redoStack=[];updateBtns();
+
+// RESTORE UNDO/REDO HISTORY FOR THIS FILE
+if(!fileHistories[path]) fileHistories[path] = { undo: [savedText], redo: [] };
+undoStack = fileHistories[path].undo.slice();
+redoStack = fileHistories[path].redo.slice();
+updateBtns();
   updateGutter();updateCursor();refreshHighlight();
   status.textContent=path;fileSelect.value=path;
   try{localStorage.setItem('mb_file',JSON.stringify({pid:(typeof currentProjectId!=='undefined'?currentProjectId:''),path:path}))}catch(e){}

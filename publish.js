@@ -203,6 +203,26 @@ async function openSheet(){
     $('pbToGh').onclick=function(){closeSheet();if(typeof window.showTab==='function')window.showTab('github')};
   }
 }
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+async function createRepo(){
+  if(S.busy)return;
+  var name=(($('pbNewName')||{}).value||'').trim();var desc=(($('pbNewDesc')||{}).value||'').trim();var priv=(($('pbNewVis')||{}).value!=='public');
+  if(!/^[\w.-]+$/.test(name)){setNote('Use only letters, numbers, dashes, dots and underscores in the repo name.','bad');return}
+  var btn=$('pbCreate');S.busy=true;if(btn){btn.disabled=true;btn.textContent='Creating\u2026'}
+  try{
+    var r=await gh('POST','/user/repos',{name:name,description:desc,private:priv,auto_init:true});
+    $('pbRepo').value=r.full_name;$('pbBranch').value=r.default_branch||'main';
+    if($('pbMsg'))$('pbMsg').value='Initial commit from Multi Bundle';
+    setNote('Repo created. Preparing your files\u2026');
+    for(var i=0;i<6&&!S.scan;i++){await sleep(i?1200:800);await runScan()}
+    if(!S.scan)throw new Error('Repo created, but GitHub is still setting it up. Tap Check changes in a moment, then Publish.');
+    S.busy=false;
+    if(S.rows.length)await runPublish();else setNote('Repo created. Nothing else to upload.','ok');
+  }catch(e){
+    S.busy=false;if(btn){btn.disabled=false;btn.textContent='Create repo & publish'}
+    setNote(e&&e.status===422?'You already have a repo with that name. Pick another name.':explain(e,true),'bad');
+  }
+}
 window.openPublish=openSheet;
 
 /* ---------- editor button + styles ---------- */

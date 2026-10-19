@@ -479,7 +479,7 @@ body.editor-full main{padding:0}
 /* ========== Updates page ========== */
 .updates-tabs{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
 .updates-tab{
-  flex:1;min-width:131px;
+  flex:1;min-width:130px;
   background:#20222a;color:#cfd0d8;border:1px solid #303139;
   border-radius:10px;padding:12px 14px;font-size:13px;font-weight:800;
   cursor:pointer;transition:all .12s;

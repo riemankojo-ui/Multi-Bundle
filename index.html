@@ -287,32 +287,6 @@
       <div id="updatesSnapshotsList" class="snapshots-list"></div>
     </section>
   </div>
-
-  <!-- NEW: Published Detail View -->
-  <div id="publishedDetailView" hidden>
-    <section class="card">
-      <button id="publishedBackBtn" class="btn secondary">← Back to Updates</button>
-      <div class="heading" style="margin-top:14px">
-        <div><label class="eyebrow">PUBLISHED GROUP</label><h2 id="publishedDetailTitle">—</h2></div>
-        <span id="publishedDetailCount" class="pill">0 files</span>
-      </div>
-      <div id="publishedDetailMeta" class="status">—</div>
-    </section>
-
-    <section class="card">
-      <div class="heading"><label class="eyebrow">FILES IN THIS PUBLISH</label></div>
-      <div id="publishedFileList" class="filelist" style="max-height: 40vh; overflow-y: auto;"></div>
-    </section>
-
-    <section class="card" style="position: sticky; bottom: 80px; z-index: 10; background: #15161a; border-color: #303139;">
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button id="pubDetailSaveBack" class="btn primary" style="flex:1;">Save Back</button>
-        <button id="pubDetailPublishBack" class="btn secondary" style="flex:1;">Publish Back</button>
-        <button id="pubDetailDownload" class="btn secondary" style="flex:1;">Download</button>
-      </div>
-    </section>
-  </div>
-
 </section>
 
 <section id="bundlePage" class="tab-page" hidden>
@@ -537,13 +511,12 @@
 <script src="publish.js"></script>
 <script src="backups.js"></script>
 <script src="edtools.js"></script>
+<!-- Service worker disabled for testing -->
 <script>
-  if('serviceWorker' in navigator){
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('/sw.js').then(function(reg) {
-        console.log('Service Worker registered');
-      });
-    });
+  if('serviceWorker' in navigator){ 
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      for(let reg of regs){ reg.unregister(); }
+    }); 
   }
 </script>
 </body></html>

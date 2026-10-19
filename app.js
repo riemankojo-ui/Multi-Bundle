@@ -937,6 +937,7 @@ window.importGithubRepoAsProject = async function(fullName, branch) {
 if ($('ghOauthBtn')) {
   $('ghOauthBtn').onclick = async function() {
     const provider = new firebase.auth.GithubAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     provider.addScope('repo');
     try {
       const res = await (firebase.auth().currentUser ? firebase.auth().currentUser.linkWithPopup(provider) : firebase.auth().signInWithPopup(provider));

@@ -361,6 +361,7 @@ async function githubLogout(){
   if($('githubToken'))$('githubToken').value='';setGhStatus('Signed out.');showToast('Signed out');
 }
 async function showGithubLoggedIn(user){
+  setTimeout(function(){if(typeof loadGithubReposForProjects==='function')loadGithubReposForProjects()},0);
   // Hide the big connect button
   var oauthBtn = $('ghOauthBtn');
   if (oauthBtn) oauthBtn.style.display = 'none';

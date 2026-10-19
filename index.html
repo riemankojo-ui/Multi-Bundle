@@ -152,7 +152,54 @@
 <section id="githubPage" class="tab-page" hidden>
   <section class="card">
     <label class="eyebrow">GITHUB</label>
-    <h1>Connect with <span>GitHub</span></h1>
+    <h1>GitHub <span>Repos</span></h1>
+    <p>Sign in with GitHub to see all your repos, including private ones. No token needed.</p>
+    <button id="ghOauthBtn" class="btn primary" style="width:100%">Connect with GitHub</button>
+    <button id="ghImportBtn" class="btn secondary" style="width:100%;margin-top:10px" onclick="document.getElementById('githubPage').classList.toggle('gh-open')">Import</button>
+    <style>#githubPage:not([hidden]){display:flex;flex-direction:column}#githubPage:has(#githubLoggedIn:not([hidden])) #ghOauthBtn{display:none}#githubPage #githubLoggedOut{display:block}#githubPage > section:has(#githubLoggedOut),#githubPage > section:has(#ghPublicUrl){order:1}#ghProfileCard{order:2}#githubPage:not(:has(#githubLoggedIn:not([hidden]))) #ghProfileCard{display:none}#githubPage:not(.gh-open) > section:not(:has(#ghImportBtn)):not(#ghProfileCard){display:none}</style>
+  </section>
+  <section class="card" id="ghProfileCard">
+    <label class="eyebrow">PROJECTS</label>
+    <h2>Your GitHub projects</h2>
+    <div id="githubLoggedIn" hidden>
+      <div class="gh-user">
+        <img id="ghAvatar" alt="">
+        <div class="gh-user-info"><b id="ghName">—</b><small id="ghLogin">—</small></div>
+        <button id="githubLogoutBtn" class="btn secondary">Sign out</button>
+      </div>
+      <input id="ghRepoSearch" class="gh-search" type="text" placeholder="Search your repos…" autocomplete="off">
+      <div id="ghRepoList" class="gh-repo-list"></div>
+    </div>
+  </section>
+  <section class="card">
+    <label class="eyebrow">TOKEN</label>
+    <h2>Import with a token</h2>
+    <p>Sign in with a token to see your repos (including private).</p>
+    <div id="githubLoggedOut">
+      <div class="gh-row">
+        <input id="githubToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+        <button id="githubLoginBtn" class="btn primary">Sign in</button>
+      </div>
+      <p class="note">Or create a token at github.com/settings/tokens → Generate new token (classic) → tick "repo" → Generate → copy.</p>
+      <div class="status" id="githubStatus">Not signed in.</div>
+    </div>
+  </section>
+  <section class="card">
+    <label class="eyebrow">PUBLIC REPO</label>
+    <h2>Import by URL</h2>
+    <p>Works without signing in. Public repos only. Also accepts /commit/SHA or /tree/branch.</p>
+    <div class="gh-row">
+      <input id="ghPublicUrl" type="text" placeholder="https://github.com/owner/repo" autocomplete="off">
+      <button id="ghPublicBtn" class="btn primary">Import</button>
+    </div>
+    <div class="status" id="ghPublicStatus">Paste a public repo URL.</div>
+  </section>
+</section>
+<style>#githubPage:not([hidden])::after{content:"Tip: tap any repo in your list to import it. It will appear in your Projects tab.";order:3;display:block;text-align:center;color:var(--muted);font-size:13px;line-height:1.6;padding:18px 20px;margin-bottom:90px;border:1px dashed var(--line);border-radius:17px}</style>
+<section id="githubPageOld" class="tab-page" hidden>
+  <section class="card">
+    <label class="eyebrow">GITHUB</label>
+    <h1>GitHub <span>Repos</span></h1>
     <p>Sign in with GitHub to see all your repos, including private ones. No token needed.</p>
     
     <button id="ghOauthBtn" class="btn primary" style="width:100%">Connect with GitHub</button>

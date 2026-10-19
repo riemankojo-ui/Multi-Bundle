@@ -422,7 +422,7 @@ async function importRepo(fullName,branch,isPublic){
       }catch(e){return null}
     }));
     const clean=result.filter(function(x){return x});
-    await processIncoming(clean,window.__ghPullName||repo);window.__ghPullName=null;await markGithubSource(fullName,bn);
+    const prevFiles=files;await processIncoming(clean,window.__ghPullName||repo);window.__ghPullName=null;if(files!==prevFiles)await markGithubSource(fullName,bn);
     statusFn('Imported '+fullName+' — '+clean.length+' files.');showToast('Imported '+repo,'success');
   }catch(e){statusFn('Import failed: '+e.message)}
 }

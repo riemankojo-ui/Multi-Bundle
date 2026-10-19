@@ -181,7 +181,8 @@ async function openSheet(){
   var dirty=false;var es=$('editorStatus');if(es&&/\u2022\s*$/.test(es.textContent||''))dirty=true;
   back.innerHTML='<div class="pb-card" id="pbCard">'+
     '<div class="pb-top"><div><div class="pb-eyebrow">PUBLISH</div><div class="pb-title">Send to GitHub</div></div><button class="pb-x" id="pbClose" aria-label="Close">\u2715</button></div>'+
-    (signed?
+    '<div style="display:flex;align-items:center;gap:10px;background:#101115;border:1px solid #25262c;border-radius:12px;padding:10px 12px;margin-bottom:4px"><div style="width:38px;height:38px;border-radius:10px;background:#24252b;display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0">'+esc((p.name||'?').slice(0,2).toUpperCase())+'</div><div style="min-width:0"><div style="font-size:14px;font-weight:800;overflow-wrap:anywhere">'+esc(p.name||'Untitled')+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere">'+curFiles().length+' file'+(curFiles().length===1?'':'s')+(p.githubRepo?' \u00b7 '+esc(p.githubRepo):' \u00b7 not linked to GitHub yet')+(p.lastImport?' \u00b7 imported '+new Date(p.lastImport).toLocaleDateString():'')+'</div></div></div>'+
+(signed?
       '<div class="pb-grid"><div class="pb-f"><label>Repo</label><input id="pbRepo" placeholder="owner/repo" value="'+esc(repo)+'" autocomplete="off" autocapitalize="off"></div>'+
       '<div class="pb-f"><label>Branch</label><input id="pbBranch" placeholder="main" value="'+esc(branch)+'" autocomplete="off" autocapitalize="off"></div></div>'+
       '<button class="pb-mini" id="pbScan">Check changes</button>'+

@@ -154,6 +154,8 @@
     <h1>Connect with <span>GitHub</span></h1>
     <p>Sign in with GitHub to see all your repos, including private ones. No token needed.</p>
     <button id="ghOauthBtn" class="btn primary" style="width:100%">Connect with GitHub</button>
+    <button id="ghImportBtn" class="btn secondary" style="width:100%;margin-top:10px" onclick="document.getElementById('githubPage').classList.toggle('gh-open')">Import</button>
+    <style>#githubPage:has(#githubLoggedIn:not([hidden])) #ghOauthBtn{display:none}#githubPage:not(.gh-open) > section:not(:has(#ghImportBtn)){display:none}</style>
   </section>
   <section class="card">
     <label class="eyebrow">GITHUB</label>

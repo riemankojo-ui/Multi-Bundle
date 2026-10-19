@@ -130,13 +130,13 @@ function htmlPages(){return files.filter(function(f){return ['html','htm'].inclu
 function currentProjectName(){return window.__currentProjectName||'No project loaded'}
 function setCurrentProjectName(n){window.__currentProjectName=n||'No project loaded';const dn=$('detailProjectName');if(dn)dn.textContent=window.__currentProjectName}
 
-async function saveCurrentProject(){
+async function __saveCurrentProjectImpl(){
   if(!currentProjectId||!files.length)return;
   const all=await dbGetAll();const existing=all.find(function(p){return p.id===currentProjectId});
   await dbUpsertProject(Object.assign({},existing,{id:currentProjectId,name:existing?existing.name:currentProjectName(),files:serializeFiles(),savedAt:Date.now(),createdAt:existing?existing.createdAt:Date.now()}));
   await renderProjectCards();
 }
-window.saveCurrentProject=async function(){await saveCurrentProject();if(document.getElementById('bundleProjectsCard')&&typeof renderBundleProjects==='function')renderBundleProjects()};
+window.saveCurrentProject=async function(){await __saveCurrentProjectImpl();if(document.getElementById('bundleProjectsCard')&&typeof renderBundleProjects==='function')renderBundleProjects()};
 
 function openDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.add('open');if(b)b.classList.add('open')}
 function closeDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open')}

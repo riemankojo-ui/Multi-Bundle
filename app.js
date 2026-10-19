@@ -868,7 +868,13 @@ async function loadGithubReposForProjects() {
   const box = $('ghProjectCards');
   if (!section || !box) return;
 
-  // NEW: Check local storage if ghToken is empty
+  // NEW: If no one is logged into Google, hide GitHub repos completely
+  if (typeof window.isCloudSignedIn === 'function' && !window.isCloudSignedIn()) {
+    section.hidden = true;
+    return;
+  }
+
+  // Check local storage if ghToken is empty
   if (!ghToken) {
     try { ghToken = localStorage.getItem('mb_gh_active_token') || ''; } catch(e) {}
   }

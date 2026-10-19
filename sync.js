@@ -317,8 +317,14 @@ document.body.classList.remove('auth-loading');
     return !!(es && /\u2022\s*$/.test(es.textContent || ''));
   }
   window.signOutGoogle = async function () {
-    if (signingOut) return;
-    if (typeof closeDrawer === 'function') { try { closeDrawer(); } catch (e) {} }
+  if (signingOut) return;
+  if (typeof closeDrawer === 'function') { try { closeDrawer(); } catch (e) {} }
+  
+  // NEW: Wipe the GitHub connection completely
+  try { localStorage.removeItem('mb_gh_active_token'); } catch(e) {}
+  if (typeof ghToken !== 'undefined') ghToken = '';
+  if (typeof $('githubLoggedIn') !== 'undefined' && $('githubLoggedIn')) $('githubLoggedIn').hidden = true;
+  if (typeof $('githubLoggedOut') !== 'undefined' && $('githubLoggedOut')) $('githubLoggedOut').hidden = false;
     const who = (cloudUser && (cloudUser.email || cloudUser.displayName)) || 'this account';
     const ask = typeof window.showConfirm === 'function' ? window.showConfirm : null;
     if (ask) {

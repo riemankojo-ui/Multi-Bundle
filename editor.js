@@ -18,13 +18,37 @@ window.__addChoice=function(){return new Promise(function(res){
   var bs='display:block;width:100%;margin-top:10px;padding:14px;border-radius:12px;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:#20222a;color:#fff';
   c.innerHTML='<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">ADD TO PROJECT</div><div style="font-size:18px;font-weight:800;color:#fff;margin:2px 0 6px">What do you want to do?</div>'+
     '<button data-c="create" style="'+bs+';background:#f01424;border:0">+ Create new file</button>'+
-    '<button data-c="import" style="'+bs+'">Import files or logos from phone</button>'+
+    '<button data-c="folder" style="'+bs+'">New folder (create an app)</button>'+'<button data-c="import" style="'+bs+'">Import files or logos from phone</button>'+
     '<button data-c="x" style="'+bs+';background:transparent;color:#a2a3ad">Cancel</button>';
   b.appendChild(c);document.body.appendChild(b);
   function done(v){b.remove();res(v)}
   b.onclick=function(e){if(e.target===b)done('x')};
   c.querySelectorAll('button').forEach(function(x){x.onclick=function(){done(x.dataset.c)}});
 })};
+window.__newFolderApp=async function(){
+  if(typeof dirty!=='undefined'&&dirty){var okd=await confirmFn('You have unsaved changes. Discard them?',{title:'Unsaved changes',confirmText:'Discard',cancelText:'Keep editing'});if(!okd)return}
+  var name=await promptFn('New folder','',{message:'Name your app folder. It becomes a new project in the Projects tab.'});
+  if(!name||!name.trim())return;name=name.trim();
+  var all=await dbGetAll();
+  if(all.find(function(p){return p.name===name})){toast('A project named "'+name+'" already exists','error');return}
+  if(all.length>=PROJECT_LIMIT){toast('Project limit reached. Delete one first.','error');return}
+  if(typeof window.saveCurrentProject==='function'&&currentProjectId)await window.saveCurrentProject();
+  var safe=name.replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]});
+  function mk(p,t,ty){return {path:p,name:p,size:t.length,type:ty,blob:null,text:t}}
+  files=[
+    mk('index.html','<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>'+safe+'</title>\n<link rel="stylesheet" href="style.css">\n</head>\n<body>\n<h1>'+safe+'</h1>\n<p>Start building your app here.</p>\n<script src="app.js"><\/script>\n</body>\n</html>\n','text/html'),
+    mk('style.css','body{font-family:system-ui,sans-serif;margin:0;padding:24px;background:#0d0e12;color:#fff}\nh1{color:#f01424}\n','text/css'),
+    mk('app.js','console.log("App ready");\n','text/javascript')
+  ];
+  currentProjectId=Date.now().toString();setCurrentProjectName(name);
+  await dbUpsertProject({id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now(),history:[]});
+  try{localStorage.setItem('mb_active_project',currentProjectId)}catch(e0){}
+  refreshFileList();loadFile('index.html');
+  if(typeof populatePages==='function')populatePages();
+  if(typeof render==='function')render();
+  if(typeof renderProjectCards==='function')renderProjectCards();
+  toast('Created "'+name+'"','success');
+};
 window.__importFromPhone=function(){
   if(typeof currentProjectId==='undefined'||!currentProjectId){toast('Open a project first','error');return}
   var inp=document.createElement('input');inp.type='file';inp.multiple=true;
@@ -392,7 +416,7 @@ fileSelect.addEventListener('change',async function(e){
   loadFile(e.target.value);
 });
 $('editorSaveBtn').onclick=saveFile;
-$('editorNewBtn').onclick=async function(){const choice=window.__addChoice?await window.__addChoice():'create';if(choice==='import'){window.__importFromPhone();return}if(choice!=='create')return;
+$('editorNewBtn').onclick=async function(){const choice=window.__addChoice?await window.__addChoice():'create';if(choice==='folder'){window.__newFolderApp();return}if(choice==='import'){window.__importFromPhone();return}if(choice!=='create')return;
   const name=await promptFn('New file','',{message:'Enter a file path, e.g. pages/about.html'});
   if(!name||!name.trim())return;
   const p=name.trim();

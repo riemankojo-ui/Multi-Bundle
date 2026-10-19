@@ -1111,3 +1111,83 @@ if ($('ghOauthBtn')) {
     }
   };
 }
+let __currentPubGroup = null; 
+
+async function handlePubDetailSaveBack() {
+  if (!__currentPubGroup) return;
+  var { projectId, group } = __currentPubGroup;
+  var all = await dbGetAll();
+  var p = all.find(function(x){return x.id === projectId});
+  if (!p) return;
+
+  var filesToSave = group.files || [];
+  if (!filesToSave.length) { showToast('No files to save', 'error'); return; }
+
+  var ok = await showConfirm('Restore these ' + filesToSave.length + ' files back into your project?', { title: 'Save Back', confirmText: 'Restore Files' });
+  if (!ok) return;
+
+  showToast('Restored ' + filesToSave.length + ' files into project', 'success');
+  if (typeof window.__refreshProjects === 'function') window.__refreshProjects();
+}
+
+function handlePubDetailPublishBack() {
+  if (!__currentPubGroup) return;
+  if (typeof window.openPublish === 'function') {
+    window.openPublish();
+  } else {
+    showToast('Publish function not found', 'error');
+  }
+}
+
+async function handlePubDetailDownload() {
+  if (!__currentPubGroup) return;
+  var { group } = __currentPubGroup;
+  var fs = group.files || [];
+  if (!fs.length) { showToast('No files to download', 'error'); return; }
+
+  var out = 'Published Files Export\nGroup: ' + (group.msg || 'Update') + '\nDate: ' + new Date(group.ts).toISOString() + '\n\n';
+  fs.forEach(function(f) { out += f.path + ' (' + f.status + ')\n'; });
+
+  var blob = new Blob([out], { type: 'text/plain' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'published-files_' + Date.now() + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  showToast('Downloaded file list', 'success');
+}
+
+function openPublishedDetail(project, group) {
+  __currentPubGroup = { projectId: project.id, group: group };
+  
+  if ($('updatesDetailView')) $('updatesDetailView').hidden = true;
+  if ($('publishedDetailView')) $('publishedDetailView').hidden = false;
+
+  if ($('publishedDetailTitle')) $('publishedDetailTitle').textContent = group.msg || 'Published Update';
+  var fs = group.files || [];
+  if ($('publishedDetailCount')) $('publishedDetailCount').textContent = fs.length + ' files';
+  if ($('publishedDetailMeta')) $('publishedDetailMeta').textContent = 'Published on ' + new Date(group.ts).toLocaleString() + ' to ' + (project.githubRepo || 'GitHub');
+
+  var list = $('publishedFileList');
+  if (list) {
+    if (!fs.length) {
+      list.innerHTML = '<div class="pc-empty">No file list saved for this publish.</div>';
+    } else {
+      list.innerHTML = fs.map(function(f) {
+        return '<div class="file-row"><div class="file-icon">'+(f.status==='new'?'NEW':'MOD')+'</div><div class="file-meta"><div class="file-name">'+esc(base(f.path))+'</div><div class="file-path">'+esc(f.path)+'</div></div></div>';
+      }).join('');
+    }
+  }
+}
+
+if ($('publishedBackBtn')) {
+  $('publishedBackBtn').onclick = function() {
+    if ($('publishedDetailView')) $('publishedDetailView').hidden = true;
+    if ($('updatesDetailView')) $('updatesDetailView').hidden = false;
+  };
+}
+if ($('pubDetailSaveBack')) $('pubDetailSaveBack').onclick = handlePubDetailSaveBack;
+if ($('pubDetailPublishBack')) $('pubDetailPublishBack').onclick = handlePubDetailPublishBack;
+if ($('pubDetailDownload')) $('pubDetailDownload').onclick = handlePubDetailDownload;

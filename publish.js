@@ -156,6 +156,7 @@ async function runPublish(){
   try{
     var res=await pushRows(S.scan,S.rows,msg,setStatus);
     await saveRecord(S.scan,S.rows);
+    try{var lst=await dbGetAll();var pp=lst.find(function(x){return x.id===pid()});if(pp){pp.publishes=pp.publishes||[];pp.publishes.unshift({ts:Date.now(),msg:msg,repo:S.scan.repo,branch:S.scan.branch,sha:res.sha,files:S.rows.filter(function(r){return r.on}).map(function(r){return{path:r.path,status:r.isNew?'new':'changed'}})});pp.publishes=pp.publishes.slice(0,20);await dbSetAll(lst)}}catch(e0){}
     if(typeof window.logHistory==='function')await window.logHistory({type:'publish',note:'Published '+res.count+' file'+(res.count===1?'':'s')+' to '+S.scan.repo+'@'+S.scan.branch});
     if(typeof window.renderProjectCards==='function')window.renderProjectCards();
     var url='https://github.com/'+S.scan.repo+'/commit/'+res.sha;

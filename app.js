@@ -136,7 +136,7 @@ async function saveCurrentProject(){
   await dbUpsertProject(Object.assign({},existing,{id:currentProjectId,name:existing?existing.name:currentProjectName(),files:serializeFiles(),savedAt:Date.now(),createdAt:existing?existing.createdAt:Date.now()}));
   await renderProjectCards();
 }
-window.saveCurrentProject=saveCurrentProject;
+window.saveCurrentProject=async function(){await saveCurrentProject();if(document.getElementById('bundleProjectsCard')&&typeof renderBundleProjects==='function')renderBundleProjects()};
 
 function openDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.add('open');if(b)b.classList.add('open')}
 function closeDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open')}
@@ -225,13 +225,85 @@ if(currentProjectId===id){
   await renderProjectCards();render();showToast('Project deleted');
 }
 
+function ghOkPath(p){return !p.split('/').some(function(s){return s.startsWith('.')&&s!=='.well-known'})}
+async function ghMakeDraft(projectId){
+  var all=await dbGetAll();var p=all.find(function(x){return x.id===projectId});if(!p)return;
+  showToast('Fetching updates from GitHub...');
+  try{
+    var res=await checkGithubUpdates(p);
+    var paths=res.changed.concat(res.added).filter(ghOkPath);var removed=res.removed.filter(ghOkPath);
+    if(!paths.length&&!removed.length){showToast('Already up to date','success');return}
+    var items=[];
+    for(var i=0;i<paths.length;i+=6){
+      var got=await Promise.all(paths.slice(i,i+6).map(async function(path){
+        var br=await ghFetch('https://api.github.com/repos/'+p.githubRepo+'/git/blobs/'+res.remote[path]);
+        if(!br.ok)throw new Error('Could not download '+path+' ('+br.status+')');
+        var j=await br.json();var bin=atob((j.content||'').replace(/\s/g,''));var u8=new Uint8Array(bin.length);
+        for(var k=0;k<bin.length;k++)u8[k]=bin.charCodeAt(k);
+        var blob=new Blob([u8]);
+        return {path:path,name:base(path),size:u8.length,type:blob.type||'',blob:blob,text:textExt.has(ext(path))?new TextDecoder().decode(u8):null,status:res.changed.indexOf(path)>-1?'changed':'added'};
+      }));
+      items=items.concat(got);
+    }
+    var cur=(await dbGetAll()).find(function(x){return x.id===projectId});if(!cur)return;
+    cur.draft={ts:Date.now(),shas:res.remote,base:p.githubShas?null:res.base,items:items,removed:removed};
+    await dbUpsertProject(cur);
+    showToast('Draft ready: '+items.length+' file'+(items.length===1?'':'s')+' updated','success');
+    showTab('projects');await openProjectDetail(projectId);
+  }catch(e){showToast('Update failed: '+e.message,'error')}
+}
+window.ghMakeDraft=ghMakeDraft;
+async function applyDraft(projectId,onlyPath){
+  if(currentProjectId===projectId&&typeof saveCurrentProject==='function')await saveCurrentProject();
+  var all=await dbGetAll();var p=all.find(function(x){return x.id===projectId});if(!p||!p.draft)return;
+  var d=p.draft;var items=onlyPath?d.items.filter(function(i){return i.path===onlyPath}):d.items;
+  var pf=deserializeFiles(p.files||[]);
+  items.forEach(function(it){var nf={path:it.path,name:it.name,size:it.size,type:it.type,blob:it.blob,text:it.text};var ix=pf.findIndex(function(f){return f.path===it.path});if(ix>-1)pf[ix]=nf;else pf.push(nf)});
+  if(!onlyPath){var rm=d.removed||[];pf=pf.filter(function(f){return rm.indexOf(f.path)===-1})}
+  pf.sort(function(a,b){return a.path.localeCompare(b.path)});
+  p.files=pf.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}});
+  var shas=Object.assign({},p.githubShas||d.base||{});
+  items.forEach(function(it){if(d.shas[it.path])shas[it.path]=d.shas[it.path]});
+  if(!onlyPath)(d.removed||[]).forEach(function(r){delete shas[r]});
+  p.githubShas=shas;
+  if(onlyPath)d.items=d.items.filter(function(i){return i.path!==onlyPath});else{d.items=[];d.removed=[]}
+  if(!d.items.length&&!(d.removed&&d.removed.length)){delete p.draft;p.lastImport=Date.now()}else p.draft=d;
+  p.savedAt=Date.now();
+  await dbUpsertProject(p);
+  currentProjectId=projectId;
+  await logHistory({type:'import',note:onlyPath?'Saved '+onlyPath+' from GitHub draft':'Saved GitHub update ('+items.length+' file'+(items.length===1?'':'s')+')'});
+  await renderProjectCards();await openProjectDetail(projectId);
+  showToast(onlyPath?'Saved '+onlyPath:'Whole project saved','success');
+}
+async function discardDraft(projectId){
+  var all=await dbGetAll();var p=all.find(function(x){return x.id===projectId});if(!p)return;
+  delete p.draft;await dbUpsertProject(p);await renderProjectCards();await openProjectDetail(projectId);showToast('Draft discarded');
+}
+function renderDraftBox(p){
+  var list=$('detailFileList');if(!list||!list.parentNode)return;
+  var box=$('draftBox');if(!box){box=document.createElement('div');box.id='draftBox';list.parentNode.insertBefore(box,list)}
+  var d=p&&p.draft;var n=d&&d.items?d.items.length:0;var nr=d&&d.removed?d.removed.length:0;
+  if(!d||(!n&&!nr)){box.innerHTML='';return}
+  var bs='padding:12px;border-radius:12px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:#20222a;color:#fff';
+  var order={changed:0,added:1};var items=d.items.slice().sort(function(a,b){return (order[a.status]||0)-(order[b.status]||0)||a.path.localeCompare(b.path)});
+  box.innerHTML='<div style="background:#101115;border:1px solid #3a1a1e;border-radius:14px;padding:14px;margin-bottom:14px">'+
+    '<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">GITHUB UPDATE DRAFT</div>'+
+    '<div style="font-size:16px;font-weight:800;margin:3px 0 2px">'+n+' updated file'+(n===1?'':'s')+(nr?' \u00b7 '+nr+' removed on GitHub':'')+'</div>'+
+    '<div style="font-size:12px;color:#a2a3ad;margin-bottom:10px">Drafted '+timeAgo(d.ts)+'. Your project does not change until you save.</div>'+
+    '<div style="max-height:46vh;overflow:auto;border:1px solid #25262c;border-radius:12px">'+items.map(function(i){var col=i.status==='added'?'#2ecc71':'#f5b301';return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #25262c"><span style="font-size:10px;font-weight:800;letter-spacing:1px;padding:3px 7px;border-radius:7px;background:'+col+'22;color:'+col+';flex-shrink:0">'+(i.status==='added'?'NEW':'UPDATED')+'</span><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;overflow-wrap:anywhere">'+esc(i.path)+'</div><div style="font-size:11px;color:#a2a3ad">'+size(i.size||0)+'</div></div><button data-save="'+esc(i.path)+'" style="'+bs+';padding:8px 12px;flex-shrink:0">Save</button></div>'}).join('')+'</div>'+
+    '<div style="display:flex;gap:8px;margin-top:12px"><button id="draftDiscard" style="'+bs+';flex:1">Discard</button><button id="draftSaveAll" style="'+bs+';flex:2;background:#f01424;border:0">Save whole project</button></div></div>';
+  box.querySelectorAll('[data-save]').forEach(function(b){b.onclick=function(){applyDraft(p.id,b.getAttribute('data-save'))}});
+  var sa=box.querySelector('#draftSaveAll');if(sa)sa.onclick=function(){applyDraft(p.id)};
+  var dc=box.querySelector('#draftDiscard');if(dc)dc.onclick=function(){discardDraft(p.id)};
+}
+
 async function openProjectDetail(id){
   if($('projectsListView'))$('projectsListView').hidden=true;
   if($('projectDetailView'))$('projectDetailView').hidden=false;
   if($('detailStatus'))$('detailStatus').textContent='Opening…';
   const p=await loadProjectIntoMemory(id);if(!p)return;
   if($('detailFileCount'))$('detailFileCount').textContent=files.length+' files';
-  if($('detailStatus'))$('detailStatus').textContent='Loaded '+files.length+' files.';
+  if($('detailStatus'))$('detailStatus').textContent='Loaded '+files.length+' files.'; renderDraftBox(p);
   const list=$('detailFileList');
   if(list){
     list.className='filelist';
@@ -345,7 +417,7 @@ async function clearToken(){
   }catch(e){}
 }
 
-async function ghFetch(url){const t=getToken();const headers={};if(t)headers.Authorization='Bearer '+t;return fetch(url,{headers:headers})}
+async function ghFetch(url){const t=getToken();const headers={};if(t)headers.Authorization='Bearer '+t;return fetch(url,{headers:headers,cache:'no-store'})}
 
 async function githubLogin(){
   const t=($('githubToken').value||'').trim();if(!t){setGhStatus('Paste a token first.');return}
@@ -583,6 +655,49 @@ function exportBundle(){
   setTimeout(function(){URL.revokeObjectURL(a.href)},2000);showToast('Bundle downloaded','success');
 }
 
+async function renderBundleProjects(){
+  var page=$('bundlePage');if(!page)return;
+  var card=$('bundleProjectsCard');
+  if(!card){card=document.createElement('section');card.className='card';card.id='bundleProjectsCard';page.appendChild(card)}
+  var all=[];try{all=await dbGetAll()}catch(e){}
+  all.sort(function(a,b){return (b.savedAt||0)-(a.savedAt||0)});
+  card.innerHTML='<label class="eyebrow">PROJECTS</label><h2>Pick a project</h2><p class="note" style="margin:4px 0 12px">Tap a project to choose which files go into the TXT.</p>'+
+    (all.length?all.map(function(p){var n=(p.id===currentProjectId?files:(p.files||[])).length;return '<div class="file-row" data-bp="'+esc(p.id)+'" style="cursor:pointer"><div class="file-icon">'+esc((p.name||'?').slice(0,2).toUpperCase())+'</div><div class="file-meta"><div class="file-name">'+esc(p.name||'Untitled')+'</div><div class="file-path">'+n+' files'+(p.id===currentProjectId?' \u00b7 open now':'')+'</div></div><div class="file-size">Select</div></div>'}).join(''):'<p class="note">No saved projects yet. Import one in the Projects tab.</p>');
+  card.querySelectorAll('[data-bp]').forEach(function(r){r.onclick=function(){bundlePick(r.getAttribute('data-bp'),all)}});
+}
+window.renderBundleProjects=renderBundleProjects;
+function bundlePick(id,all){
+  var p=all.find(function(x){return x.id===id});if(!p)return;
+  var list=(id===currentProjectId?files:deserializeFiles(p.files||[])).slice().sort(function(a,b){return a.path.localeCompare(b.path)});
+  var tf=list.filter(function(f){return f.text!=null});var nBin=list.length-tf.length;
+  var b=document.createElement('div');b.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
+  var c=document.createElement('div');c.style.cssText='width:100%;max-width:560px;max-height:82vh;display:flex;flex-direction:column;background:#15161a;border:1px solid #2a2b32;border-radius:18px 18px 0 0;padding:16px;box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff';
+  var bs='padding:12px;border-radius:12px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:#20222a;color:#fff';
+  c.innerHTML='<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">CREATE TXT</div><div style="font-size:18px;font-weight:800;margin:2px 0 4px;overflow-wrap:anywhere">'+esc(p.name||'Untitled')+'</div><div id="bpCount" style="font-size:12px;color:#a2a3ad;margin-bottom:10px"></div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:10px"><button id="bpAll" style="'+bs+';flex:1">Select all</button><button id="bpNone" style="'+bs+';flex:1">Select none</button></div>'+
+    '<div id="bpList" style="overflow:auto;flex:1;border:1px solid #25262c;border-radius:12px"></div>'+
+    '<div style="display:flex;gap:8px;margin-top:12px"><button id="bpCancel" style="'+bs+';flex:1">Cancel</button><button id="bpGo" style="'+bs+';flex:2;background:#f01424;border:0">Create TXT</button></div>';
+  b.appendChild(c);document.body.appendChild(b);
+  var box=c.querySelector('#bpList');
+  box.innerHTML=tf.length?tf.map(function(f,i){return '<label style="display:flex;gap:10px;align-items:center;padding:11px 12px;border-bottom:1px solid #25262c;font-size:13px"><input type="checkbox" data-i="'+i+'" checked style="width:18px;height:18px;accent-color:#f01424;flex-shrink:0"><span style="overflow-wrap:anywhere;flex:1">'+esc(f.path)+'</span><span style="color:#a2a3ad;font-size:11px;flex-shrink:0">'+size(f.size||0)+'</span></label>'}).join(''):'<div style="padding:16px;font-size:13px;color:#a2a3ad">This project has no text files to bundle.</div>';
+  var boxes=[].slice.call(box.querySelectorAll('input'));
+  function upd(){var n=boxes.filter(function(x){return x.checked}).length;c.querySelector('#bpCount').textContent=n+' of '+tf.length+' text files selected'+(nBin?' \u00b7 '+nBin+' image/binary file'+(nBin===1?'':'s')+' not embedded':'');c.querySelector('#bpGo').disabled=!n;c.querySelector('#bpGo').style.opacity=n?'1':'.45'}
+  boxes.forEach(function(x){x.onchange=upd});upd();
+  c.querySelector('#bpAll').onclick=function(){boxes.forEach(function(x){x.checked=true});upd()};
+  c.querySelector('#bpNone').onclick=function(){boxes.forEach(function(x){x.checked=false});upd()};
+  function close(){b.remove()}
+  b.onclick=function(e){if(e.target===b)close()};
+  c.querySelector('#bpCancel').onclick=close;
+  c.querySelector('#bpGo').onclick=function(){
+    var pick=boxes.filter(function(x){return x.checked}).map(function(x){return tf[+x.getAttribute('data-i')]});if(!pick.length)return;
+    var nm=p.name||'project';
+    var out='Multi Bundle Export\nProject: '+nm+'\nFiles: '+pick.length+(pick.length<tf.length?' (selected from '+tf.length+' text files)':'')+'\nExported: '+new Date().toISOString()+'\n'+'='.repeat(60)+'\n\n';
+    pick.forEach(function(f){out+='\n'+'='.repeat(60)+'\nFILE: '+f.path+'\n'+'='.repeat(60)+'\n\n'+f.text+'\n'});
+    var blob=new Blob([out],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download=nm.replace(/[^\w\-]+/g,'_')+'.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(a.href)},2000);close();showToast('TXT created with '+pick.length+' file'+(pick.length===1?'':'s'),'success');
+  };
+}
 function showTab(name){
   ['home','projects','bundle','preview','editor','backups','github','updates'].forEach(function(p){
     const el=$(p+'Page');if(el)el.hidden=(p!==name);
@@ -591,6 +706,7 @@ function showTab(name){
   document.querySelectorAll('.drawer-nav a').forEach(function(a){a.classList.toggle('selected',a.dataset.tab===name)});
    try{localStorage.setItem('mb_nav',JSON.stringify({tab:name,pid:currentProjectId}))}catch(e){}
   if(name==='projects')showProjectsList();
+  if(name==='bundle'&&typeof renderBundleProjects==='function')renderBundleProjects();
   if(name==='updates'&&typeof setUpdatesTab==='function')setUpdatesTab(window.__updatesMode||'github');
 }
 window.showTab=showTab;
@@ -639,6 +755,37 @@ async function renderUpdatesList(){
 }
 function countDrafts(p){if(!p.history)return 0;const since=p.lastImport||0;return p.history.filter(function(h){return h.type==='edit'&&h.ts>since}).length}
 
+function pubDayLabel(ts){
+  var d=new Date(ts),n=new Date();
+  var a=new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime(),b=new Date(n.getFullYear(),n.getMonth(),n.getDate()).getTime();
+  var diff=Math.round((b-a)/86400000);
+  if(diff<=0)return 'Today';if(diff===1)return 'Yesterday';
+  if(diff<7)return d.toLocaleDateString(undefined,{weekday:'long'});
+  if(d.getFullYear()===n.getFullYear())return d.toLocaleDateString(undefined,{day:'numeric',month:'long'});
+  return d.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+}
+function ghShowPublishes(p){
+  var list=$('updatesDetailList');if(!list)return;
+  var lab=list.parentNode&&list.parentNode.querySelector('.eyebrow');if(lab)lab.textContent='PUBLISHED TO GITHUB';
+  var pubs=(p.publishes||[]).slice();
+  (p.history||[]).forEach(function(h){if(h.type==='publish'&&!pubs.some(function(g){return Math.abs(g.ts-h.ts)<8000}))pubs.push({ts:h.ts,msg:h.note||'Published',files:null})});
+  pubs.sort(function(a,b){return b.ts-a.ts});pubs=pubs.slice(0,20);
+  var note=$('updatesDetailNote');if(note)note.textContent=pubs.length?pubs.length+' publish'+(pubs.length===1?'':'es')+' (latest 20 kept)':'Nothing published from this app yet.';
+  var cnt=$('updatesDetailCount');if(cnt)cnt.textContent=pubs.length+' group'+(pubs.length===1?'':'s');
+  if(!pubs.length){list.innerHTML='<div class="pc-empty">When you publish, each publish shows here as a group with its files.</div>';return}
+  var html='',last='';
+  pubs.forEach(function(g,gi){
+    var day=pubDayLabel(g.ts);
+    if(day!==last){html+='<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#a2a3ad;margin:14px 2px 8px;text-transform:uppercase">'+esc(day)+'</div>';last=day}
+    var fs=g.files||[];
+    var meta=(g.files?fs.length+' file'+(fs.length===1?'':'s'):'File list not saved')+' \u00b7 '+new Date(g.ts).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+' \u00b7 '+timeAgoLong(g.ts);
+    html+='<div style="border:1px solid #25262c;border-radius:14px;background:#101115;margin-bottom:10px;overflow:hidden">'+
+      '<div data-pg="'+gi+'" style="display:flex;align-items:center;gap:10px;padding:12px;cursor:pointer"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;overflow-wrap:anywhere">'+esc(g.msg||'Update from Multi Bundle')+'</div><div style="font-size:12px;color:#a2a3ad;margin-top:2px">'+meta+'</div></div><span style="color:#a2a3ad;font-size:18px">\u203a</span></div>'+
+      '<div id="pgfiles'+gi+'" hidden style="border-top:1px solid #25262c">'+fs.map(function(f){var col=f.status==='new'?'#2ecc71':'#f5b301';return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #1d1e24"><span style="font-size:10px;font-weight:800;letter-spacing:1px;padding:3px 7px;border-radius:7px;background:'+col+'22;color:'+col+'">'+(f.status==='new'?'NEW':'UPDATED')+'</span><span style="font-size:13px;overflow-wrap:anywhere;flex:1">'+esc(f.path)+'</span></div>'}).join('')+'</div></div>';
+  });
+  list.innerHTML=html;
+  list.querySelectorAll('[data-pg]').forEach(function(h){h.onclick=function(){var b=$('pgfiles'+h.getAttribute('data-pg'));if(b)b.hidden=!b.hidden}});
+}
 async function gitBlobSha(bytes){
   const pre=new TextEncoder().encode('blob '+bytes.length+'\0');
   const all=new Uint8Array(pre.length+bytes.length);all.set(pre);all.set(bytes,pre.length);
@@ -663,7 +810,7 @@ async function checkGithubUpdates(p){
   const added=[],changed=[],removed=[];
   Object.keys(remote).forEach(function(k){if(!(k in base))added.push(k);else if(base[k]!==remote[k])changed.push(k)});
   Object.keys(base).forEach(function(k){if(!(k in remote))removed.push(k)});
-  return {added:added,changed:changed,removed:removed};
+  return {added:added,changed:changed,removed:removed,remote:remote,base:base};
 }
 async function renderGhRemote(p,mode){
   const box=$('ghRemoteBox');if(!box)return;
@@ -674,8 +821,7 @@ async function renderGhRemote(p,mode){
     const n=r.added.length+r.changed.length+r.removed.length;
     if(!n){box.innerHTML='<div class="status">✓ Up to date with GitHub.</div>';return}
     const names=r.changed.concat(r.added).slice(0,8).map(function(x){return '<div class="upd-path" style="font-size:12px;margin:3px 0">'+esc(x)+'</div>'}).join('');
-    box.innerHTML='<div class="status" style="color:#fff;font-weight:700">'+n+' file'+(n===1?'':'s')+' changed on GitHub</div>'+names+(n>8?'<div class="status">+ '+(n-8)+' more</div>':'')+'<button id="ghPullBtn" class="btn primary" style="margin-top:10px">Pull update</button>';
-    $('ghPullBtn').onclick=function(){window.__ghPullName=p.name;showTab('github');importRepo(p.githubRepo,p.githubBranch)};
+    box.innerHTML='<div class="status" style="color:#fff;font-weight:700">'+n+' file'+(n===1?'':'s')+' changed on GitHub</div>'+names+(n>8?'<div class="status">+ '+(n-8)+' more</div>':'')+'';   
   }catch(e){box.innerHTML='<div class="status">Could not check GitHub: '+esc(e.message)+'</div>'}
 }
 
@@ -708,7 +854,7 @@ async function openUpdatesDetail(projectId,mode){
       }).join('');
     }
   }
-  if(list)list.querySelectorAll('.upd-save').forEach(function(b){b.onclick=function(){saveFileBack(p.id,Number(b.dataset.ts))}});
+  if(list)list.querySelectorAll('.upd-save').forEach(function(b){b.onclick=function(){saveFileBack(p.id,Number(b.dataset.ts))}}); if(mode==='github')ghShowPublishes(p);
   renderSnapshotsSection(p);
   if($('updatesListView'))$('updatesListView').hidden=true;
   if($('updatesDetailView'))$('updatesDetailView').hidden=false;

@@ -137,8 +137,7 @@
         <button id="detailBundleBtn" class="btn secondary">Bundle</button>
         <button id="detailDeleteBtn" class="btn secondary">Delete</button>
       </div>
-      <div class="status" id="dectsSection" hidden>
-    <div class="heading">etailStatus">Tap "Edit code" to modify files.</div>
+      <div class="status" id="detailStatus">Tap "Edit code" to modify files.</div>
     </section>
     <section class="card">
       <div class="heading"><label class="eyebrow">FILES</label></div>
@@ -152,6 +151,12 @@
 <section id="githubPage" class="tab-page" hidden>
   <section class="card">
     <label class="eyebrow">GITHUB</label>
+    <h1>Connect with <span>GitHub</span></h1>
+    <p>Sign in with GitHub to see all your repos, including private ones. No token needed.</p>
+    <button id="ghOauthBtn" class="btn primary" style="width:100%">Connect with GitHub</button>
+  </section>
+  <section class="card">
+    <label class="eyebrow">GITHUB</label>
     <h1>Import from <span>GitHub</span></h1>
     <p>Sign in with a token to see your repos (including private), or paste a public repo URL.</p>
 
@@ -160,7 +165,6 @@
         <input id="githubToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
         <button id="githubLoginBtn" class="btn primary">Sign in</button>
       </div>
-      <button id="ghOauthBtn" class="btn primary" style="width:100%;margin-bottom:10px">Connect with GitHub (no token)</button>
       <p class="note">Or create a token at github.com/settings/tokens → Generate new token (classic) → tick "repo" → Generate → copy.</p>
       <div class="status" id="githubStatus">Not signed in.</div>
     </div>

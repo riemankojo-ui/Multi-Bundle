@@ -12,6 +12,43 @@ let currentPath='',dirty=false,undoStack=[],redoStack=[],lastPush=0,fileHistorie
 
 const toast=window.showToast||function(){};
 const promptFn=window.showPrompt||function(){return Promise.resolve(null)};
+window.__addChoice=function(){return new Promise(function(res){
+  var b=document.createElement('div');b.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
+  var c=document.createElement('div');c.style.cssText='width:100%;max-width:560px;background:#15161a;border:1px solid #2a2b32;border-radius:18px 18px 0 0;padding:16px 16px 24px;box-sizing:border-box;font-family:system-ui,sans-serif';
+  var bs='display:block;width:100%;margin-top:10px;padding:14px;border-radius:12px;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:#20222a;color:#fff';
+  c.innerHTML='<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">ADD TO PROJECT</div><div style="font-size:18px;font-weight:800;color:#fff;margin:2px 0 6px">What do you want to do?</div>'+
+    '<button data-c="create" style="'+bs+';background:#f01424;border:0">+ Create new file</button>'+
+    '<button data-c="import" style="'+bs+'">Import files or logos from phone</button>'+
+    '<button data-c="x" style="'+bs+';background:transparent;color:#a2a3ad">Cancel</button>';
+  b.appendChild(c);document.body.appendChild(b);
+  function done(v){b.remove();res(v)}
+  b.onclick=function(e){if(e.target===b)done('x')};
+  c.querySelectorAll('button').forEach(function(x){x.onclick=function(){done(x.dataset.c)}});
+})};
+window.__importFromPhone=function(){
+  if(typeof currentProjectId==='undefined'||!currentProjectId){toast('Open a project first','error');return}
+  var inp=document.createElement('input');inp.type='file';inp.multiple=true;
+  inp.onchange=async function(){
+    var list=[].slice.call(inp.files||[]);if(!list.length)return;
+    var dup=list.filter(function(f){return files.find(function(x){return x.path===f.name})});
+    if(dup.length){var ok=await confirmFn(dup.length+' file'+(dup.length===1?'':'s')+' already exist: '+dup.map(function(f){return f.name}).join(', ')+'. Replace them?',{title:'Replace files?',confirmText:'Replace',cancelText:'Skip those'});if(!ok)list=list.filter(function(f){return dup.indexOf(f)===-1})}
+    var added=0;
+    for(var i=0;i<list.length;i++){
+      var f=list[i];var t=textExt.has(ext(f.name))?await f.text():null;
+      var nf={path:f.name,name:f.name,size:f.size,type:f.type||'application/octet-stream',blob:f,text:t};
+      var idx=files.findIndex(function(x){return x.path===nf.path});
+      if(idx>-1)files[idx]=nf;else files.push(nf);added++;
+    }
+    if(!added)return;
+    files.sort(function(a,b){return a.path.localeCompare(b.path)});
+    refreshFileList();if(typeof render==='function')render();
+    if(typeof window.saveCurrentProject==='function')await window.saveCurrentProject();
+    try{var all=await dbGetAll();var p=all.find(function(x){return x.id===currentProjectId});var lg=detectProjectLogo(files);if(p&&lg&&lg!==p.logo){p.logo=lg;await dbSetAll(all);if(typeof renderProjectCards==='function')renderProjectCards()}}catch(e0){}
+    if(typeof window.logHistory==='function')window.logHistory({type:'new',path:list[0].name,note:'Imported '+added+' file'+(added===1?'':'s')+' from phone'});
+    toast('Imported '+added+' file'+(added===1?'':'s'),'success');
+  };
+  inp.click();
+};
 const confirmFn=window.showConfirm||function(){return Promise.resolve(false)};
 
 function escHtml(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
@@ -355,7 +392,7 @@ fileSelect.addEventListener('change',async function(e){
   loadFile(e.target.value);
 });
 $('editorSaveBtn').onclick=saveFile;
-$('editorNewBtn').onclick=async function(){
+$('editorNewBtn').onclick=async function(){const choice=window.__addChoice?await window.__addChoice():'create';if(choice==='import'){window.__importFromPhone();return}if(choice!=='create')return;
   const name=await promptFn('New file','',{message:'Enter a file path, e.g. pages/about.html'});
   if(!name||!name.trim())return;
   const p=name.trim();

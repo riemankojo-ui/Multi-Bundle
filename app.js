@@ -407,7 +407,7 @@ async function importRepo(fullName,branch,isPublic){
     if(!r.ok){statusFn('Could not list files.');return}
     const tree=await r.json();const blobs=(tree.tree||[]).filter(function(x){return x.type==='blob'});window.__ghShas={};blobs.forEach(function(n){window.__ghShas[n.path]=n.sha});
     if(!blobs.length){statusFn('Repo has no files.');return}
-    statusFn('Downloading '+blobs.length+' files…');let done=0;
+    statusFn('Downloading '+blobs.length+' files…');let done=0;window.__ghRawOK=false;try{const pr=await fetch('https://raw.githubusercontent.com/'+owner+'/'+repo+'/'+encodeURI(bn)+'/'+encodeURI(blobs[0].path)+'?v='+Date.now(),{method:'HEAD'});window.__ghRawOK=pr.ok}catch(e1){}
     const result=await Promise.all(blobs.map(async function(node){
       const path=node.path;const isText=textExt.has(ext(path));
       try{
@@ -864,7 +864,7 @@ async function restoreLastProject() {
 render();
 renderProjectCards();
 restoreLastProject().then(() => {
-  render(); // Re-render the home screen with the restored project
+  render(); renderProjectCards(); // Re-render the home screen with the restored project
   if (typeof window.__restoreEditor === 'function') window.__restoreEditor();
 });
 

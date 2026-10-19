@@ -288,7 +288,7 @@ if (gateLoading) gateLoading.style.display = 'none';
 if (gateContent) gateContent.style.display = 'block';
 
 // NEW: Unhide the app now that we know the login state
-document.body.classList.remove('auth-loading');
+document.body.classList.remove('auth-loading'); document.documentElement.classList.add('auth-ready');
 
   const prof = profileOf(user);
   saveProfile(user);

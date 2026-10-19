@@ -154,12 +154,9 @@
     <label class="eyebrow">GITHUB</label>
     <h1>Connect with <span>GitHub</span></h1>
     <p>Sign in with GitHub to see all your repos, including private ones. No token needed.</p>
+    
     <button id="ghOauthBtn" class="btn primary" style="width:100%">Connect with GitHub</button>
-  </section>
 
-  <section class="card" id="ghProfileCard">
-    <label class="eyebrow">PROJECTS</label>
-    <h2>Your GitHub projects</h2>
     <div id="githubLoggedIn" hidden>
       <div class="gh-user">
         <img id="ghAvatar" alt="">
@@ -251,21 +248,18 @@
 </section>
 
 <section id="previewPage" class="tab-page" hidden>
-  <!-- ONE TOP TOOLBAR -->
   <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px; padding: 0 16px;">
     <select id="pageSelect" disabled style="flex: 1; min-width: 0; background: #101115; color: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 13px; outline: 0;"><option>No project loaded</option></select>
     <button id="openPageBtn" class="btn secondary" disabled style="padding: 10px 16px;">Open</button>
     <button id="fullScreenBtn" class="btn primary" style="padding: 10px 16px; white-space: nowrap;">Full screen</button>
   </div>
   
-  <!-- BROWSER BAR -->
   <div class="browser" style="margin: 0 16px 10px 16px;">
     <i></i><i></i><i></i>
     <span id="previewPath">Your website will appear here</span>
     <button id="refreshBtn" disabled>↻</button>
   </div>
   
-  <!-- PREVIEW -->
   <div class="preview-wrap" style="flex: 1; min-height: 0; display: flex; border-radius: 0;">
     <div id="previewLoader" class="preview-loader"><div class="spinner"></div></div>
     <iframe id="frame" bgcolor="#0d0e12" title="Local website preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" hidden style="flex: 1; height: 100%; width: 100%; border: 0;"></iframe>

@@ -361,7 +361,12 @@ async function githubLogout(){
   if($('githubToken'))$('githubToken').value='';setGhStatus('Signed out.');showToast('Signed out');
 }
 async function showGithubLoggedIn(user){
-  if($('githubLoggedOut'))$('githubLoggedOut').hidden=true;if($('githubLoggedIn'))$('githubLoggedIn').hidden=false;
+  // Hide the big connect button
+  var oauthBtn = $('ghOauthBtn');
+  if (oauthBtn) oauthBtn.style.display = 'none';
+  
+  // Show the repos
+  if($('githubLoggedIn'))$('githubLoggedIn').hidden=false;
   if($('ghAvatar'))$('ghAvatar').src=user.avatar_url||'';if($('ghName'))$('ghName').textContent=user.name||user.login;
   if($('ghLogin'))$('ghLogin').textContent='@'+user.login;await loadRepoList();
 }

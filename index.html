@@ -155,7 +155,20 @@
     <p>Sign in with GitHub to see all your repos, including private ones. No token needed.</p>
     <button id="ghOauthBtn" class="btn primary" style="width:100%">Connect with GitHub</button>
     <button id="ghImportBtn" class="btn secondary" style="width:100%;margin-top:10px" onclick="document.getElementById('githubPage').classList.toggle('gh-open')">Import</button>
-    <style>#githubPage:has(#githubLoggedIn:not([hidden])) #ghOauthBtn{display:none}#githubPage:not(.gh-open) > section:not(:has(#ghImportBtn)){display:none}</style>
+    <style>#githubPage:has(#githubLoggedIn:not([hidden])) #ghOauthBtn{display:none}#githubPage:has(#githubLoggedIn:not([hidden])) > section:has(#githubLoggedOut){display:none}#githubPage:not(:has(#githubLoggedIn:not([hidden]))) #ghProfileCard{display:none}#githubPage:not(.gh-open) > section:not(:has(#ghImportBtn)):not(#ghProfileCard){display:none}</style>
+  </section>
+  <section class="card" id="ghProfileCard">
+    <label class="eyebrow">PROJECTS</label>
+    <h2>Your GitHub projects</h2>
+    <div id="githubLoggedIn" hidden>
+      <div class="gh-user">
+        <img id="ghAvatar" alt="">
+        <div class="gh-user-info"><b id="ghName">—</b><small id="ghLogin">—</small></div>
+        <button id="githubLogoutBtn" class="btn secondary">Sign out</button>
+      </div>
+      <input id="ghRepoSearch" class="gh-search" type="text" placeholder="Search your repos…" autocomplete="off">
+      <div id="ghRepoList" class="gh-repo-list"></div>
+    </div>
   </section>
   <section class="card">
     <label class="eyebrow">GITHUB</label>

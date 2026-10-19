@@ -537,12 +537,13 @@
 <script src="publish.js"></script>
 <script src="backups.js"></script>
 <script src="edtools.js"></script>
-<!-- Service worker disabled for testing -->
 <script>
-  if('serviceWorker' in navigator){ 
-    navigator.serviceWorker.getRegistrations().then(function(regs){
-      for(let reg of regs){ reg.unregister(); }
-    }); 
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/sw.js').then(function(reg) {
+        console.log('Service Worker registered');
+      });
+    });
   }
 </script>
 </body></html>

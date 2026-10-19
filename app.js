@@ -84,12 +84,12 @@ async function dbGetAllRaw(){
 }
 let __saveTimer=null;
 function __flushProjects(){clearTimeout(__saveTimer);__saveTimer=null;if(__projCache)return dbSetAllNow(__projCache,__cacheUid);return Promise.resolve()}
-async function dbSetAll(arr){__projCache=arr;__cacheUid=__uid();clearTimeout(__saveTimer);__saveTimer=setTimeout(__flushProjects,500)}
+async function dbSetAll(arr){__projCache=arr;__cacheUid=__uid();clearTimeout(__saveTimer);__saveTimer=setTimeout(function(){__flushProjects().catch(function(e){showToast('Save failed: '+e.message,'error')})},500)}
 window.addEventListener('pagehide',function(){if(__saveTimer)__flushProjects()});
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&__saveTimer)__flushProjects()});
 async function dbSetAllNow(arr,uid){
-  if(uid===undefined)uid=__uid();if(uid===null)return;
-  try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,__key(uid));await new Promise(function(res){tx.oncomplete=res;tx.onerror=res;tx.onabort=res})}catch(e){console.warn(e)}
+  if(uid===undefined)uid=__uid();if(uid===null)throw new Error('Not signed in, cannot save');
+  try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,__key(uid));await new Promise(function(res,rej){tx.oncomplete=res;tx.onerror=function(){rej(tx.error)};tx.onabort=function(){rej(tx.error||new Error('Storage write aborted (storage may be full)'))}})}catch(e){console.warn(e);throw e}
 }
 async function dbUpsertProject(p){const all=await dbGetAll();const i=all.findIndex(function(x){return x.id===p.id});if(i>=0)all[i]=p;else all.unshift(p);await dbSetAll(all)}
 async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all.filter(function(x){return x.id!==id}))}

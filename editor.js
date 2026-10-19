@@ -397,14 +397,14 @@ try{
 status.textContent=currentPath+' •';
   if(typeof window.saveCurrentProject==='function'){
     try{
-      toast('Saved','success');status.textContent=currentPath+' Saved';await window.saveCurrentProject();
+      await window.saveCurrentProject();toast('Saved','success');status.textContent=currentPath+' Saved';
       if(typeof window.logHistory==='function'){
         window.logHistory({type:'edit',path:currentPath,note:'Edited file',text:f.text.length<300000?f.text:undefined});
       }
       status.textContent=currentPath+' Saved';
       void 0;
       setTimeout(function(){status.textContent=currentPath},1500);
-    }catch(e){toast('Save failed','error')}
+    }catch(e){toast('Save failed: '+(e&&e.message||e),'error')}
   }
   if(typeof render==='function')render();
 }

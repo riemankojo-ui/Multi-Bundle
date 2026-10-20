@@ -580,7 +580,10 @@ $('editorPreviewBtn').onclick=function(){renderPreview();$('editorPreviewPane').
     try{previewFrame.srcdoc=''}catch(_){}
   }
   cb.onclick=closePv;
-  cb.addEventListener('touchstart',function(e){e.preventDefault();closePv()},{passive:false});
+  var tsx=0,tsy=0,tmoved=false;
+cb.addEventListener('touchstart',function(e){var t=e.touches[0];tsx=t.clientX;tsy=t.clientY;tmoved=false},{passive:true});
+cb.addEventListener('touchmove',function(e){var t=e.touches[0];if(Math.abs(t.clientX-tsx)+Math.abs(t.clientY-tsy)>10)tmoved=true},{passive:true});
+cb.addEventListener('touchend',function(e){e.preventDefault();if(!tmoved)closePv()},{passive:false});
 })();
 ta.addEventListener('input',function(){
   if(/\.html?$/i.test(currentPath)){

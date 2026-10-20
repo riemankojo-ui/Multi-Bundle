@@ -429,6 +429,38 @@ async function cutMatch(){
 if($('editorCutBtn'))$('editorCutBtn').onclick=cutMatch;
 if($('editorReplaceOne'))$('editorReplaceOne').onclick=replaceOne;
 if($('editorReplaceAll'))$('editorReplaceAll').onclick=replaceAll;
+function __quiet(pos){
+  function go(){
+    try{CSS.highlights.delete('srch-all');CSS.highlights.delete('srch')}catch(_){}
+    try{ta.setSelectionRange(pos,pos)}catch(_){}
+  }
+  go();requestAnimationFrame(go);setTimeout(go,80);
+}
+function replaceOne(){
+  if(!matches.length||matchIndex<0){toast('No match to replace','error');return}
+  const rv=$('editorReplaceInput').value,s=matches[matchIndex],e=s+(matchLens[matchIndex]||0);
+  const st=ta.scrollTop,sl=ta.scrollLeft;
+  ta.value=ta.value.slice(0,s)+rv+ta.value.slice(e);
+  edited();runSearch();
+  const end=s+rv.length;
+  let k=matches.findIndex(function(p){return p>=end});
+  if(k<0)k=matches.findIndex(function(p){return p<s});
+  matchIndex=k;
+  ta.scrollTop=st;ta.scrollLeft=sl;syncScroll();
+  updateSearchCount();
+  __quiet(end);
+}
+function replaceAll(){
+  if(!matches.length){toast('No match to replace','error');return}
+  const rv=$('editorReplaceInput').value;let v=ta.value;const n=matches.length;
+  const st=ta.scrollTop,sl=ta.scrollLeft;
+  for(let i=matches.length-1;i>=0;i--){v=v.slice(0,matches[i])+rv+v.slice(matches[i]+(matchLens[i]||0))}
+  ta.value=v;edited();
+  matches=[];matchLens=[];matchIndex=-1;updateSearchCount();
+  ta.scrollTop=st;ta.scrollLeft=sl;syncScroll();
+  __quiet(0);
+  toast('Replaced '+n,'success');
+}
 function scrollToPosition(pos){
   const cs=getComputedStyle(ta);
   const lh=parseFloat(cs.lineHeight)||(parseFloat(cs.fontSize)*1.55)||20;

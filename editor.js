@@ -243,7 +243,7 @@ function highlightAll(code){
 function refreshHighlight(){
   if(!hl)return;
   const v=ta.value;
-  hl.innerHTML=highlightAll(v)+(v.endsWith('\n')?' ':'');
+  hl.innerHTML=(v.length>100000?escHtml(v):highlightAll(v))+(v.endsWith('\n')?' ':'');
   hl.scrollTop=ta.scrollTop;hl.scrollLeft=ta.scrollLeft;
 }
 
@@ -295,7 +295,7 @@ function pushHistory(force){
   if(!force&&now-lastPush<300)return;lastPush=now;
   const v=ta.value;
   if(undoStack.length&&undoStack[undoStack.length-1]===v)return;
-  undoStack.push(v);if(undoStack.length>200)undoStack.shift();
+  undoStack.push(v);if(undoStack.length>60)undoStack.shift();
 redoStack=[];
 if(currentPath) fileHistories[currentPath] = { undo: undoStack.slice(), redo: [] };
 updateBtns();
@@ -551,7 +551,7 @@ ta.addEventListener('input',function(){
     // Wait 1.5 seconds after you stop typing to refresh the preview
     window.__pvT=setTimeout(function(){
        // Only refresh if the editor is actually visible to save battery
-       if (!$('editorPage').hidden) renderPreview();
+       if (!$('editorPage').hidden && $('editorPreviewPane') && $('editorPreviewPane').classList.contains('open')) renderPreview();
     }, 1500); 
   }
 });

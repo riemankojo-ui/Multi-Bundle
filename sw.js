@@ -1,5 +1,5 @@
 /* Multi Bundle Service Worker — v8 */
-const CACHE='multibundle-v156';
+const CACHE='multibundle-v157';
 const ASSETS=['/','/index.html','/style.css','/app.js','/editor.js','/settings.js','/publish.js','/sync.js','/backups.js','/edtools.js','/manifest.json','/logo.png'];
 
 self.addEventListener('install',function(e){

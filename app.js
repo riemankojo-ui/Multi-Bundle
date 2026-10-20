@@ -24,7 +24,7 @@ let files=[],urls=[],currentPagePath='',urlCache=new Map();
 let currentProjectId=null;
 let ghToken='';
 try { ghToken = localStorage.getItem('mb_gh_active_token') || ''; } catch(e) {}
-const PROJET_LIMIT=10;
+const PROJECT_LIMIT=20;
 
 const textExt=new Set(['html','htm','css','js','mjs','json','txt','md','xml','svg','php','py','sql','yaml','yml','toml','csv','webmanifest','ts','jsx','tsx']);
 const ext=p=>(p.split('.').pop()||'').toLowerCase();

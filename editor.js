@@ -72,8 +72,8 @@ window.__addChoice=function(){return new Promise(function(res){
     dragging=false;
   }
   // Touch + mouse on card and handle
-  // drag only from handle
-  // drag only from handle
+  c.addEventListener('touchstart',start,{passive:false});
+  c.addEventListener('mousedown',start);
   window.addEventListener('touchmove',move,{passive:false});
   window.addEventListener('mousemove',move);
   window.addEventListener('touchend',end);
@@ -476,7 +476,7 @@ status.textContent=currentPath+' •';
       status.textContent=currentPath+' Saved';
       void 0;
       setTimeout(function(){status.textContent=currentPath},1500);
-    }catch(e){toast('Save failed','error')}
+    }catch(e){toast('Save failed: '+((e&&e.message)||e),'error')}
   }
   if(typeof render==='function')render();
 }

@@ -573,7 +573,15 @@ function renderPreview(){
 }
 $('editorPreviewRefresh').onclick=renderPreview;
 $('editorPreviewBtn').onclick=function(){renderPreview();$('editorPreviewPane').classList.add('open')};
-$('editorPreviewClose').onclick=function(){$('editorPreviewPane').classList.remove('open')};
+(function(){
+  var cb=$('editorPreviewClose'),pane=$('editorPreviewPane');
+  function closePv(){
+    pane.classList.remove('open');
+    try{previewFrame.srcdoc=''}catch(_){}
+  }
+  cb.onclick=closePv;
+  cb.addEventListener('touchstart',function(e){e.preventDefault();closePv()},{passive:false});
+})();
 ta.addEventListener('input',function(){
   if(/\.html?$/i.test(currentPath)){
     clearTimeout(window.__pvT);

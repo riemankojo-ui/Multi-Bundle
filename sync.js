@@ -258,7 +258,7 @@
   }
   
   if ($('gateLoginBtn')) $('gateLoginBtn').onclick = googleLogin;
-    if ($('gateGithubBtn')) $('gateGithubBtn').onclick = githubLogin;
+    if ($('gateGithubBtn')) $('gateGithubBtn').style.display = 'none';
     if ($('gateEmailBtn')) $('gateEmailBtn').onclick = emailSubmit;
     if ($('gateForgot')) $('gateForgot').onclick = forgotPassword;
     if ($('gateModeBtn')) $('gateModeBtn').onclick = function () { mode = mode === 'signin' ? 'signup' : 'signin'; applyMode(); };

@@ -1128,6 +1128,16 @@ window.__reloadGithub=async function(){
   if(t){ghToken=t;try{const r=await fetch('https://api.github.com/user',{headers:{Authorization:'Bearer '+t}});if(r.ok){const u=await r.json();await showGithubLoggedIn(u)}}catch(e){}}
 };
 window.__refreshProjects = async function() {
+  try {
+    if (__saveTimer) await __flushProjects();
+    __projCache = null;
+    const __recs = await dbGetAll();
+    if (currentProjectId && !__recs.some(function (p) { return p.id === currentProjectId; })) {
+      files = []; currentProjectId = null;
+      if (typeof setCurrentProjectName === 'function') setCurrentProjectName('No project loaded');
+    }
+    if (typeof renderBundleProjects === 'function') renderBundleProjects();
+  } catch (e) {}
   if(__saveTimer)await __flushProjects();__projCache = null;if(typeof window.__reloadGithub==='function')window.__reloadGithub(); 
   await renderProjectCards();
   render();

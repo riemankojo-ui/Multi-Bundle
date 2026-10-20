@@ -12,6 +12,39 @@ let currentPath='',dirty=false,undoStack=[],redoStack=[],lastPush=0,fileHistorie
 
 const toast=window.showToast||function(){};
 const promptFn=window.showPrompt||function(){return Promise.resolve(null)};
+function smoothDrag(b,c){
+  var id=null,sx=0,sy=0,bx=0,by=0,tx=0,ty=0,minX=0,maxX=0,minY=0,maxY=0,moving=false,pending=false;
+  c.style.touchAction='none';c.style.willChange='transform';
+  function apply(){pending=false;c.style.transform='translate3d('+tx+'px,'+ty+'px,0)'}
+  c.addEventListener('pointerdown',function(e){
+    if(id!==null)return;
+    id=e.pointerId;sx=e.clientX;sy=e.clientY;bx=tx;by=ty;moving=false;
+    var r=c.getBoundingClientRect();
+    minX=tx-r.left;maxX=tx+(window.innerWidth-r.right);
+    minY=ty-r.top;maxY=ty+(window.innerHeight-r.bottom);
+  });
+  c.addEventListener('pointermove',function(e){
+    if(e.pointerId!==id)return;
+    var dx=e.clientX-sx,dy=e.clientY-sy;
+    if(!moving){
+      if(Math.abs(dx)+Math.abs(dy)<6)return;
+      moving=true;c.__moved=true;
+      try{c.setPointerCapture(e.pointerId)}catch(_){}
+    }
+    tx=Math.max(minX,Math.min(maxX,bx+dx));
+    ty=Math.max(minY,Math.min(maxY,by+dy));
+    if(!pending){pending=true;requestAnimationFrame(apply)}
+    e.preventDefault();
+  });
+  function end(e){
+    if(e.pointerId!==id)return;
+    id=null;moving=false;
+    setTimeout(function(){c.__moved=false},60);
+  }
+  c.addEventListener('pointerup',end);
+  c.addEventListener('pointercancel',end);
+  c.addEventListener('click',function(e){if(c.__moved){e.stopPropagation();e.preventDefault()}},true);
+}
 window.__addChoice=function(){return new Promise(function(res){
   var b=document.createElement('div');
   b.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.4)';
@@ -19,7 +52,7 @@ window.__addChoice=function(){return new Promise(function(res){
   c.style.cssText='position:fixed;left:12px;top:120px;width:auto;min-width:160px;max-width:200px;background:#1c1d22;border:1px solid #2e2f36;border-radius:16px;padding:4px 4px 6px;box-sizing:border-box;font-family:system-ui,sans-serif;box-shadow:0 14px 40px rgba(0,0,0,.5);touch-action:none;user-select:none;-webkit-user-select:none';
   var row='display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;margin:0;border:0;border-radius:11px;background:transparent;color:#f0f0f2;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left;white-space:nowrap';
   c.innerHTML=
-    '<div id="addDragHandle" style="padding:8px 0 4px;cursor:grab;text-align:center">'+
+    '<div id="addDragHandle" style="padding:14px 0 10px;cursor:grab;text-align:center">'+
       '<div style="width:32px;height:4px;border-radius:4px;background:#55565f;margin:0 auto"></div>'+
     '</div>'+
     '<button data-c="create" style="'+row+'">'+
@@ -72,8 +105,8 @@ window.__addChoice=function(){return new Promise(function(res){
     dragging=false;
   }
   // Touch + mouse on card and handle
-  c.addEventListener('touchstart',start,{passive:false});
-  c.addEventListener('mousedown',start);
+  smoothDrag(b,c);
+  /* old mouse drag removed, smoothDrag handles it */
   window.addEventListener('touchmove',move,{passive:false});
   window.addEventListener('mousemove',move);
   window.addEventListener('touchend',end);

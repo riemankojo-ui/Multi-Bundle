@@ -240,7 +240,30 @@ function highlightAll(code){
   if(['js','mjs','ts','jsx','tsx','json'].includes(e))return highlightJS(code);
   return escHtml(code);
 }
+var __lastHlText=null;
+function __plainMode(on){
+  if(on){
+    if(!ta.__plain){
+      ta.__plain=1;
+      var c=getComputedStyle(hl).color;
+      ta.style.setProperty('-webkit-text-fill-color',c,'important');
+      ta.style.setProperty('color',c,'important');
+      hl.style.visibility='hidden';
+    }
+  }else if(ta.__plain){
+    ta.__plain=0;
+    ta.style.removeProperty('-webkit-text-fill-color');
+    ta.style.removeProperty('color');
+    hl.style.visibility='';
+  }
+}
 function refreshHighlight(){
+  if(!hl)return;
+  var v0=ta.value;
+  if(v0!==__lastHlText){__lastHlText=v0;__refreshHighlightCore()}
+  __plainMode(false);
+}
+function __refreshHighlightCore(){
   if(!hl)return;
   const v=ta.value;
   hl.innerHTML=(v.length>100000?escHtml(v):highlightAll(v))+(v.endsWith('\n')?' ':'');
@@ -273,6 +296,7 @@ ta.addEventListener('input', function() {
 
   // 3. DELAYED HIGHLIGHT (Wait 200ms after you stop typing to color the text)
   clearTimeout(highlightTimer);
+if(ta.value.length<=15000){refreshHighlight()}else{__plainMode(true)}
   highlightTimer = setTimeout(function() {
     refreshHighlight();
   }, 200);

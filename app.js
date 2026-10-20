@@ -24,7 +24,7 @@ let files=[],urls=[],currentPagePath='',urlCache=new Map();
 let currentProjectId=null;
 let ghToken='';
 try { ghToken = localStorage.getItem('mb_gh_active_token') || ''; } catch(e) {}
-const PROJECT_LIMIT=10;
+const PROJET_LIMIT=10;
 
 const textExt=new Set(['html','htm','css','js','mjs','json','txt','md','xml','svg','php','py','sql','yaml','yml','toml','csv','webmanifest','ts','jsx','tsx']);
 const ext=p=>(p.split('.').pop()||'').toLowerCase();
@@ -1192,7 +1192,13 @@ async function loadGithubReposForProjects() {
       headers: { 'Authorization': 'Bearer ' + ghToken }
     });
     
-    if (!res.ok) throw new Error('Could not load repos');
+    if (res.status === 401) {
+  box.innerHTML = '<div style="color:#ff8a8a;font-size:12px;margin-bottom:8px;">GitHub session expired.</div><button id="ghReconnectBtn" class="pc-btn primary" style="width:100%;">Reconnect GitHub</button>';
+  var rb = document.getElementById('ghReconnectBtn');
+  if (rb) rb.onclick = function () { var ob = document.getElementById('ghOauthBtn'); if (ob) ob.click(); else showToast('Open the GitHub tab and tap Connect', 'error'); };
+  return;
+}
+if (!res.ok) throw new Error('Could not load repos');
     const repos = await res.json();
     
     if (!repos.length) {
@@ -1240,7 +1246,9 @@ if ($('ghOauthBtn')) {
     provider.setCustomParameters({ prompt: 'select_account' });
     provider.addScope('repo');
     try {
-      const res = await (firebase.auth().currentUser ? firebase.auth().currentUser.linkWithPopup(provider) : firebase.auth().signInWithPopup(provider));
+      const cu = firebase.auth().currentUser;
+const linked = !!(cu && cu.providerData && cu.providerData.some(function (p) { return p.providerId === 'github.com'; }));
+const res = await (cu ? (linked ? cu.reauthenticateWithPopup(provider) : cu.linkWithPopup(provider)) : firebase.auth().signInWithPopup(provider));
       
       const tok = res.credential.accessToken;
       ghToken = tok; 

@@ -671,7 +671,92 @@ if(themeBtn&&themeCard){
   applyEdTheme(savedTheme);
 }
 updateGutter();refreshFileList();refreshHighlight();
-window.__restoreEditor = function() {
+// Remember highlighted text when you leave the Editor tab
+var __edSel = { start: 0, end: 0, path: '' };
+function saveEdSel() {
+  try {
+    if (!ta) return;
+    __edSel = { start: ta.selectionStart || 0, end: ta.selectionEnd || 0, path: currentPath || '' };
+  } catch (e) {}
+}
+function restoreEdSel() {
+  try {
+    if (!ta || !__edSel) return;
+    if (__edSel.path && currentPath && __edSel.path !== currentPath) return;
+    var a = __edSel.start, b = __edSel.end;
+    if (a == null || b == null) return;
+    if (a > ta.value.length) a = ta.value.length;
+    if (b > ta.value.length) b = ta.value.length;
+    ta.focus({ preventScroll: true });
+    ta.setSelectionRange(a, b);
+  } catch (e) {}
+}
+if (ta) {
+  ta.addEventListener('blur', saveEdSel);
+  ta.addEventListener('select', saveEdSel);
+  ta.addEventListener('keyup', saveEdSel);
+  ta.addEventListener('mouseup', saveEdSel);
+}
+if (editorPage) {
+  var __edObs = new MutationObserver(function () {
+    if (!editorPage.hidden) {
+      setTimeout(restoreEdSel, 30);
+      setTimeout(restoreEdSel, 120);
+    } else {
+      saveEdSel();
+    }
+  });
+  __edObs.observe(editorPage, { attributes: true, attributeFilter: ['hidden'] });
+}
+var __edSel = { start: 0, end: 0, path: '' };
+function saveEdSel() {
+  try {
+    if (!ta) return;
+    __edSel = {
+      start: ta.selectionStart || 0,
+      end: ta.selectionEnd || 0,
+      path: currentPath || '',
+      scroll: ta.scrollTop || 0
+    };
+  } catch (e) {}
+}
+function restoreEdSel() {
+  try {
+    if (!ta || !__edSel) return;
+    if (__edSel.path && currentPath && __edSel.path !== currentPath) return;
+    var a = __edSel.start, b = __edSel.end;
+    if (a == null || b == null) return;
+    if (a > ta.value.length) a = ta.value.length;
+    if (b > ta.value.length) b = ta.value.length;
+    ta.focus({ preventScroll: true });
+    ta.setSelectionRange(a, b);
+    if (__edSel.scroll != null) ta.scrollTop = __edSel.scroll;
+  } catch (e) {}
+}
+if (ta) {
+  ['blur', 'select', 'keyup', 'mouseup', 'touchend'].forEach(function (ev) {
+    ta.addEventListener(ev, saveEdSel);
+  });
+}
+// Save when you leave the app, restore when you come back
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) saveEdSel();
+  else setTimeout(restoreEdSel, 80);
+});
+window.addEventListener('pageshow', function () { setTimeout(restoreEdSel, 80); });
+if (editorPage) {
+  var __edObs = new MutationObserver(function () {
+    if (editorPage.hidden) saveEdSel();
+    else {
+      setTimeout(restoreEdSel, 40);
+      setTimeout(restoreEdSel, 150);
+    }
+  });
+  __edObs.observe(editorPage, { attributes: true, attributeFilter: ['hidden'] });
+}
+window.__restoreEditor = function () {
   if (typeof refreshFileList === 'function') refreshFileList();
+  setTimeout(restoreEdSel, 50);
+  setTimeout(restoreEdSel, 200);
 };
 })();

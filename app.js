@@ -1168,8 +1168,17 @@ async function restoreLastProject() {
 render();
 renderProjectCards();
 restoreLastProject().then(() => {
-  render(); renderProjectCards(); // Re-render the home screen with the restored project
+  render(); renderProjectCards();
   if (typeof window.__restoreEditor === 'function') window.__restoreEditor();
+  // Stay on the last tab after refresh
+  try {
+    var nav = JSON.parse(localStorage.getItem('mb_nav') || 'null');
+    if (nav && nav.tab && typeof showTab === 'function') {
+      showTab(nav.tab);
+      if (nav.tab === 'preview' && currentPagePath && typeof openPage === 'function') openPage(currentPagePath);
+      if (nav.tab === 'editor' && typeof window.__restoreEditor === 'function') window.__restoreEditor();
+    }
+  } catch (e) {}
 });
 
 // --- NEW: GitHub Repos in Projects Tab ---

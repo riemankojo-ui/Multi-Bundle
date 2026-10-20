@@ -744,6 +744,21 @@ document.addEventListener('visibilitychange', function () {
   else setTimeout(restoreEdSel, 80);
 });
 window.addEventListener('pageshow', function () { setTimeout(restoreEdSel, 80); });
+var __edRestoring = false, __edTouching = false;
+if (ta) {
+  ta.addEventListener('touchstart', function () { __edTouching = true; }, { passive: true });
+  ta.addEventListener('touchend', function () { setTimeout(function () { __edTouching = false; }, 350); }, { passive: true });
+}
+document.addEventListener('selectionchange', function () {
+  if (!ta || __edRestoring) return;
+  if (editorPage && editorPage.hidden) return;
+  if (ta.selectionStart !== ta.selectionEnd) { saveEdSel(); return; }
+  if (__edTouching) return;
+  if (__edSel && __edSel.start !== __edSel.end && (!__edSel.path || __edSel.path === currentPath)) {
+    __edRestoring = true;
+    setTimeout(function () { restoreEdSel(); __edRestoring = false; }, 0);
+  }
+});
 if (editorPage) {
   var __edObs = new MutationObserver(function () {
     if (editorPage.hidden) saveEdSel();

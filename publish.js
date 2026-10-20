@@ -4,8 +4,8 @@
 var $=function(id){return document.getElementById(id)};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function toast(m,t){if(window.showToast)window.showToast(m,t)}
-function pid(){return (typeof currentProjectId!=='undefined')?currentProjectId:null}
-function curFiles(){return (typeof files!=='undefined'&&Array.isArray(files))?files:[]}
+function pid(){if(window.__pbOv&&window.__pbOv.pid)return window.__pbOv.pid;return (typeof currentProjectId!=='undefined')?currentProjectId:null}
+function curFiles(){if(window.__pbOv&&window.__pbOv.files)return window.__pbOv.files;return (typeof files!=='undefined'&&Array.isArray(files))?files:[]}
 function token(){return (typeof getToken==='function')?getToken():''}
 function isRepo(r){return /^[\w.-]+\/[\w.-]+$/.test(r||'')}
 function brPath(b){return b.split('/').map(encodeURIComponent).join('/')}
@@ -164,8 +164,8 @@ async function runPublish(){
   try{
     var res=await pushRows(S.scan,S.rows,msg,setStatus);
     await saveRecord(S.scan,S.rows);
-    try{var lst=await dbGetAll();var pp=lst.find(function(x){return x.id===pid()});if(pp){pp.publishes=pp.publishes||[];pp.publishes.unshift({ts:Date.now(),msg:msg,repo:S.scan.repo,branch:S.scan.branch,sha:res.sha,files:S.rows.filter(function(r){return r.on}).map(function(r){return{path:r.path,status:r.isNew?'new':'changed'}})});pp.publishes=pp.publishes.slice(0,20);await dbSetAll(lst)}}catch(e0){}
-    if(typeof window.logHistory==='function')await window.logHistory({type:'publish',note:'Published '+res.count+' file'+(res.count===1?'':'s')+' to '+S.scan.repo+'@'+S.scan.branch});
+    try{var lst=await dbGetAll();var pp=lst.find(function(x){return x.id===pid()});if(pp){pp.publishes=pp.publishes||[];pp.publishes.unshift({ts:Date.now(),msg:msg,repo:S.scan.repo,branch:S.scan.branch,sha:res.sha,files:(function(){var cap=900000;return S.rows.filter(function(r){return r.on}).map(function(r){var o={path:r.path,status:r.isNew?'new':'changed'};var t=r.f&&r.f.text;if(typeof t==='string'&&t.length<=cap){o.text=t;cap-=t.length}return o})})()});pp.publishes=pp.publishes.slice(0,20);await dbSetAll(lst)}}catch(e0){}
+    if(!window.__pbOv&&typeof window.logHistory==='function')await window.logHistory({type:'publish',note:'Published '+res.count+' file'+(res.count===1?'':'s')+' to '+S.scan.repo+'@'+S.scan.branch});
     if(typeof window.renderProjectCards==='function')window.renderProjectCards();
     var url='https://github.com/'+S.scan.repo+'/commit/'+res.sha;
     var card=$('pbCard');
@@ -179,7 +179,8 @@ async function runPublish(){
   }catch(e){S.busy=false;setStatus('');setNote(explain(e,true),'bad');updateGo()}
 }
 function settingsRepo(){try{return JSON.parse(localStorage.getItem('mb_deploy_'+pid())||'null')||{}}catch(e){return {}}}
-async function openSheet(){
+async function openSheet(opts){
+  window.__pbOv=(opts&&opts.files)?{pid:opts.pid,files:opts.files}:null;
   if(!pid()||!curFiles().length){toast('Open a project first','error');return}
   closeSheet();
   var recs=await dbGetAll();var p=recs.find(function(x){return x.id===pid()})||{};

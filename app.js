@@ -784,7 +784,7 @@ function ghShowPublishes(p){
       '<div id="pgfiles'+gi+'" hidden style="border-top:1px solid #25262c">'+fs.map(function(f){var col=f.status==='new'?'#2ecc71':'#f5b301';return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #1d1e24"><span style="font-size:10px;font-weight:800;letter-spacing:1px;padding:3px 7px;border-radius:7px;background:'+col+'22;color:'+col+'">'+(f.status==='new'?'NEW':'UPDATED')+'</span><span style="font-size:13px;overflow-wrap:anywhere;flex:1">'+esc(f.path)+'</span></div>'}).join('')+'</div></div>';
   });
   list.innerHTML=html;
-  list.querySelectorAll('[data-pg]').forEach(function(h){h.onclick=function(){var b=$('pgfiles'+h.getAttribute('data-pg'));if(b)b.hidden=!b.hidden}});
+  window.__pubList=pubs;window.__pubProj=p.id;list.querySelectorAll('[data-pg]').forEach(function(h){h.onclick=function(){openPubSheet(Number(h.getAttribute('data-pg')))}});
 }
 async function gitBlobSha(bytes){
   const pre=new TextEncoder().encode('blob '+bytes.length+'\0');
@@ -860,6 +860,154 @@ async function openUpdatesDetail(projectId,mode){
   if($('updatesDetailView'))$('updatesDetailView').hidden=false;
 }
 
+function pubFileText(p,g,f){
+  if(typeof f.text==='string')return f.text;
+  var best=null;
+  (p.history||[]).forEach(function(h){
+    if(h.path===f.path&&typeof h.text==='string'&&h.ts<=g.ts+10000&&(!best||h.ts>best.ts))best=h;
+  });
+  return best?best.text:null;
+}
+function pubDlBlob(blob,name){
+  var u=URL.createObjectURL(blob);var a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(u)},8000);
+}
+async function pubDownload(p,chosen){
+  if(chosen.length===1){pubDlBlob(new Blob([chosen[0].text],{type:'text/plain'}),chosen[0].path.split('/').pop());return}
+  if(window.JSZip){
+    var z=new JSZip();chosen.forEach(function(s){z.file(s.path,s.text)});
+    var b=await z.generateAsync({type:'blob',compression:'DEFLATE'});
+    pubDlBlob(b,String(p.name||'project').replace(/[^\w.\- ]+/g,'').trim().replace(/\s+/g,'-')+'-version.zip');
+    return;
+  }
+  for(var i=0;i<chosen.length;i++){
+    pubDlBlob(new Blob([chosen[i].text],{type:'text/plain'}),chosen[i].path.split('/').pop());
+    await new Promise(function(r){setTimeout(r,400)});
+  }
+}
+async function pubSaveBack(projId,chosen){
+  var all=await dbGetAll();
+  var p=all.find(function(x){return x.id===projId});
+  if(!p)return false;
+  p.snapshots=p.snapshots||[];
+  p.snapshots.unshift({ts:Date.now(),label:'Before save back',files:p.files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})});
+  if(p.snapshots.length>20)p.snapshots.length=20;
+  p.history=p.history||[];
+  chosen.forEach(function(s){
+    var f=p.files.find(function(x){return x.path===s.path});
+    if(f){f.text=s.text;f.blob=null;f.size=s.text.length}
+    else p.files.push({path:s.path,name:s.path.split('/').pop(),size:s.text.length,type:'text/plain',blob:null,text:s.text});
+    p.history.unshift({ts:Date.now(),type:'edit',path:s.path,note:'Saved back from published version',text:s.text});
+  });
+  p.savedAt=Date.now();
+  await dbSetAll(all);
+  try{await __flushProjects()}catch(e){showToast('Save failed: '+(e&&e.message||e),'error');return false}
+  if(currentProjectId===projId){files=deserializeFiles(p.files)}
+  await renderProjectCards();
+  if(typeof populatePages==='function')populatePages();
+  if(typeof render==='function')render();
+  showToast('Saved '+chosen.length+' file'+(chosen.length===1?'':'s')+' back to project','success');
+  return true;
+}
+async function openPubSheet(gi){
+  var g=(window.__pubList||[])[gi],projId=window.__pubProj;
+  if(!g)return;
+  var all=await dbGetAll();
+  var p=all.find(function(x){return x.id===projId});
+  if(!p)return;
+  var fs=(g.files||[]).map(function(f){return{path:f.path,status:f.status,text:pubFileText(p,g,f)}});
+  async function ghFetchOld(f){
+  try{
+    if(!g.sha||!g.repo||typeof getToken!=='function'||!getToken())return;
+    if(/\.(png|jpe?g|gif|webp|ico|zip|pdf|woff2?|ttf|otf|mp3|mp4)$/i.test(f.path))return;
+    var r=await fetch('https://api.github.com/repos/'+g.repo+'/contents/'+f.path.split('/').map(encodeURIComponent).join('/')+'?ref='+g.sha,{headers:{'Accept':'application/vnd.github.raw+json','Authorization':'Bearer '+getToken()}});
+    if(r.ok)f.text=await r.text();
+  }catch(e){}
+}
+var miss0=fs.filter(function(f){return typeof f.text!=='string'});
+if(miss0.length){showToast('Loading this version from GitHub\u2026');await Promise.all(miss0.map(ghFetchOld))}
+var have=fs.filter(function(f){return typeof f.text==='string'});
+  var bs='display:block;width:100%;margin-top:10px;padding:14px;border-radius:12px;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:#20222a;color:#fff';
+  var sm='background:#20222a;color:#cfd0d8;border:1px solid #303139;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer';
+  var bk=document.createElement('div');
+  bk.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
+  var c=document.createElement('div');
+  c.style.cssText='width:100%;max-width:560px;max-height:88vh;overflow-y:auto;background:#15161a;border:1px solid #2a2b32;border-radius:18px 18px 0 0;padding:16px 16px 24px;box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff';
+  bk.appendChild(c);document.body.appendChild(bk);
+  function close(){bk.remove()}
+  bk.onclick=function(e){if(e.target===bk)close()};
+  function toFile(f){return{path:f.path,name:f.path.split('/').pop(),size:f.text.length,type:'text/plain',blob:null,text:f.text}}
+  function menu(){
+    var miss=fs.length-have.length;
+    c.innerHTML='<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">PUBLISHED VERSION</div>'+
+      '<div style="font-size:18px;font-weight:800;margin:2px 0 4px;overflow-wrap:anywhere">'+esc(g.msg||'Update from Multi Bundle')+'</div>'+
+      '<div style="font-size:12px;color:#a2a3ad;line-height:1.5">'+esc(new Date(g.ts).toLocaleString())+' \u00b7 '+fs.length+' file'+(fs.length===1?'':'s')+(miss?' \u00b7 '+miss+' without a saved copy':'')+'</div>'+
+      (have.length?'':'<div style="font-size:12px;color:#f5b942;margin-top:8px">No saved copy of this version, so it cannot be published, saved back or downloaded.</div>')+
+      '<button data-a="publish" style="'+bs+';background:#f01424;border:0">Publish back</button>'+
+      '<button data-a="save" style="'+bs+'">Save back to project</button>'+
+      '<button data-a="download" style="'+bs+'">Download</button>'+
+      '<button data-a="x" style="'+bs+';background:transparent;color:#a2a3ad">Close</button>';
+    c.querySelectorAll('button').forEach(function(b){
+      var a=b.dataset.a;
+      if(a!=='x'&&!have.length){b.disabled=true;b.style.opacity='.4';return}
+      b.onclick=function(){
+        if(a==='x')close();
+        else if(a==='publish'){
+          close();
+          if(typeof window.openPublish==='function')window.openPublish({pid:projId,files:have.map(toFile)});
+          else showToast('Publish is not ready','error');
+        }
+        else pick(a);
+      };
+    });
+  }
+  function pick(mode){
+    var isSave=mode==='save',sel={};
+    fs.forEach(function(f,i){if(typeof f.text==='string')sel[i]=true});
+    function count(){return Object.keys(sel).filter(function(k){return sel[k]}).length}
+    c.innerHTML='<div style="display:flex;align-items:center;gap:10px"><button id="pvBack" style="'+sm+'">\u2039 Back</button><div style="flex:1"></div><button id="pvAll" style="'+sm+'"></button></div>'+
+      '<div style="font-size:18px;font-weight:800;margin:12px 0 8px">'+(isSave?'Choose files to save back':'Choose files to download')+'</div>'+
+      '<div style="border:1px solid #25262c;border-radius:12px;background:#101115;overflow:hidden">'+fs.map(function(f,i){
+        var ok=typeof f.text==='string';
+        return '<label style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid #1d1e24;'+(ok?'cursor:pointer':'opacity:.45')+'"><input type="checkbox" data-i="'+i+'"'+(ok?' checked':' disabled')+' style="width:18px;height:18px;accent-color:#ff2d46;flex-shrink:0"><span style="flex:1;font-size:13px;overflow-wrap:anywhere">'+esc(f.path)+'</span>'+(ok?'':'<span style="font-size:10px;color:#a2a3ad">no saved copy</span>')+'</label>';
+      }).join('')+'</div>'+
+      '<button id="pvGo" style="'+bs+';background:#f01424;border:0"></button>';
+    function refresh(){
+      var n=count();
+      $('pvAll').textContent=(n===have.length)?'Select none':'Select all';
+      var go=$('pvGo');
+      go.textContent=(isSave?'Save back ':'Download ')+n+' file'+(n===1?'':'s');
+      go.disabled=!n;go.style.opacity=n?'1':'.4';
+    }
+    $('pvBack').onclick=menu;
+    $('pvAll').onclick=function(){
+      var on=count()!==have.length;
+      c.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+        if(!cb.disabled){cb.checked=on;sel[cb.dataset.i]=on}
+      });
+      refresh();
+    };
+    c.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+      cb.onchange=function(){sel[cb.dataset.i]=cb.checked;refresh()};
+    });
+    $('pvGo').onclick=async function(){
+      var chosen=fs.filter(function(f,i){return sel[i]&&typeof f.text==='string'});
+      if(!chosen.length)return;
+      if(isSave){
+        var ok=await showConfirm('Put '+chosen.length+' file'+(chosen.length===1?'':'s')+' from this version back into the project? A backup snapshot is saved first.',{title:'Save back',confirmText:'Save back',cancelText:'Cancel'});
+        if(!ok)return;
+        var done=await pubSaveBack(projId,chosen);
+        if(done){close();openUpdatesDetail(projId,window.__updatesMode||'github')}
+      }else{
+        try{await pubDownload(p,chosen);showToast('Download started','success');close()}
+        catch(e){showToast('Download failed: '+(e&&e.message||e),'error')}
+      }
+    };
+    refresh();
+  }
+  menu();
+}
 async function saveFileBack(projectId,ts){
   const all=await dbGetAll();const p=all.find(function(x){return x.id===projectId});if(!p)return;
   const h=(p.history||[]).find(function(x){return x.ts===ts});

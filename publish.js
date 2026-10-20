@@ -50,28 +50,36 @@ function b64(bytes){var s='',C=0x8000;for(var i=0;i<bytes.length;i+=C)s+=String.
 
 /* ---------- core logic ---------- */
 async function computeScan(repo,branch,p,fl){
-  var info=await gh('GET','/repos/'+repo);
+  var pInfo=gh('GET','/repos/'+repo);
+var pUser=fetch('https://api.github.com/user',{headers:{'Authorization':'Bearer '+token(),'Accept':'application/vnd.github+json'}});
+var pRef=gh('GET','/repos/'+repo+'/git/ref/heads/'+brPath(branch));
+pUser.catch(function(){});pRef.catch(function(){});
+var info=await pInfo;
   if(info.permissions&&info.permissions.push===false){var pe=new Error('no write access');pe.status=-1;throw pe}
-  var ur=await fetch('https://api.github.com/user',{headers:{'Authorization':'Bearer '+token(),'Accept':'application/vnd.github+json'}});
+  var ur=await pUser;
   var sc=ur.headers.get('x-oauth-scopes');
   if(sc!==null){
     var have=sc.split(',').map(function(x){return x.trim()}).filter(Boolean);
     if(have.indexOf('repo')===-1&&!(info.private===false&&have.indexOf('public_repo')!==-1)){var se=new Error('missing scope');se.status=-2;se.have=have;throw se}
   }
   var br=brPath(branch);
-  var ref=await gh('GET','/repos/'+repo+'/git/ref/heads/'+br);
+  var ref=await pRef;
   var headSha=ref.object.sha;
-  var commit=await gh('GET','/repos/'+repo+'/git/commits/'+headSha);
-  var treeSha=commit.tree.sha;
-  var tree=await gh('GET','/repos/'+repo+'/git/trees/'+treeSha+'?recursive=1');
+  var commit=null;
+  var treeSha=null;
+  var tree;
+try{tree=await gh('GET','/repos/'+repo+'/git/trees/'+headSha+'?recursive=1');treeSha=tree.sha}
+catch(e1){commit=await gh('GET','/repos/'+repo+'/git/commits/'+headSha);treeSha=commit.tree.sha;tree=await gh('GET','/repos/'+repo+'/git/trees/'+treeSha+'?recursive=1')}
   if(tree.truncated){var te=new Error('This repo is too large to compare here.');te.status=0;throw te}
   var remote={};
   (tree.tree||[]).forEach(function(n){if(n.type==='blob')remote[n.path]={sha:n.sha,mode:n.mode}});
   var base=(p&&p.githubRepo===repo&&(p.githubBranch||'main')===branch&&p.githubShas)?p.githubShas:null;
+var hm={};
+await Promise.all(fl.map(async function(f){var bb=await fileBytes(f);if(bb)hm[f.path]=await sha1blob(bb)}));
   var rows=[];
   for(var i=0;i<fl.length;i++){
-    var f=fl[i];var bytes=await fileBytes(f);if(!bytes)continue;
-    var ls=await sha1blob(bytes);var rem=remote[f.path];
+    var f=fl[i];if(hm[f.path]==null)continue;
+    var ls=hm[f.path];var rem=remote[f.path];
     if(rem&&rem.sha===ls)continue;
     if(base&&base[f.path]===ls)continue;
     var conflict=base?(!!rem&&base[f.path]!==rem.sha):false;
@@ -91,7 +99,7 @@ async function pushRows(scan,rows,msg,onProgress){
       done++;if(onProgress)onProgress('Uploading '+done+'/'+sel.length+'\u2026');
     }
   }
-  await Promise.all([worker(),worker(),worker()]);
+  await Promise.all([worker(),worker(),worker(),worker(),worker()]);
   if(onProgress)onProgress('Creating commit\u2026');
   var tree=await gh('POST','/repos/'+scan.repo+'/git/trees',{base_tree:scan.treeSha,tree:entries});
   var commit=await gh('POST','/repos/'+scan.repo+'/git/commits',{message:msg,tree:tree.sha,parents:[scan.headSha]});

@@ -434,7 +434,12 @@ $('editorSearchPrev').onclick=function(){prevMatch();focusSel()};
 $('editorSearchClose').onclick=closeSearch;
 $('editorSearchBtn').onclick=function(){searchBar.classList.contains('open')?closeSearch():openSearch()};
 
+var __ucT=0;
 function updateCursor(){
+  if(__ucT)return;
+  __ucT=requestAnimationFrame(function(){__ucT=0;updateCursorNow()});
+}
+function updateCursorNow(){
   const p=ta.selectionStart,b=ta.value.slice(0,p);
   const line=b.split('\n').length,col=p-b.lastIndexOf('\n');
   cursorInfo.textContent='Ln '+line+', Col '+col;

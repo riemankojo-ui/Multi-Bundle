@@ -1,5 +1,5 @@
 /* Multi Bundle Service Worker — v8 */
-const CACHE='multibundle-v162';
+const CACHE='multibundle-v1563;
 const ASSETS=['/','/index.html','/style.css','/app.js','/editor.js','/settings.js','/publish.js','/sync.js','/backups.js','/edtools.js','/manifest.json','/logo.png'];
 
 self.addEventListener('install',function(e){
@@ -13,7 +13,7 @@ self.addEventListener('fetch',function(e){
   if(e.request.method!=='GET')return;
   var url;try{url=new URL(e.request.url)}catch(err){return}
   if(url.origin!==location.origin)return;
-  if(url.pathname.indexOf('/api/')===0)return;
+  if(url.pathname.indexOf('/api/')===0||url.pathname.indexOf('/__/')===0)return;
   e.respondWith(fetch(e.request).then(function(res){
     if(res&&res.status===200&&res.type==='basic'){var copy=res.clone();caches.open(CACHE).then(function(c){c.put(e.request,copy)})}
     return res;

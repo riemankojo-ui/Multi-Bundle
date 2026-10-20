@@ -1263,7 +1263,17 @@ const res = await (cu ? (linked ? cu.reauthenticateWithPopup(provider) : cu.link
       
     } catch (e) {
       if (e && e.code === 'auth/credential-already-in-use' && e.credential && e.credential.accessToken) { const tok2 = e.credential.accessToken; ghToken = tok2; try { localStorage.setItem('mb_gh_active_token', tok2); } catch (e3) {} if (typeof saveToken === 'function') await saveToken(tok2); showToast('GitHub connected!', 'success'); try { const ur = await fetch('https://api.github.com/user', { headers: { Authorization: 'Bearer ' + tok2 } }); if (ur.ok) await showGithubLoggedIn(await ur.json()); } catch (e4) {} return; }
-      showToast('Could not link GitHub: ' + e.message, 'error');
+      if (e && (e.code === 'auth/network-request-failed' || e.code === 'auth/popup-blocked' || e.code === 'auth/internal-error' || e.code === 'auth/web-storage-unsupported')) {
+  try {
+    showToast('Opening GitHub sign-in…');
+    const cu2 = firebase.auth().currentUser;
+    const linked2 = !!(cu2 && cu2.providerData && cu2.providerData.some(function (p) { return p.providerId === 'github.com'; }));
+    if (cu2) { await (linked2 ? cu2.reauthenticateWithRedirect(provider) : cu2.linkWithRedirect(provider)); }
+    else { await firebase.auth().signInWithRedirect(provider); }
+    return;
+  } catch (e5) { e = e5; }
+}
+showToast('Could not link GitHub: ' + (e && e.message || e), 'error');
     }
   };
 }

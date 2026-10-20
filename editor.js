@@ -476,7 +476,7 @@ status.textContent=currentPath+' •';
       status.textContent=currentPath+' Saved';
       void 0;
       setTimeout(function(){status.textContent=currentPath},1500);
-    }catch(e){toast('Save failed','error')}
+    }catch(e){toast('Save failed: '+((e&&e.message)||e),'error')}
   }
   if(typeof render==='function')render();
 }

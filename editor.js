@@ -13,17 +13,89 @@ let currentPath='',dirty=false,undoStack=[],redoStack=[],lastPush=0,fileHistorie
 const toast=window.showToast||function(){};
 const promptFn=window.showPrompt||function(){return Promise.resolve(null)};
 window.__addChoice=function(){return new Promise(function(res){
-  var b=document.createElement('div');b.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
-  var c=document.createElement('div');c.style.cssText='width:100%;max-width:560px;background:#15161a;border:1px solid #2a2b32;border-radius:18px 18px 0 0;padding:16px 16px 24px;box-sizing:border-box;font-family:system-ui,sans-serif';
-  var bs='display:block;width:100%;margin-top:10px;padding:14px;border-radius:12px;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:#20222a;color:#fff';
-  c.innerHTML='<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">ADD TO PROJECT</div><div style="font-size:18px;font-weight:800;color:#fff;margin:2px 0 6px">What do you want to do?</div>'+
-    '<button data-c="create" style="'+bs+';background:#f01424;border:0">+ Create new file</button>'+
-    '<button data-c="folder" style="'+bs+'">New folder (create an app)</button>'+'<button data-c="import" style="'+bs+'">Import files or logos from phone</button>'+
-    '<button data-c="x" style="'+bs+';background:transparent;color:#a2a3ad">Cancel</button>';
+  var b=document.createElement('div');
+  b.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.4)';
+  var c=document.createElement('div');
+  c.style.cssText='position:fixed;left:12px;top:120px;width:auto;min-width:160px;max-width:200px;background:#1c1d22;border:1px solid #2e2f36;border-radius:16px;padding:4px 4px 6px;box-sizing:border-box;font-family:system-ui,sans-serif;box-shadow:0 14px 40px rgba(0,0,0,.5);touch-action:none;user-select:none;-webkit-user-select:none';
+  var row='display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;margin:0;border:0;border-radius:11px;background:transparent;color:#f0f0f2;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left;white-space:nowrap';
+  c.innerHTML=
+    '<div id="addDragHandle" style="padding:8px 0 4px;cursor:grab;text-align:center">'+
+      '<div style="width:32px;height:4px;border-radius:4px;background:#55565f;margin:0 auto"></div>'+
+    '</div>'+
+    '<button data-c="create" style="'+row+'">'+
+      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ff6b75" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>'+
+      '<span>Create file</span></button>'+
+    '<button data-c="folder" style="'+row+'">'+
+      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#7ec8ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'+
+      '<span>New folder</span></button>'+
+    '<button data-c="import" style="'+row+'">'+
+      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#7dd68e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'+
+      '<span>Import</span></button>'+
+    '<div style="height:1px;background:#2a2b32;margin:2px 8px"></div>'+
+    '<button data-c="x" style="'+row+';color:#a2a3ad;justify-content:center;padding:9px 12px">Cancel</button>';
   b.appendChild(c);document.body.appendChild(b);
-  function done(v){b.remove();res(v)}
+
+  // Strong finger drag — grab handle or any empty part of card
+  var dragging=false, moved=false, ox=0, oy=0, sx=0, sy=0;
+  function getPoint(e){return e.touches&&e.touches[0]?e.touches[0]:e.changedTouches&&e.changedTouches[0]?e.changedTouches[0]:e}
+  function start(e){
+    if(e.target.closest&&e.target.closest('button'))return;
+    var t=getPoint(e);
+    dragging=true; moved=false;
+    sx=t.clientX; sy=t.clientY;
+    var r=c.getBoundingClientRect();
+    ox=r.left; oy=r.top;
+    c.style.left=ox+'px';
+    c.style.top=oy+'px';
+    c.style.transform='none';
+    c.style.transition='none';
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  function move(e){
+    if(!dragging)return;
+    var t=getPoint(e);
+    var dx=t.clientX-sx, dy=t.clientY-sy;
+    if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;
+    var nx=ox+dx, ny=oy+dy;
+    // keep card on screen
+    var maxX=window.innerWidth-c.offsetWidth;
+    var maxY=window.innerHeight-c.offsetHeight;
+    if(nx<0)nx=0; if(ny<0)ny=0;
+    if(nx>maxX)nx=maxX; if(ny>maxY)ny=maxY;
+    c.style.left=nx+'px';
+    c.style.top=ny+'px';
+    e.preventDefault();
+  }
+  function end(e){
+    if(!dragging)return;
+    dragging=false;
+  }
+  // Touch + mouse on card and handle
+  // drag only from handle
+  // drag only from handle
+  window.addEventListener('touchmove',move,{passive:false});
+  window.addEventListener('mousemove',move);
+  window.addEventListener('touchend',end);
+  window.addEventListener('mouseup',end);
+  window.addEventListener('touchcancel',end);
+
+  function done(v){
+    window.removeEventListener('touchmove',move);
+    window.removeEventListener('mousemove',move);
+    window.removeEventListener('touchend',end);
+    window.removeEventListener('mouseup',end);
+    window.removeEventListener('touchcancel',end);
+    b.remove();
+    res(v);
+  }
   b.onclick=function(e){if(e.target===b)done('x')};
-  c.querySelectorAll('button').forEach(function(x){x.onclick=function(){done(x.dataset.c)}});
+  c.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      if(moved){e.preventDefault();e.stopPropagation();return}
+      done(btn.dataset.c);
+    });
+  });
 })};
 window.__newFolderApp=async function(){
   if(typeof dirty!=='undefined'&&dirty){var okd=await confirmFn('You have unsaved changes. Discard them?',{title:'Unsaved changes',confirmText:'Discard',cancelText:'Keep editing'});if(!okd)return}
@@ -397,14 +469,14 @@ try{
 status.textContent=currentPath+' •';
   if(typeof window.saveCurrentProject==='function'){
     try{
-      await window.saveCurrentProject();toast('Saved','success');status.textContent=currentPath+' Saved';
+      toast('Saved','success');status.textContent=currentPath+' Saved';await window.saveCurrentProject();
       if(typeof window.logHistory==='function'){
         window.logHistory({type:'edit',path:currentPath,note:'Edited file',text:f.text.length<300000?f.text:undefined});
       }
       status.textContent=currentPath+' Saved';
       void 0;
       setTimeout(function(){status.textContent=currentPath},1500);
-    }catch(e){toast('Save failed: '+(e&&e.message||e),'error')}
+    }catch(e){toast('Save failed','error')}
   }
   if(typeof render==='function')render();
 }

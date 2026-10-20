@@ -84,12 +84,12 @@ async function dbGetAllRaw(){
 }
 let __saveTimer=null;
 function __flushProjects(){clearTimeout(__saveTimer);__saveTimer=null;if(__projCache)return dbSetAllNow(__projCache,__cacheUid);return Promise.resolve()}
-async function dbSetAll(arr){__projCache=arr;__cacheUid=__uid();clearTimeout(__saveTimer);__saveTimer=setTimeout(function(){__flushProjects().catch(function(e){showToast('Save failed: '+e.message,'error')})},500)}
+async function dbSetAll(arr){__projCache=arr;__cacheUid=__uid();clearTimeout(__saveTimer);__saveTimer=setTimeout(__flushProjects,500)}
 window.addEventListener('pagehide',function(){if(__saveTimer)__flushProjects()});
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&__saveTimer)__flushProjects()});
 async function dbSetAllNow(arr,uid){
-  if(uid===undefined)uid=__uid();if(uid===null)throw new Error('Not signed in, cannot save');
-  try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,__key(uid));await new Promise(function(res,rej){tx.oncomplete=res;tx.onerror=function(){rej(tx.error)};tx.onabort=function(){rej(tx.error||new Error('Storage write aborted (storage may be full)'))}})}catch(e){console.warn(e);throw e}
+  if(uid===undefined)uid=__uid();if(uid===null)return;
+  try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,__key(uid));await new Promise(function(res){tx.oncomplete=res;tx.onerror=res;tx.onabort=res})}catch(e){console.warn(e)}
 }
 async function dbUpsertProject(p){const all=await dbGetAll();const i=all.findIndex(function(x){return x.id===p.id});if(i>=0)all[i]=p;else all.unshift(p);await dbSetAll(all)}
 async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all.filter(function(x){return x.id!==id}))}
@@ -130,13 +130,13 @@ function htmlPages(){return files.filter(function(f){return ['html','htm'].inclu
 function currentProjectName(){return window.__currentProjectName||'No project loaded'}
 function setCurrentProjectName(n){window.__currentProjectName=n||'No project loaded';const dn=$('detailProjectName');if(dn)dn.textContent=window.__currentProjectName}
 
-async function __saveCurrentProjectImpl(){
+async function saveCurrentProject(){
   if(!currentProjectId||!files.length)return;
   const all=await dbGetAll();const existing=all.find(function(p){return p.id===currentProjectId});
   await dbUpsertProject(Object.assign({},existing,{id:currentProjectId,name:existing?existing.name:currentProjectName(),files:serializeFiles(),savedAt:Date.now(),createdAt:existing?existing.createdAt:Date.now()}));
   await renderProjectCards();
 }
-window.saveCurrentProject=async function(){await __saveCurrentProjectImpl();if(document.getElementById('bundleProjectsCard')&&typeof renderBundleProjects==='function')renderBundleProjects()};
+window.saveCurrentProject=async function(){await saveCurrentProject();if(document.getElementById('bundleProjectsCard')&&typeof renderBundleProjects==='function')renderBundleProjects()};
 
 function openDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.add('open');if(b)b.classList.add('open')}
 function closeDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open')}

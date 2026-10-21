@@ -214,6 +214,86 @@ async function __doDelete(paths){
   if(typeof window.logHistory==='function')window.logHistory({type:'delete',path:paths[0],note:'Deleted '+paths.length+' file'+(paths.length===1?'':'s')});
   return true;
 }
+async function __doRename(oldPath,raw){
+  const np=String(raw||'').trim().replace(/\\/g,'/').replace(/\/{2,}/g,'/').replace(/^\/+/,'').replace(/\/+$/,'');
+  if(!np){toast('Type a new name','error');return false}
+  if(np===oldPath){toast('That is already the name','error');return false}
+  if(/(^|\/)\.\.?(\/|$)/.test(np)||/[\u0000-\u001f<>:"|?*\\]/.test(np)){toast('That name is not allowed','error');return false}
+  if(files.some(function(x){return x.path.toLowerCase()===np.toLowerCase()&&x.path!==oldPath})){toast('A file with that name already exists','error');return false}
+  const f=files.find(function(x){return x.path===oldPath});
+  if(!f){toast('File not found','error');return false}
+  const pid=(typeof currentProjectId!=='undefined')?currentProjectId:null;
+  if(!pid){toast('Open a project first','error');return false}
+  if(oldPath===currentPath&&f.text!=null&&ta.value!==f.text){f.text=ta.value;f.size=f.text.length;dirty=false;originalText=f.text}
+  try{
+    const all0=await dbGetAll();const p0=all0.find(function(x){return x.id===pid});
+    if(p0){
+      p0.snapshots=p0.snapshots||[];
+      p0.snapshots.unshift({ts:Date.now(),label:'Before rename',files:files.map(function(x){return{path:x.path,name:x.name,size:x.size,type:x.type,text:x.text,blob:x.blob}})});
+      if(p0.snapshots.length>20)p0.snapshots.length=20;
+      await dbSetAll(all0);
+    }
+  }catch(e0){}
+  const esc=oldPath.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const src='(?<![\\w.\\-])'+esc+'(?![\\w\\-.])';
+  const rt=new RegExp(src),rg=new RegExp(src,'g');
+  const hits=files.filter(function(x){return x!==f&&x.text!=null&&rt.test(x.text)});
+  f.path=np;f.name=np.split('/').pop();
+  if(hits.length){
+    const yes=await confirmFn(hits.length+' other file'+(hits.length===1?'':'s')+' mention "'+oldPath+'" (like a link or script tag). Update '+(hits.length===1?'it':'them')+' to "'+np+'"?',{title:'Update links?',confirmText:'Update',cancelText:'Keep as is'});
+    if(yes)hits.forEach(function(x){x.text=x.text.replace(rg,function(){return np});x.size=x.text.length});
+  }
+  if(oldPath===currentPath)currentPath=np;
+  if(fileHistories[oldPath]){fileHistories[np]=fileHistories[oldPath];delete fileHistories[oldPath]}
+  if(typeof currentPagePath!=='undefined'&&currentPagePath===oldPath)currentPagePath=np;
+  try{localStorage.removeItem('mb_draft_'+pid+'_'+oldPath)}catch(e1){}
+  try{const sf=JSON.parse(localStorage.getItem('mb_file')||'null');if(sf&&sf.pid===pid&&sf.path===oldPath){sf.path=np;localStorage.setItem('mb_file',JSON.stringify(sf))}}catch(e2){}
+  refreshFileList();
+  if(typeof populatePages==='function')populatePages();
+  if(typeof render==='function')render();
+  if(typeof window.saveCurrentProject==='function')await window.saveCurrentProject();
+  try{
+    const all1=await dbGetAll();const p1=all1.find(function(x){return x.id===pid});
+    const lg=(typeof detectProjectLogo==='function')?detectProjectLogo(files):null;
+    if(p1&&(lg||null)!==(p1.logo||null)){p1.logo=lg||null;await dbSetAll(all1);if(typeof renderProjectCards==='function')renderProjectCards()}
+  }catch(e3){}
+  if(typeof window.logHistory==='function')window.logHistory({type:'edit',path:np,note:'Renamed from '+oldPath,text:(f.text!=null&&f.text.length<300000)?f.text:undefined});
+  return true;
+}
+window.__renameCurrentFile=async function(){
+  if(!currentPath){toast('Open a file first','error');return}
+  const old=currentPath;
+  const nn=await promptFn('Rename this file',old,{message:'Type the new name. A folder path like pages/about.html moves it.',confirmText:'Rename'});
+  if(nn==null)return;
+  if(await __doRename(old,nn))toast('Renamed to '+String(nn).trim(),'success');
+};
+window.__openRenameFiles=function(){
+  if(typeof currentProjectId==='undefined'||!currentProjectId||!files.length){toast('Open a project with files first','error');return}
+  const list=files.map(function(f){return f.path}).sort(function(a,b){return a.localeCompare(b)});
+  const bk=document.createElement('div');
+  bk.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
+  const c=document.createElement('div');
+  c.style.cssText='width:100%;max-width:560px;max-height:85vh;overflow-y:auto;background:#15161a;border:1px solid #2a2b32;border-radius:18px 18px 0 0;padding:16px 16px 24px;box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff';
+  bk.appendChild(c);document.body.appendChild(bk);
+  function close(){bk.remove()}
+  bk.onclick=function(e){if(e.target===bk)close()};
+  c.innerHTML='<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">RENAME FILE</div>'+
+    '<div style="font-size:18px;font-weight:800;margin:4px 0 4px">Tap the file to rename</div>'+
+    '<div style="font-size:12px;color:#a2a3ad;margin-bottom:10px">Pick one file, then type its new name.</div>'+
+    '<div style="border:1px solid #25262c;border-radius:12px;background:#101115;overflow:hidden">'+list.map(function(p,i){
+      return '<button data-i="'+i+'" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:13px 12px;border:0;border-bottom:1px solid #1d1e24;background:transparent;color:#fff;font-family:inherit;font-size:13px;cursor:pointer"><span style="flex:1;overflow-wrap:anywhere">'+escHtml(p)+'</span>'+(p===currentPath?'<span style="font-size:10px;color:#a2a3ad">open now</span>':'')+'</button>';
+    }).join('')+'</div>'+
+    '<button id="rfX" style="display:block;width:100%;margin-top:10px;padding:14px;border-radius:12px;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:transparent;color:#a2a3ad">Cancel</button>';
+  $('rfX').onclick=close;
+  c.querySelectorAll('button[data-i]').forEach(function(b){
+    b.onclick=async function(){
+      const old=list[+b.dataset.i];
+      const nn=await promptFn('Rename file',old,{message:'Type the new name. A folder path like pages/about.html moves it.',confirmText:'Rename'});
+      if(nn==null)return;
+      if(await __doRename(old,nn)){close();toast('Renamed to '+String(nn).trim(),'success')}
+    };
+  });
+};
 window.__deleteCurrentFile=async function(){
   if(!currentPath){toast('Open a file first','error');return}
   const name=currentPath;

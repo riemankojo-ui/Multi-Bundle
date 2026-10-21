@@ -191,6 +191,8 @@
       if (!ok) return;
       applyOp({ v: '', a: 0, b: 0 }); toast('Cleared. Tap Undo to bring it back.');
     },
+    renthis: function () { closeCard(); if (typeof window.__renameCurrentFile === 'function') window.__renameCurrentFile(); else toast('Not ready'); },
+    renfiles: function () { closeCard(); if (typeof window.__openRenameFiles === 'function') window.__openRenameFiles(); else toast('Not ready'); },
     delthis: function () { closeCard(); if (typeof window.__deleteCurrentFile === 'function') window.__deleteCurrentFile(); else toast('Not ready'); },
 delfiles: function () { closeCard(); if (typeof window.__openDeleteFiles === 'function') window.__openDeleteFiles(); else toast('Not ready'); },
     ind: function () { applyOp(indentOp(ta.value, ta.selectionStart, ta.selectionEnd)); },
@@ -235,7 +237,7 @@ delfiles: function () { closeCard(); if (typeof window.__openDeleteFiles === 'fu
     '<button data-a="line">Go to line</button><button data-a="sel">Select line</button>' +
     '<button data-a="dup">Duplicate line</button><button data-a="del">Delete line</button>' +
     '<button data-a="cmt">Comment line</button><button data-a="paste">Paste</button>' +
-    '<button data-a="ind">Indent</button><button data-a="out">Outdent</button>' +
+    '<button data-a="renthis">Rename this file</button><button data-a="renfiles">Rename file</button>' +
     '<button data-a="delthis">Delete this file</button><button data-a="delfiles">Delete file</button>' +
     '<button data-a="dedup" id="etDedup" style="grid-column:1 / -1;padding:10px 4px;font-size:12px">Remove DBT (0)</button></div>' +
     '<div class="et-size"><span>Text size</span><button data-a="fsm" aria-label="Smaller">A\u2212</button><b id="etFs">' + fs + '</b><button data-a="fsp" aria-label="Bigger">A+</button></div>';

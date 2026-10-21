@@ -15,7 +15,7 @@ document.addEventListener('click',function(e){
   const bd=document.getElementById('drawerBackdrop');
   if(drawer)drawer.classList.remove('open');
   if(bd)bd.classList.remove('open');
-   try{localStorage.setItem('mb_nav',JSON.stringify({tab:name,pid:currentProjectId}))}catch(e){}
+   if(window.self===window.top)try{localStorage.setItem('mb_nav',JSON.stringify({tab:name,pid:currentProjectId}))}catch(e){}
   if(name==='projects'&&typeof showProjectsList==='function')showProjectsList();
   if(name==='updates'&&typeof setUpdatesTab==='function')setUpdatesTab(window.__updatesMode||'github');
 },true);
@@ -634,6 +634,7 @@ window.addEventListener('message',function(e){
 });
 
 function openPage(path){
+  if(window.self!==window.top)return;
   resetPreview();const f=findFile(path);
   if(!f){if($('previewPath'))$('previewPath').textContent='File not found';return}
   currentPagePath=f.path;if($('pageSelect'))$('pageSelect').value=f.path;
@@ -704,7 +705,7 @@ function showTab(name){
   });
   document.querySelectorAll('.bottom span').forEach(function(s){s.classList.toggle('selected',s.dataset.tab===name)});
   document.querySelectorAll('.drawer-nav a').forEach(function(a){a.classList.toggle('selected',a.dataset.tab===name)});
-   try{localStorage.setItem('mb_nav',JSON.stringify({tab:name,pid:currentProjectId}))}catch(e){}
+   if(window.self===window.top)try{localStorage.setItem('mb_nav',JSON.stringify({tab:name,pid:currentProjectId}))}catch(e){}
   if(name==='projects')showProjectsList();
   if(name==='bundle'&&typeof renderBundleProjects==='function')renderBundleProjects();
   if(name==='updates'&&typeof setUpdatesTab==='function')setUpdatesTab(window.__updatesMode||'github');

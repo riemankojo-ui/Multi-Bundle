@@ -143,6 +143,21 @@
     try { localStorage.setItem('mb_edfs', String(fs)); } catch (e) {}
   }
 
+  function countDoubles() {
+    var lines = ta.value.split('\n'), prev = null, n = 0;
+    lines.forEach(function (l) {
+      var t = l.trim();
+      if (t && t === prev && /[A-Za-z0-9]/.test(t)) n++; else prev = t;
+    });
+    return n;
+  }
+  function updateDedup() {
+    var b = $('etDedup'); if (!b) return;
+    b.textContent = 'Remove DBT (' + countDoubles() + ')';
+  }
+  ta.addEventListener('input', function () {
+    clearTimeout(window.__dbtT); window.__dbtT = setTimeout(updateDedup, 300);
+  });
   var ACTIONS = {
     all: function () { if (!haveFile()) return toast('Open a file first'); ta.blur(); ta.select(); },
     copy: function () { if (!ta.value) return toast('Nothing to copy'); var n = ta.value.split('\n').length; copyText(ta.value, 'Copied all ' + n + ' lines'); },
@@ -180,6 +195,22 @@
 delfiles: function () { closeCard(); if (typeof window.__openDeleteFiles === 'function') window.__openDeleteFiles(); else toast('Not ready'); },
     ind: function () { applyOp(indentOp(ta.value, ta.selectionStart, ta.selectionEnd)); },
     out: function () { applyOp(outdentOp(ta.value, ta.selectionStart, ta.selectionEnd)); },
+    dedup: async function () {
+      if (!haveFile()) return toast('Open a file first');
+      var v = ta.value, a = ta.selectionStart, b = ta.selectionEnd, s = 0, e = v.length;
+      if (a !== b) { var r = lineRange(v, a, b); s = r.start; e = r.end; }
+      var lines = v.slice(s, e).split('\n'), out = [], prev = null, n = 0;
+      lines.forEach(function (l) {
+        var t = l.trim();
+        if (t && t === prev && /[A-Za-z0-9]/.test(t)) { n++; return; }
+        out.push(l); prev = t;
+      });
+      if (!n) return toast('No doubled lines found');
+      var ok = typeof window.showConfirm === 'function' ? await window.showConfirm('Found ' + n + ' line' + (n === 1 ? '' : 's') + ' that repeat the line right above them. Remove ' + (n === 1 ? 'it' : 'them') + '? You can bring ' + (n === 1 ? 'it' : 'them') + ' back with Undo.', { title: 'Remove doubled lines?', confirmText: 'Remove', cancelText: 'Cancel' }) : true;
+      if (!ok) return;
+      applyOp({ v: v.slice(0, s) + out.join('\n') + v.slice(e), a: s, b: s });
+      toast('Removed ' + n + ' doubled line' + (n === 1 ? '' : 's') + '. Tap Undo to bring back.', 'success');
+    },
     fsm: function () { setFs(fs - 1); },
     fsp: function () { setFs(fs + 1); }
   };
@@ -205,7 +236,8 @@ delfiles: function () { closeCard(); if (typeof window.__openDeleteFiles === 'fu
     '<button data-a="dup">Duplicate line</button><button data-a="del">Delete line</button>' +
     '<button data-a="cmt">Comment line</button><button data-a="paste">Paste</button>' +
     '<button data-a="ind">Indent</button><button data-a="out">Outdent</button>' +
-    '<button data-a="delthis">Delete this file</button><button data-a="delfiles">Delete file</button></div>' +
+    '<button data-a="delthis">Delete this file</button><button data-a="delfiles">Delete file</button>' +
+    '<button data-a="dedup" id="etDedup" style="grid-column:1 / -1;padding:10px 4px;font-size:12px">Remove DBT (0)</button></div>' +
     '<div class="et-size"><span>Text size</span><button data-a="fsm" aria-label="Smaller">A\u2212</button><b id="etFs">' + fs + '</b><button data-a="fsp" aria-label="Bigger">A+</button></div>';
   
   // APPEND TO BODY (Floats over everything)
@@ -219,6 +251,7 @@ let hasMoved = false;
 let savedLeft = 0, savedTop = 0;
 
   function openCard() {
+  updateDedup();
   var tc = $('editorThemeCard'); if (tc) tc.classList.remove('open');
   card.classList.add('open');
   

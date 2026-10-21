@@ -683,6 +683,8 @@ $('editorNewBtn').onclick=async function(){const choice=window.__addChoice?await
 };
 
 function renderPreview(){
+  if(window.self!==window.top)return;
+  var __pp=$('editorPreviewPane');if(!__pp||!__pp.classList.contains('open'))return;
   if(!currentPath)return;
   const loader=$('editorPreviewLoader');
   if(loader)loader.classList.add('show');
@@ -690,7 +692,7 @@ function renderPreview(){
   previewFrame.srcdoc=(typeof htmlRewrite==='function')?htmlRewrite(ta.value,currentPath):ta.value;
 }
 $('editorPreviewRefresh').onclick=renderPreview;
-$('editorPreviewBtn').onclick=function(){renderPreview();$('editorPreviewPane').classList.add('open')};
+$('editorPreviewBtn').onclick=function(){$('editorPreviewPane').classList.add('open');renderPreview()};
 (function(){
   var cb=$('editorPreviewClose'),pane=$('editorPreviewPane');
   function closePv(){

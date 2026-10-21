@@ -111,7 +111,13 @@
     if (typeof files !== 'undefined') files = [];
     if (typeof currentProjectId !== 'undefined') currentProjectId = null;
     if (typeof setCurrentProjectName === 'function') setCurrentProjectName('No project loaded');
-    try { if (typeof showTab === 'function') showTab('home'); } catch (e) {}
+    // Only go Home on real sign-out — not while you are mid-edit
+    try {
+      if (typeof showTab === 'function' && document.getElementById('loginGate') &&
+          document.getElementById('loginGate').style.display !== 'none') {
+        showTab('home');
+      }
+    } catch (e) {}
   }
 
   // ---------- GitHub token for an account (so "Continue with GitHub" also unlocks your repos) ----------

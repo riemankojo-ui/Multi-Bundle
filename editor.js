@@ -179,6 +179,92 @@ window.__importFromPhone=function(){
   inp.click();
 };
 const confirmFn=window.showConfirm||function(){return Promise.resolve(false)};
+async function __doDelete(paths){
+  if(!paths.length)return false;
+  const pid=(typeof currentProjectId!=='undefined')?currentProjectId:null;
+  if(!pid){toast('Open a project first','error');return false}
+  try{
+    const all0=await dbGetAll();const p0=all0.find(function(x){return x.id===pid});
+    if(p0){
+      p0.snapshots=p0.snapshots||[];
+      p0.snapshots.unshift({ts:Date.now(),label:'Before delete',files:files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})});
+      if(p0.snapshots.length>20)p0.snapshots.length=20;
+      await dbSetAll(all0);
+    }
+  }catch(e0){}
+  const cur=currentPath;
+  paths.forEach(function(path){
+    for(let i=files.length-1;i>=0;i--){if(files[i].path===path)files.splice(i,1)}
+    try{localStorage.removeItem('mb_draft_'+pid+'_'+path)}catch(e1){}
+    delete fileHistories[path];
+  });
+  if(paths.indexOf(cur)>-1){currentPath='';dirty=false;originalText=''}
+  refreshFileList();
+  if(!files.some(function(f){return f.text!=null})){
+    ta.value='';currentPath='';dirty=false;originalText='';
+    updateGutter();refreshHighlight();status.textContent='No file open';
+  }
+  if(typeof render==='function')render();
+  if(typeof window.saveCurrentProject==='function')await window.saveCurrentProject();
+  try{
+    const all1=await dbGetAll();const p1=all1.find(function(x){return x.id===pid});
+    const lg=(typeof detectProjectLogo==='function')?detectProjectLogo(files):null;
+    if(p1&&(lg||null)!==(p1.logo||null)){p1.logo=lg||null;await dbSetAll(all1);if(typeof renderProjectCards==='function')renderProjectCards()}
+  }catch(e2){}
+  if(typeof window.logHistory==='function')window.logHistory({type:'delete',path:paths[0],note:'Deleted '+paths.length+' file'+(paths.length===1?'':'s')});
+  return true;
+}
+window.__deleteCurrentFile=async function(){
+  if(!currentPath){toast('Open a file first','error');return}
+  const name=currentPath;
+  const ok=await confirmFn('Delete '+name+' from this project? A backup snapshot is saved first, so you can bring it back from Backups.',{title:'Delete this file?',confirmText:'Delete',cancelText:'Cancel'});
+  if(!ok)return;
+  if(await __doDelete([name]))toast('Deleted '+name,'success');
+};
+window.__openDeleteFiles=function(){
+  if(typeof currentProjectId==='undefined'||!currentProjectId||!files.length){toast('Open a project with files first','error');return}
+  const list=files.map(function(f){return f.path}).sort(function(a,b){return a.localeCompare(b)});
+  const sel={};
+  const bk=document.createElement('div');
+  bk.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
+  const c=document.createElement('div');
+  c.style.cssText='width:100%;max-width:560px;max-height:85vh;overflow-y:auto;background:#15161a;border:1px solid #2a2b32;border-radius:18px 18px 0 0;padding:16px 16px 24px;box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff';
+  bk.appendChild(c);document.body.appendChild(bk);
+  function close(){bk.remove()}
+  bk.onclick=function(e){if(e.target===bk)close()};
+  const bs='display:block;width:100%;margin-top:10px;padding:14px;border-radius:12px;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:#20222a;color:#fff';
+  const sm='background:#20222a;color:#cfd0d8;border:1px solid #303139;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer';
+  c.innerHTML='<div style="display:flex;align-items:center;gap:10px"><div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424;flex:1">DELETE FILES</div><button id="dfAll" style="'+sm+'">Select all</button></div>'+
+    '<div style="font-size:18px;font-weight:800;margin:4px 0 4px">Select files to delete</div>'+
+    '<div style="font-size:12px;color:#a2a3ad;margin-bottom:10px">Tap the files you want to remove from this project.</div>'+
+    '<div style="border:1px solid #25262c;border-radius:12px;background:#101115;overflow:hidden">'+list.map(function(p,i){
+      return '<label style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid #1d1e24;cursor:pointer"><input type="checkbox" data-i="'+i+'" style="width:18px;height:18px;accent-color:#ff2d46;flex-shrink:0"><span style="flex:1;font-size:13px;overflow-wrap:anywhere">'+escHtml(p)+'</span>'+(p===currentPath?'<span style="font-size:10px;color:#a2a3ad">open now</span>':'')+'</label>';
+    }).join('')+'</div>'+
+    '<button id="dfGo" style="'+bs+';background:#f01424;border:0"></button>'+
+    '<button id="dfX" style="'+bs+';background:transparent;color:#a2a3ad">Cancel</button>';
+  function count(){return Object.keys(sel).filter(function(k){return sel[k]}).length}
+  function refresh(){
+    const n=count();
+    const go=$('dfGo');go.textContent='Delete '+n+' file'+(n===1?'':'s');
+    go.disabled=!n;go.style.opacity=n?'1':'.4';
+    $('dfAll').textContent=(n===list.length)?'Select none':'Select all';
+  }
+  c.querySelectorAll('input[type=checkbox]').forEach(function(cb){cb.onchange=function(){sel[cb.dataset.i]=cb.checked;refresh()}});
+  $('dfAll').onclick=function(){
+    const on=count()!==list.length;
+    c.querySelectorAll('input[type=checkbox]').forEach(function(cb){cb.checked=on;sel[cb.dataset.i]=on});
+    refresh();
+  };
+  $('dfX').onclick=close;
+  $('dfGo').onclick=async function(){
+    const chosen=list.filter(function(p,i){return sel[i]});
+    if(!chosen.length)return;
+    const ok=await confirmFn('Delete '+chosen.length+' file'+(chosen.length===1?'':'s')+' from this project? A backup snapshot is saved first, so you can bring them back from Backups.',{title:'Delete files?',confirmText:'Delete',cancelText:'Cancel'});
+    if(!ok)return;
+    if(await __doDelete(chosen)){close();toast('Deleted '+chosen.length+' file'+(chosen.length===1?'':'s'),'success')}
+  };
+  refresh();
+};
 
 function escHtml(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
 

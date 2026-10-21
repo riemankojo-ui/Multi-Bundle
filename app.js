@@ -66,7 +66,7 @@ function openDB(){if(!__dbp){__dbp=openDBRaw();__dbp.catch(function(){__dbp=null
 function openDBRaw(){return new Promise(function(res,rej){const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=function(){const db=r.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE)};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
 let __projCache=null;
 async function dbGetAll(){const uid=__uid();if(__projCache&&__cacheUid===uid)return __projCache;if(__projCache&&__cacheUid!==uid&&__saveTimer)await __flushProjects();const r=await dbGetAllRaw();__projCache=r;__cacheUid=uid;return r}
-function __uid(){let u=null;try{u=window.getCloudUser&&window.getCloudUser()}catch(e){}if(u)return u.uid;return window.__authKnown?null:'local'}
+function __uid(){let u=null;try{u=window.getCloudUser&&window.getCloudUser()}catch(e){}if(u){const em=u.email||(u.providerData&&u.providerData[0]&&u.providerData[0].email)||'';return em?('e:'+String(em).toLowerCase()):u.uid}return window.__authKnown?null:'local'}
 function __key(uid){return uid==='local'?'projects':'projects_'+uid}
 let __cacheUid=null;
 async function dbGetAllRaw(){
@@ -75,6 +75,12 @@ async function dbGetAllRaw(){
     const db=await openDB();
     function read(k){return new Promise(function(res){const req=db.transaction(DB_STORE,'readonly').objectStore(DB_STORE).get(k);req.onsuccess=function(){res(req.result)};req.onerror=function(){res(null)}})}
     let d=await read(__key(uid));
+    if(!d&&typeof uid==='string'&&uid.indexOf('e:')===0){
+      try{
+        const cu=window.getCloudUser&&window.getCloudUser();
+        if(cu&&cu.uid){const own=await read('projects_'+cu.uid);if(own&&own.length){d=own;const txc=db.transaction(DB_STORE,'readwrite');txc.objectStore(DB_STORE).put(d,__key(uid))}}
+      }catch(e8){}
+    }
     if(!d&&uid!=='local'&&!localStorage.getItem('mb_legacy_claimed')){
       const old=await read('projects');
       if(old&&old.length){d=old;localStorage.setItem('mb_legacy_claimed',uid);const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(d,__key(uid))}

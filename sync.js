@@ -15,7 +15,7 @@
   try { rememberedUid = localStorage.getItem('mb_uid') || ''; } catch (e) {}
 
   // Until Google answers, act as the account that was signed in last time so a refresh keeps your projects.
-  window.getCloudUser = () => cloudUser || (!authKnown && rememberedUid ? { uid: rememberedUid } : null);
+  window.getCloudUser = () => cloudUser || (!authKnown && rememberedUid ? { uid: rememberedUid, email: ((cachedProfile() || {}).email || '') } : null);
   window.isCloudSignedIn = () => !!cloudUser;
   Object.defineProperty(window, '__authKnown', { get: () => authKnown, configurable: true });
 

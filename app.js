@@ -910,7 +910,7 @@ async function pubSaveBack(projId,chosen){
   p.savedAt=Date.now();
   await dbSetAll(all);
   try{await __flushProjects()}catch(e){showToast('Save failed: '+(e&&e.message||e),'error');return false}
-  if(currentProjectId===projId){files=deserializeFiles(p.files)}
+  if(currentProjectId===projId){files=deserializeFiles(p.files);if(typeof window.__edReloadCurrent==='function')window.__edReloadCurrent(chosen.map(function(s){return s.path}))}
   await renderProjectCards();
   if(typeof populatePages==='function')populatePages();
   if(typeof render==='function')render();
@@ -1027,7 +1027,7 @@ async function saveFileBack(projectId,ts){
   p.savedAt=Date.now();
   p.history.unshift({ts:Date.now(),type:'edit',path:h.path,note:'Saved back from update',text:h.text});
   await dbSetAll(all);
-  if(currentProjectId===projectId){files=deserializeFiles(p.files)}
+  if(currentProjectId===projectId){files=deserializeFiles(p.files);if(typeof window.__edReloadCurrent==='function')window.__edReloadCurrent([h.path])}
   await renderProjectCards();
   if(typeof populatePages==='function')populatePages();
   if(typeof render==='function')render();
@@ -1043,7 +1043,7 @@ async function restoreSnapshot(projectId,ts){
   if(p.snapshots.length>20)p.snapshots.length=20;
   p.files=snap.files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}});
   p.savedAt=Date.now();await dbSetAll(all);
-  if(currentProjectId===projectId){files=deserializeFiles(p.files);setCurrentProjectName(p.name)}
+  if(currentProjectId===projectId){files=deserializeFiles(p.files);setCurrentProjectName(p.name);if(typeof window.__edReloadCurrent==='function')window.__edReloadCurrent(files.map(function(f){return f.path}))}
   await renderProjectCards();populatePages();render();
   showToast('Restored from '+new Date(snap.ts).toLocaleString(),'success');
   openUpdatesDetail(projectId,window.__updatesMode||'local');

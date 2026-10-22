@@ -990,7 +990,7 @@ window.__edOpenFile = function (path) {
 window.__edReloadCurrent = function (paths) {
   try {
     paths = paths || [];
-    paths.forEach(function (p) { delete fileHistories[p]; });
+    paths.forEach(function (p) { delete fileHistories[p]; try { localStorage.removeItem('mb_draft_' + (typeof currentProjectId !== 'undefined' ? currentProjectId : '') + '_' + p); } catch (e0) {} });
     var cp = currentPath, hit = paths.indexOf(cp) > -1;
     if (hit) dirty = false;
     refreshFileList();

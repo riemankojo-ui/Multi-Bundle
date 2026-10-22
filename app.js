@@ -706,6 +706,7 @@ function bundlePick(id,all){
   };
 }
 function showTab(name){
+  if(name!=='editor'&&document.body.classList.contains('editor-full')&&$('editorFullBtn'))$('editorFullBtn').click();
   ['home','projects','bundle','preview','editor','backups','github','updates'].forEach(function(p){
     const el=$(p+'Page');if(el)el.hidden=(p!==name);
   });
@@ -717,6 +718,7 @@ function showTab(name){
   if(name==='updates'&&typeof setUpdatesTab==='function')setUpdatesTab(window.__updatesMode||'github');
 }
 window.showTab=showTab;
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 
 window.__updatesMode='github';
 let __updatesCurrentProject=null;

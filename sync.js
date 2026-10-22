@@ -309,6 +309,7 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
       if (previousUid && previousUid !== user.uid) resetScreen();
     } else {
       try { localStorage.removeItem('mb_uid'); } catch (e) {}
+      if (previousUid && !signingOut) { try { localStorage.setItem('mb_lastout', new Date().toISOString()); } catch (e) {} toast('Your session ended on its own. Please sign in again.', 'error'); }
       rememberedUid = '';
       if (loginGate) loginGate.style.display = "flex";
       setBusy(false);

@@ -772,11 +772,12 @@ function renderPreview(){
   previewFrame.srcdoc=(typeof htmlRewrite==='function')?htmlRewrite(ta.value,currentPath):ta.value;
 }
 $('editorPreviewRefresh').onclick=renderPreview;
-$('editorPreviewBtn').onclick=function(){$('editorPreviewPane').classList.add('open');renderPreview()};
+$('editorPreviewBtn').onclick=function(){$('editorPreviewPane').classList.add('open');ta.readOnly=true;ta.blur();renderPreview()};
 (function(){
   var cb=$('editorPreviewClose'),pane=$('editorPreviewPane');
   function closePv(){
     pane.classList.remove('open');
+    ta.readOnly=false;
     try{previewFrame.srcdoc=''}catch(_){}
   }
   cb.onclick=closePv;

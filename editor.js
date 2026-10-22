@@ -586,6 +586,7 @@ async function cutMatch(){
     if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(piece);
     else{const t=document.createElement('textarea');t.value=piece;t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t)}
   }catch(err){}
+  window.__edSkipRestore=Date.now()+1500;
   ta.value=ta.value.slice(0,s)+ta.value.slice(e);
   edited();runSearch();
   const k=matches.findIndex(function(p){return p>=s});
@@ -596,6 +597,7 @@ if($('editorCutBtn'))$('editorCutBtn').onclick=cutMatch;
 if($('editorReplaceOne'))$('editorReplaceOne').onclick=replaceOne;
 if($('editorReplaceAll'))$('editorReplaceAll').onclick=replaceAll;
 function __quiet(pos){
+  try{if(window.__edSetCaret)window.__edSetCaret(pos)}catch(_){}
   function go(){
     try{CSS.highlights.delete('srch-all');CSS.highlights.delete('srch')}catch(_){}
     try{ta.setSelectionRange(pos,pos)}catch(_){}
@@ -929,6 +931,7 @@ function restoreEdSel() {
     if (a == null || b == null) return;
     if (a > ta.value.length) a = ta.value.length;
     if (b > ta.value.length) b = ta.value.length;
+    if (window.__edSkipRestore && Date.now() < window.__edSkipRestore) return;
     ta.focus({ preventScroll: true });
     ta.setSelectionRange(a, b);
     if (__edSel.scroll != null) ta.scrollTop = __edSel.scroll;
@@ -970,6 +973,9 @@ if (editorPage) {
   });
   __edObs.observe(editorPage, { attributes: true, attributeFilter: ['hidden'] });
 }
+window.__edSetCaret = function (pos) {
+  __edSel = { start: pos, end: pos, path: currentPath || '', scroll: ta.scrollTop || 0 };
+};
 window.__restoreEditor = function () {
   if (typeof refreshFileList === 'function') refreshFileList();
   setTimeout(restoreEdSel, 50);

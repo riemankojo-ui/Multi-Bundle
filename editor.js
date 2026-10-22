@@ -170,7 +170,8 @@ window.__importFromPhone=function(){
     }
     if(!added)return;
     files.sort(function(a,b){return a.path.localeCompare(b.path)});
-    refreshFileList();if(typeof render==='function')render();
+    var __op=(list.find(function(f){return textExt.has(ext(f.name))})||{}).name;
+    refreshFileList();if(__op&&typeof window.__edOpenFile==='function')window.__edOpenFile(__op);if(typeof render==='function')render();
     if(typeof window.saveCurrentProject==='function')await window.saveCurrentProject();
     try{var all=await dbGetAll();var p=all.find(function(x){return x.id===currentProjectId});var lg=detectProjectLogo(files);if(p&&lg&&lg!==p.logo){p.logo=lg;await dbSetAll(all);if(typeof renderProjectCards==='function')renderProjectCards()}}catch(e0){}
     if(typeof window.logHistory==='function')window.logHistory({type:'new',path:list[0].name,note:'Imported '+added+' file'+(added===1?'':'s')+' from phone'});
@@ -716,7 +717,7 @@ async function saveFile(){
   if(!changed){
     dirty=false;
     status.textContent=currentPath;
-    toast('No changes to save');
+    toast('No changes');
     return;
   }
 
@@ -975,6 +976,16 @@ if (editorPage) {
 }
 window.__edSetCaret = function (pos) {
   __edSel = { start: pos, end: pos, path: currentPath || '', scroll: ta.scrollTop || 0 };
+};
+window.__edOpenFile = function (path) {
+  try {
+    delete fileHistories[path];
+    try { localStorage.removeItem('mb_draft_' + (typeof currentProjectId !== 'undefined' ? currentProjectId : '') + '_' + path); } catch (e) {}
+    dirty = false;
+    refreshFileList();
+    loadFile(path);
+    __edSel = { start: 0, end: 0, path: path };
+  } catch (e) {}
 };
 window.__edReloadCurrent = function (paths) {
   try {

@@ -75,8 +75,12 @@
       '<div class="bk-title">EXPORT <small>Pick the files you want to take out</small></div>' +
       '<div class="bk-bar"><label class="bk-all"><input type="checkbox" id="bkAll"><span>Select all</span></label><span class="bk-count" id="bkCount">0 selected</span></div>' +
       '<div class="bk-files">' + rows + '</div>' +
-      '<div class="bk-actions"><button class="btn primary" id="bkZip">Make ZIP</button><button class="btn secondary" id="bkRaw">Raw files</button></div>' +
-      '<div class="bk-hint">ZIP puts everything in one file. Raw files saves each file on its own with its own name, like index.html and style.css.</div></section>';
+      '<div class="bk-actions">' +
+  '<button class="btn primary" id="bkZip">Make ZIP</button>' +
+  '<button class="btn secondary" id="bkRaw">Raw files</button>' +
+  '<button class="btn secondary" id="bkDel" style="color:#ff8a8a;border-color:#5a2430;background:#25131a">Delete</button>' +
+'</div>' +
+'<div class="bk-hint">ZIP puts everything in one file. Raw files saves each file on its own with its own name. Delete removes the selected files from the project (a snapshot is saved first).</div></section>';
   }
 
   function selectedFiles(p) { return sortedFiles(p).filter(function (f) { return state.sel[f.path]; }); }
@@ -86,7 +90,7 @@
     var c = $('bkCount'); if (c) c.textContent = n + ' selected';
     var a = $('bkAll');
     if (a) { a.checked = n > 0 && n === fl.length; a.indeterminate = n > 0 && n < fl.length; }
-    ['bkZip', 'bkRaw'].forEach(function (id) { var b = $(id); if (b) b.disabled = !n || state.busy; });
+    ['bkZip', 'bkRaw', 'bkDel'].forEach(function (id) { var b = $(id); if (b) b.disabled = !n || state.busy; });
   }
 
   function download(blob, name) {
@@ -128,6 +132,71 @@
     state.busy = false; updateBar(p);
   }
 
+  async function runDelete(p) {
+    var list = selectedFiles(p);
+    if (!list.length || state.busy) return;
+
+    var msg = 'Delete ' + list.length + ' file' + (list.length === 1 ? '' : 's') +
+      ' from "' + (p.name || 'this project') + '"?\n\nA backup snapshot is saved first so you can restore later.';
+    var ok = false;
+    if (typeof window.showConfirm === 'function') {
+      ok = await window.showConfirm(msg, { title: 'Delete files', confirmText: 'Delete', cancelText: 'Keep' });
+    } else {
+      ok = window.confirm(msg);
+    }
+    if (!ok) return;
+
+    state.busy = true;
+    updateBar(p);
+    toast('Deleting…');
+
+    try {
+      // Save a snapshot first
+      p.snapshots = p.snapshots || [];
+      p.snapshots.unshift({
+        ts: Date.now(),
+        label: 'Before delete (' + list.length + ' file' + (list.length === 1 ? '' : 's') + ')',
+        files: (p.files || []).map(function (f) {
+          return { path: f.path, name: f.name, size: f.size, type: f.type, text: f.text, blob: f.blob };
+        })
+      });
+      if (p.snapshots.length > 20) p.snapshots.length = 20;
+
+      // Remove the selected files
+      var remove = {};
+      list.forEach(function (f) { remove[f.path] = true; });
+      p.files = (p.files || []).filter(function (f) { return !remove[f.path]; });
+      p.savedAt = Date.now();
+
+      // Persist
+      if (typeof dbUpsertProject === 'function') {
+        await dbUpsertProject(p);
+      } else if (typeof dbSetAll === 'function') {
+        var all = await dbGetAll();
+        var i = all.findIndex(function (x) { return x.id === p.id; });
+        if (i >= 0) all[i] = p;
+        await dbSetAll(all);
+      }
+
+      // Keep live project in sync
+      if (typeof currentProjectId !== 'undefined' && currentProjectId === p.id && typeof files !== 'undefined') {
+        files = p.files.slice();
+        if (typeof populatePages === 'function') populatePages();
+        if (typeof render === 'function') render();
+      }
+
+      // Refresh UI
+      state.sel = {};
+      toast('Deleted ' + list.length + ' file' + (list.length === 1 ? '' : 's'), 'success');
+      openProject(p.id);
+    } catch (e) {
+      toast((e && e.message) || 'Could not delete the files', 'error');
+    }
+
+    state.busy = false;
+    updateBar(p);
+  }
+
   function showList() {
     state.pid = null; state.sel = {};
     var body = $('bkBody'); if (!body) return;
@@ -153,7 +222,8 @@
       updateBar(p);
     };
     $('bkZip').onclick = function () { runZip(p); };
-    $('bkRaw').onclick = function () { runRaw(p); };
+$('bkRaw').onclick = function () { runRaw(p); };
+$('bkDel').onclick = function () { runDelete(p); };
     updateBar(p);
     window.scrollTo && window.scrollTo(0, 0);
   }

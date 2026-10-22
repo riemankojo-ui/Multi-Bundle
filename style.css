@@ -203,6 +203,13 @@ iframe{width:100%;height:100%;background:#0d0e12;border:0;display:block}
 
 /* ========== Tab visibility ========== */
 .tab-page[hidden]{display:none!important}
+main:has(#previewPage:not([hidden])){padding:6px 0 0!important}
+#previewPage:not([hidden]){height:calc(100dvh - 165px)!important;overflow:hidden!important}
+#previewPage > div:first-child{margin:0 0 6px!important;padding:0 8px!important;gap:6px!important}
+#previewPage #pageSelect{padding:6px 8px!important;font-size:12px!important}
+#previewPage .btn{padding:6px 10px!important;font-size:12px!important;white-space:nowrap}
+#previewPage #refreshBtn2{flex:none;border:1px solid var(--line);background:#101115;color:#fff;border-radius:8px;padding:4px 10px;font-size:16px;line-height:1.2}
+#previewPage #frame{min-height:0!important}
 
 /* ========== Bottom nav ========== */
 .bottom{

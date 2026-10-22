@@ -938,7 +938,7 @@ function restoreEdSel() {
   } catch (e) {}
 }
 if (ta) {
-  ['blur', 'select', 'keyup', 'mouseup', 'touchend'].forEach(function (ev) {
+  ['blur', 'select', 'keyup', 'mouseup', 'touchend', 'input'].forEach(function (ev) {
     ta.addEventListener(ev, saveEdSel);
   });
 }

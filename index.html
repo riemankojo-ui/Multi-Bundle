@@ -515,6 +515,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <script>
   const firebaseConfig = {
@@ -527,9 +528,106 @@
     measurementId: "G-NRLM5GB7N8"
   };
   
-  firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
+  function __who(){return new Promise(function(r){var un=firebase.auth().onAuthStateChanged(function(u){un();r(u)})})}
+  window.cloudTok={
+    save:async function(t){try{var u=await __who();if(!u)return;await firebase.firestore().doc('users/'+u.uid+'/private/github').set({token:t,at:Date.now()})}catch(e){}},
+    load:async function(){try{var u=await __who();if(!u)return'';var d=await firebase.firestore().doc('users/'+u.uid+'/private/github').get();return d.exists?(d.data().token||''):''}catch(e){return''}}
+  };
 </script>
 
+<script>
+(function(){
+  var sig={};
+  function who(){return new Promise(function(r){var un=firebase.auth().onAuthStateChanged(function(u){un();r(u)})})}
+  function hash(s){var h=0;for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0}return h+':'+s.length}
+  window.cloudProj={
+    save:async function(arr){
+      try{
+        var u=await who();if(!u||!arr)return;
+        var db=firebase.firestore();
+        for(var p of arr){
+          if(!p||!p.id)continue;
+          var base='users/'+u.uid+'/projects/'+encodeURIComponent(p.id);
+          var tf=(p.files||[]).filter(function(f){return typeof f.text==='string'&&!f.blob&&f.text.length<500000});
+          var ops=[];
+          tf.forEach(function(f){var k=p.id+'|'+f.path,h=hash(f.text);if(sig[k]!==h)ops.push({f:f,k:k,h:h})});
+          var mk=p.id+'|meta',ms=(p.savedAt||0)+':'+(p.name||'')+':'+tf.length;
+          for(var i=0;i<ops.length;i+=200){
+            var part=ops.slice(i,i+200),b=db.batch();
+            part.forEach(function(o){b.set(db.doc(base+'/files/'+encodeURIComponent(o.f.path)),{path:o.f.path,name:o.f.name||'',type:o.f.type||'',size:o.f.size||0,text:o.f.text})});
+            await b.commit();
+            part.forEach(function(o){sig[o.k]=o.h});
+          }
+          if(sig[mk]!==ms||ops.length){
+            await db.doc(base).set({id:p.id,name:p.name||'',savedAt:p.savedAt||0,createdAt:p.createdAt||0,source:p.source||'',githubRepo:p.githubRepo||'',githubBranch:p.githubBranch||'',paths:tf.map(function(f){return f.path})});
+            sig[mk]=ms;
+          }
+        }
+      }catch(e){}
+    },
+    load:async function(){
+      try{
+        var u=await who();if(!u)return[];
+        var db=firebase.firestore(),out=[];
+        var ps=await db.collection('users/'+u.uid+'/projects').get();
+        for(var d of ps.docs){
+          var m=d.data(),snap=await d.ref.collection('files').get(),files=[];
+          snap.forEach(function(x){var f=x.data();if(!m.paths||m.paths.indexOf(f.path)>=0)files.push({path:f.path,name:f.name,size:f.size,type:f.type,text:f.text})});
+          out.push({id:m.id,name:m.name,savedAt:m.savedAt,createdAt:m.createdAt,source:m.source||undefined,githubRepo:m.githubRepo||undefined,githubBranch:m.githubBranch||undefined,files:files,history:[]});
+        }
+        return out;
+      }catch(e){return[]}
+    }
+  };
+})();
+</script>
+<script>
+(function(){
+  var sig={};
+  function who(){return new Promise(function(r){var un=firebase.auth().onAuthStateChanged(function(u){un();r(u)})})}
+  function hash(s){var h=0;for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0}return h+':'+s.length}
+  window.cloudProj={
+    save:async function(arr){
+      try{
+        var u=await who();if(!u||!arr)return;
+        var db=firebase.firestore();
+        for(var p of arr){
+          if(!p||!p.id)continue;
+          var base='users/'+u.uid+'/projects/'+encodeURIComponent(p.id);
+          var tf=(p.files||[]).filter(function(f){return typeof f.text==='string'&&!f.blob&&f.text.length<500000});
+          var ops=[];
+          tf.forEach(function(f){var k=p.id+'|'+f.path,h=hash(f.text);if(sig[k]!==h)ops.push({f:f,k:k,h:h})});
+          var mk=p.id+'|meta',ms=(p.savedAt||0)+':'+(p.name||'')+':'+tf.length;
+          for(var i=0;i<ops.length;i+=200){
+            var part=ops.slice(i,i+200),b=db.batch();
+            part.forEach(function(o){b.set(db.doc(base+'/files/'+encodeURIComponent(o.f.path)),{path:o.f.path,name:o.f.name||'',type:o.f.type||'',size:o.f.size||0,text:o.f.text})});
+            await b.commit();
+            part.forEach(function(o){sig[o.k]=o.h});
+          }
+          if(sig[mk]!==ms||ops.length){
+            await db.doc(base).set({id:p.id,name:p.name||'',savedAt:p.savedAt||0,createdAt:p.createdAt||0,source:p.source||'',githubRepo:p.githubRepo||'',githubBranch:p.githubBranch||'',paths:tf.map(function(f){return f.path})});
+            sig[mk]=ms;
+          }
+        }
+      }catch(e){}
+    },
+    load:async function(){
+      try{
+        var u=await who();if(!u)return[];
+        var db=firebase.firestore(),out=[];
+        var ps=await db.collection('users/'+u.uid+'/projects').get();
+        for(var d of ps.docs){
+          var m=d.data(),snap=await d.ref.collection('files').get(),files=[];
+          snap.forEach(function(x){var f=x.data();if(!m.paths||m.paths.indexOf(f.path)>=0)files.push({path:f.path,name:f.name,size:f.size,type:f.type,text:f.text})});
+          out.push({id:m.id,name:m.name,savedAt:m.savedAt,createdAt:m.createdAt,source:m.source||undefined,githubRepo:m.githubRepo||undefined,githubBranch:m.githubBranch||undefined,files:files,history:[]});
+        }
+        return out;
+      }catch(e){return[]}
+    }
+  };
+})();
+</script>
 <script src="sync.js"></script>
 <script src="app.js"></script>
 <script src="editor.js"></script>

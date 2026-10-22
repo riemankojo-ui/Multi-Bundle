@@ -85,6 +85,10 @@ async function dbGetAllRaw(){
       const old=await read('projects');
       if(old&&old.length){d=old;localStorage.setItem('mb_legacy_claimed',uid);const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(d,__key(uid))}
     }
+        if(!d&&uid!=='local'&&window.cloudProj){
+      const cp=await window.cloudProj.load();
+      if(cp&&cp.length){const txr=db.transaction(DB_STORE,'readwrite');txr.objectStore(DB_STORE).put(cp,__key(uid));await new Promise(function(res){txr.oncomplete=res;txr.onerror=res;txr.onabort=res});return cp}
+    }
     return d||[];
   }catch(e){return[]}
 }
@@ -95,7 +99,9 @@ window.addEventListener('pagehide',function(){if(__saveTimer)__flushProjects()})
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&__saveTimer)__flushProjects()});
 async function dbSetAllNow(arr,uid){
   if(uid===undefined)uid=__uid();if(uid===null)return;
-  try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,__key(uid));await new Promise(function(res){tx.oncomplete=res;tx.onerror=res;tx.onabort=res})}catch(e){console.warn(e)}
+      try{const db=await openDB();const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(arr,__key(uid));await new Promise(function(res){tx.oncomplete=res;tx.onerror=res;tx.onabort=res})}catch(e){console.warn(e)}
+  try{if(window.cloudProj&&uid&&uid!=='local'&&arr&&arr.length){window.__cpLatest=arr;clearTimeout(window.__cpT);window.__cpT=setTimeout(function(){window.cloudProj.save(window.__cpLatest)},5000)}}catch(e){}
+  try{if(window.cloudProj&&uid&&uid!=='local'&&arr&&arr.length){window.__cpLatest=arr;clearTimeout(window.__cpT);window.__cpT=setTimeout(function(){window.cloudProj.save(window.__cpLatest)},5000)}}catch(e){}
 }
 async function dbUpsertProject(p){const all=await dbGetAll();const i=all.findIndex(function(x){return x.id===p.id});if(i>=0)all[i]=p;else all.unshift(p);await dbSetAll(all)}
 async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all.filter(function(x){return x.id!==id}))}
@@ -393,7 +399,8 @@ function getToken(){return ghToken}
 
 async function saveToken(t){
   const uid = window.getCloudUser() ? window.getCloudUser().uid : 'local';
-  ghToken=t;
+    ghToken=t;
+  try{ if(window.cloudTok) window.cloudTok.save(t); }catch(e){}
   try { localStorage.setItem('mb_gh_active_token', t); } catch(e) {}
   try{
     const db=await openDB();
@@ -409,7 +416,10 @@ async function loadToken(){
     const tx=db.transaction(DB_STORE,'readonly');
     const req=tx.objectStore(DB_STORE).get('githubToken_'+uid);
     const t=await new Promise(function(r){req.onsuccess=function(){r(req.result)};req.onerror=function(){r(null)}});
-    return t||'';
+        if(t) return t;
+    var ct=window.cloudTok?await window.cloudTok.load():'';
+    if(ct){try{localStorage.setItem('mb_gh_active_token',ct)}catch(e){} try{var tx2=db.transaction(DB_STORE,'readwrite');tx2.objectStore(DB_STORE).put(ct,'githubToken_'+uid)}catch(e){}}
+    return ct||'';
   }catch(e){return''}
 }
 async function clearToken(){
@@ -418,7 +428,9 @@ async function clearToken(){
   try{
     const db=await openDB();
     const tx=db.transaction(DB_STORE,'readwrite');
-    tx.objectStore(DB_STORE).delete('githubToken_'+uid);
+            tx.objectStore(DB_STORE).delete('githubToken_'+uid);
+    try{var cu=firebase.auth().currentUser;if(cu)firebase.firestore().doc('users/'+cu.uid+'/private/github').delete()}catch(e){}
+    try{var cu=firebase.auth().currentUser;if(cu)firebase.firestore().doc('users/'+cu.uid+'/private/github').delete()}catch(e){}
     await new Promise(function(r){tx.oncomplete=r});
   }catch(e){}
 }

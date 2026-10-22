@@ -189,6 +189,7 @@ async function __doDelete(paths){
     if(p0){
       p0.snapshots=p0.snapshots||[];
       p0.snapshots.unshift({ts:Date.now(),label:'Before delete',files:files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})});
+      p0.deletedPaths=(p0.deletedPaths||[]).filter(function(x){return paths.indexOf(x)===-1}).concat(paths);
       if(p0.snapshots.length>20)p0.snapshots.length=20;
       await dbSetAll(all0);
     }
@@ -231,6 +232,7 @@ async function __doRename(oldPath,raw){
     if(p0){
       p0.snapshots=p0.snapshots||[];
       p0.snapshots.unshift({ts:Date.now(),label:'Before rename',files:files.map(function(x){return{path:x.path,name:x.name,size:x.size,type:x.type,text:x.text,blob:x.blob}})});
+      p0.deletedPaths=(p0.deletedPaths||[]).filter(function(x){return x!==oldPath}).concat([oldPath]);
       if(p0.snapshots.length>20)p0.snapshots.length=20;
       await dbSetAll(all0);
     }

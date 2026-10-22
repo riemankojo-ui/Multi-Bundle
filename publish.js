@@ -85,6 +85,15 @@ await Promise.all(fl.map(async function(f){var bb=await fileBytes(f);if(bb)hm[f.
     var conflict=base?(!!rem&&base[f.path]!==rem.sha):false;
     rows.push({path:f.path,f:f,ls:ls,isNew:!rem,conflict:conflict,on:!conflict});
   }
+  if(p&&p.githubRepo===repo&&(p.githubBranch||'main')===branch&&Array.isArray(p.deletedPaths)){
+    var have={},seenDel={};fl.forEach(function(f){have[f.path]=1});
+    p.deletedPaths.forEach(function(pth){
+      if(have[pth]||seenDel[pth]||!remote[pth])return;
+      seenDel[pth]=1;
+      var cf=base?(base[pth]!==remote[pth].sha):false;
+      rows.push({path:pth,f:null,ls:null,isNew:false,isDel:true,conflict:cf,on:!cf});
+    });
+  }
   return {scan:{headSha:headSha,treeSha:treeSha,remote:remote,base:base,repo:repo,branch:branch},rows:rows};
 }
 async function pushRows(scan,rows,msg,onProgress){
@@ -92,7 +101,9 @@ async function pushRows(scan,rows,msg,onProgress){
   var entries=[],done=0,idx=0;
   async function worker(){
     while(idx<sel.length){
-      var r=sel[idx++];var bytes=await fileBytes(r.f);
+      var r=sel[idx++];
+      if(r.isDel){var rem0=scan.remote[r.path];entries.push({path:r.path,mode:(rem0&&rem0.mode)||'100644',type:'blob',sha:null});done++;if(onProgress)onProgress('Uploading '+done+'/'+sel.length+'\u2026');continue}
+      var bytes=await fileBytes(r.f);
       var b=await gh('POST','/repos/'+scan.repo+'/git/blobs',{content:b64(bytes),encoding:'base64'});
       var rem=scan.remote[r.path];
       entries.push({path:r.path,mode:(rem&&rem.mode)||'100644',type:'blob',sha:b.sha});
@@ -112,7 +123,8 @@ async function saveRecord(scan,rows){
   if(scan.base){for(var k in scan.base)nb[k]=scan.base[k]}
   else{Object.keys(scan.remote).forEach(function(k){nb[k]=scan.remote[k].sha})}
   var all=true;
-  rows.forEach(function(r){if(r.on)nb[r.path]=r.ls;else all=false});
+  rows.forEach(function(r){if(r.on){if(r.isDel)delete nb[r.path];else nb[r.path]=r.ls}else all=false});
+  if(p.deletedPaths){var gone={};rows.forEach(function(r){if(r.isDel&&r.on)gone[r.path]=1});p.deletedPaths=p.deletedPaths.filter(function(x){return !gone[x]&&scan.remote[x]})}
   p.githubRepo=scan.repo;p.githubBranch=scan.branch;p.source='github';p.githubShas=nb;
   if(all)p.lastImport=Date.now();
   await dbSetAll(list);
@@ -130,7 +142,7 @@ function updateGo(){updateRestore();
 function renderRows(){
   var box=$('pbList');if(!box)return;
   box.innerHTML=S.rows.map(function(r,i){
-    var tag=r.conflict?'<span class="pb-tag warn">Also changed on GitHub</span>':(r.isNew?'<span class="pb-tag new">New</span>':'<span class="pb-tag mod">Changed</span>');
+    var tag=r.isDel?(r.conflict?'<span class="pb-tag warn">Changed on GitHub</span>':'<span class="pb-tag del">Delete</span>'):(r.conflict?'<span class="pb-tag warn">Also changed on GitHub</span>':(r.isNew?'<span class="pb-tag new">New</span>':'<span class="pb-tag mod">Changed</span>'));
     return '<label class="pb-row"><input type="checkbox" data-i="'+i+'"'+(r.on?' checked':'')+'><span class="pb-path">'+esc(r.path)+'</span>'+tag+'</label>';
   }).join('');
   box.querySelectorAll('input[type=checkbox]').forEach(function(c){
@@ -216,7 +228,7 @@ async function runScan(){
     if(!r.rows.length){setNote('Everything here is already on GitHub.','ok')}
     else{
       var warn=r.rows.filter(function(x){return x.conflict}).length;
-      var t=r.rows.length+' file'+(r.rows.length===1?'':'s')+' ready to publish.';
+      var t=r.rows.length+' file'+(r.rows.length===1?'':'s')+' ready to publish.';var nd=r.rows.filter(function(x){return x.isDel}).length;if(nd)t+=' '+nd+' will be deleted from GitHub.';
       if(!r.scan.base)t+=' No import record for this project, so this lists every file that differs from GitHub. Uncheck anything you do not want to overwrite.';
       if(warn)t+=' '+warn+' also changed on GitHub and is unchecked.';
       setNote(t,warn?'warn':'');
@@ -231,7 +243,7 @@ async function runPublish(){
   try{
     var res=await pushRows(S.scan,S.rows,msg,setStatus);
     await saveRecord(S.scan,S.rows);
-    try{var lst=await dbGetAll();var pp=lst.find(function(x){return x.id===pid()});if(pp){pp.publishes=pp.publishes||[];pp.publishes.unshift({ts:Date.now(),msg:msg,repo:S.scan.repo,branch:S.scan.branch,sha:res.sha,files:(function(){var cap=900000;return S.rows.filter(function(r){return r.on}).map(function(r){var o={path:r.path,status:r.isNew?'new':'changed'};var t=r.f&&r.f.text;if(typeof t==='string'&&t.length<=cap){o.text=t;cap-=t.length}return o})})()});pp.publishes=pp.publishes.slice(0,20);await dbSetAll(lst)}}catch(e0){}
+    try{var lst=await dbGetAll();var pp=lst.find(function(x){return x.id===pid()});if(pp){pp.publishes=pp.publishes||[];pp.publishes.unshift({ts:Date.now(),msg:msg,repo:S.scan.repo,branch:S.scan.branch,sha:res.sha,files:(function(){var cap=900000;return S.rows.filter(function(r){return r.on}).map(function(r){var o={path:r.path,status:r.isDel?'deleted':(r.isNew?'new':'changed')};var t=r.f&&r.f.text;if(typeof t==='string'&&t.length<=cap){o.text=t;cap-=t.length}return o})})()});pp.publishes=pp.publishes.slice(0,20);await dbSetAll(lst)}}catch(e0){}
     if(!window.__pbOv&&typeof window.logHistory==='function')await window.logHistory({type:'publish',note:'Published '+res.count+' file'+(res.count===1?'':'s')+' to '+S.scan.repo+'@'+S.scan.branch});
     if(typeof window.renderProjectCards==='function')window.renderProjectCards();
     var url='https://github.com/'+S.scan.repo+'/commit/'+res.sha;
@@ -348,7 +360,8 @@ function injectCss(){
     '.pb-path{flex:1;min-width:0;overflow-wrap:anywhere;font-weight:600}',
     '.pb-tag{flex-shrink:0;font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;border-radius:999px;padding:3px 8px}',
     '.pb-tag.new{background:#16331f;color:#3ddc84}.pb-tag.mod{background:#2f3a52;color:#cfe0ff}.pb-tag.warn{background:#3a2d12;color:#f5b942}',
-    '.pb-status{font-size:12px;color:#cfe0ff;min-height:16px;margin-top:10px}',
+    '.pb-tag.del{background:#3a1218;color:#ff6b81}',
+'.pb-status{font-size:12px;color:#cfe0ff;min-height:16px;margin-top:10px}',
     '.pb-go{display:block;width:100%;margin-top:10px;padding:13px;border:0;border-radius:12px;background:var(--red);color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:transform .14s ease,opacity .14s ease}',
     '.pb-go:disabled{opacity:.4;cursor:not-allowed}',
     '.pb-done{text-align:center;padding:10px 0}',

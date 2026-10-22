@@ -122,8 +122,8 @@ async function saveRecord(scan,rows){
 var S={scan:null,rows:[],busy:false};
 function setNote(t,cls){var n=$('pbNote');if(n){n.textContent=t||'';n.className='pb-note'+(cls?' '+cls:'')}}
 function setStatus(t){var n=$('pbStatus');if(n)n.textContent=t||''}
-function closeSheet(){var b=$('pbBack');if(b)b.remove();S.busy=false}
-function updateGo(){
+function closeSheet(){var b=$('pbBack');if(b)b.remove();S.busy=false;S.armed=false;clearTimeout(S.armT)}
+function updateGo(){updateRestore();
   var n=S.rows.filter(function(r){return r.on}).length;var g=$('pbGo');if(!g)return;
   g.disabled=!n||S.busy;g.textContent=n?('Publish '+n+' file'+(n===1?'':'s')):'Publish';
 }
@@ -137,6 +137,73 @@ function renderRows(){
     c.onchange=function(){S.rows[parseInt(c.dataset.i,10)].on=c.checked;updateGo()};
   });
   updateGo();
+}
+function disarm(reset){
+  var was=S.armed;S.armed=false;clearTimeout(S.armT);
+  var b=$('pbRestore');if(b)b.classList.remove('armed');
+  if(was&&reset&&S.prevNote)setNote(S.prevNote[0],S.prevNote[1]);
+  S.prevNote=null;
+}
+function updateRestore(){
+  var b=$('pbRestore');if(!b)return;
+  var any=S.rows.some(function(r){return !r.isNew&&r.f&&r.f.text!=null});
+  b.hidden=!any;b.disabled=!!S.busy;
+  if(!any)disarm(false);
+}
+async function restoreFromGitHub(){
+  if(S.busy||!S.scan)return;
+  var rows=S.rows.filter(function(r){return !r.isNew&&r.f&&r.f.text!=null});
+  if(!rows.length){toast('Nothing to restore from GitHub','error');return}
+  var b=$('pbRestore');
+  if(!S.armed){
+    var nn=$('pbNote');S.prevNote=nn?[nn.textContent,nn.className.replace('pb-note','').trim()]:null;
+    S.armed=true;if(b)b.classList.add('armed');
+    setNote('Tap the restore icon again to replace '+rows.length+' changed file'+(rows.length===1?'':'s')+' in the editor with the GitHub version. Your current version is saved as a snapshot first, so you can undo this from the Backups tab.','warn');
+    clearTimeout(S.armT);S.armT=setTimeout(function(){disarm(true)},7000);
+    return;
+  }
+  disarm(false);
+  S.busy=true;updateGo();
+  var scan=S.scan,projId=pid(),texts={},idx=0,done=0;
+  try{
+    var worker=async function(){
+      while(idx<rows.length){
+        var r=rows[idx++],rem=scan.remote[r.path];if(!rem)continue;
+        var bl=await gh('GET','/repos/'+scan.repo+'/git/blobs/'+rem.sha);
+        var bin=atob(String(bl.content||'').replace(/\s/g,''));var u8=new Uint8Array(bin.length);
+        for(var i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+        texts[r.path]=new TextDecoder('utf-8').decode(u8);
+        done++;setStatus('Downloading from GitHub '+done+'/'+rows.length+'\u2026');
+      }
+    };
+    await Promise.all([worker(),worker(),worker()]);
+    var paths=Object.keys(texts);
+    if(!paths.length)throw new Error('Could not download the GitHub files');
+    var recs=await dbGetAll();var p=recs.find(function(x){return x.id===projId});
+    if(p){
+      p.files=p.files||[];p.snapshots=p.snapshots||[];p.history=p.history||[];
+      p.snapshots.unshift({ts:Date.now(),label:'Before restore from GitHub',files:p.files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})});
+      if(p.snapshots.length>20)p.snapshots.length=20;
+      paths.forEach(function(path){
+        var t=texts[path],f=p.files.find(function(x){return x.path===path});
+        if(f){f.text=t;f.blob=null;f.size=t.length}
+        else p.files.push({path:path,name:path.split('/').pop(),size:t.length,type:'text/plain',blob:null,text:t});
+        p.history.unshift({ts:Date.now(),type:'edit',path:path,note:'Restored from GitHub',text:t.length<300000?t:undefined});
+      });
+      p.savedAt=Date.now();
+      await dbSetAll(recs);
+      if(typeof __flushProjects==='function')await __flushProjects();
+    }
+    rows.forEach(function(r){var t=texts[r.path];if(t!=null){r.f.text=t;r.f.blob=null;r.f.size=t.length}});
+    paths.forEach(function(path){try{localStorage.removeItem('mb_draft_'+projId+'_'+path)}catch(e1){}});
+    if(typeof window.__edReloadCurrent==='function')window.__edReloadCurrent(paths);
+    if(typeof window.renderProjectCards==='function')window.renderProjectCards();
+    if(typeof populatePages==='function')populatePages();
+    if(typeof render==='function')render();
+    toast('Restored '+paths.length+' file'+(paths.length===1?'':'s')+' from GitHub','success');
+    setStatus('');S.busy=false;
+    await runScan();
+  }catch(e){S.busy=false;setStatus('');setNote(explain(e),'bad');updateGo()}
 }
 async function runScan(){
   var repo=($('pbRepo').value||'').trim(),branch=($('pbBranch').value||'').trim()||'main';
@@ -190,7 +257,7 @@ async function openSheet(opts){
   var signed=!!token();
   var dirty=false;var es=$('editorStatus');if(es&&/\u2022\s*$/.test(es.textContent||''))dirty=true;
   back.innerHTML='<div class="pb-card" id="pbCard">'+
-    '<div class="pb-top"><div><div class="pb-eyebrow">PUBLISH</div><div class="pb-title">Send to GitHub</div></div><button class="pb-x" id="pbClose" aria-label="Close">\u2715</button></div>'+
+    '<div class="pb-top"><div><div class="pb-eyebrow">PUBLISH</div><div class="pb-title">Send to GitHub</div></div><div style="display:flex;gap:8px"><button class="pb-x pb-rs" id="pbRestore" hidden title="Restore GitHub files into the editor" aria-label="Restore GitHub files into the editor"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg></button><button class="pb-x" id="pbClose" aria-label="Close">\u2715</button></div></div>'+
     '<div style="display:flex;align-items:center;gap:10px;background:#101115;border:1px solid #25262c;border-radius:12px;padding:10px 12px;margin-bottom:4px"><div style="width:38px;height:38px;border-radius:10px;background:#24252b;display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0">'+esc((p.name||'?').slice(0,2).toUpperCase())+'</div><div style="min-width:0"><div style="font-size:14px;font-weight:800;overflow-wrap:anywhere">'+esc(p.name||'Untitled')+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere">'+curFiles().length+' file'+(curFiles().length===1?'':'s')+(p.githubRepo?' \u00b7 '+esc(p.githubRepo):' \u00b7 not linked to GitHub yet')+(p.lastImport?' \u00b7 imported '+new Date(p.lastImport).toLocaleDateString():'')+'</div></div></div>'+
 (signed?
       '<div class="pb-grid"><div class="pb-f"><label>Repo</label><input id="pbRepo" placeholder="owner/repo" value="'+esc(repo)+'" autocomplete="off" autocapitalize="off"></div>'+
@@ -207,7 +274,7 @@ async function openSheet(opts){
   back.onclick=function(e){if(e.target===back&&!S.busy)closeSheet()};
   $('pbClose').onclick=function(){if(!S.busy)closeSheet()};
   if(signed){
-    $('pbScan').onclick=runScan;$('pbGo').onclick=runPublish;
+    $('pbScan').onclick=runScan;$('pbGo').onclick=runPublish;$('pbRestore').onclick=restoreFromGitHub;
     if(isRepo(repo))runScan();else setNote('Enter your repo to see what will be published.');
   }else{
     $('pbToGh').onclick=function(){closeSheet();if(typeof window.showTab==='function')window.showTab('github')};
@@ -247,7 +314,11 @@ function injectCss(){
     '.pb-eyebrow{font-size:10px;font-weight:800;letter-spacing:2px;color:var(--red)}',
     '.pb-title{font-size:18px;font-weight:800;margin-top:2px}',
     '.pb-x{background:#20222a;color:#cfd0d8;border:1px solid #303139;border-radius:10px;width:34px;height:34px;font-size:14px;cursor:pointer}',
-    '.pb-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:10px}',
+    '.pb-rs{display:grid;place-items:center;color:#f5b942;background:#2a2314;border-color:#4a3b17}',
+'.pb-rs[hidden]{display:none}',
+'.pb-rs.armed{background:#f5b942;color:#1a1405;border-color:#f5b942}',
+'.pb-rs:disabled{opacity:.4}',
+'.pb-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:10px}',
     '.pb-f{display:flex;flex-direction:column;gap:5px;min-width:0;margin-top:10px}',
     '.pb-grid .pb-f{margin-top:0}',
     '.pb-f label{font-size:10px;font-weight:800;letter-spacing:1px;color:var(--muted);text-transform:uppercase}',

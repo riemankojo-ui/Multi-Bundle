@@ -976,6 +976,16 @@ if (editorPage) {
 window.__edSetCaret = function (pos) {
   __edSel = { start: pos, end: pos, path: currentPath || '', scroll: ta.scrollTop || 0 };
 };
+window.__edReloadCurrent = function (paths) {
+  try {
+    paths = paths || [];
+    paths.forEach(function (p) { delete fileHistories[p]; });
+    var cp = currentPath, hit = paths.indexOf(cp) > -1;
+    if (hit) dirty = false;
+    refreshFileList();
+    if (hit) { loadFile(cp); __edSel = { start: 0, end: 0, path: cp }; }
+  } catch (e) {}
+};
 window.__restoreEditor = function () {
   if (typeof refreshFileList === 'function') refreshFileList();
   setTimeout(restoreEdSel, 50);

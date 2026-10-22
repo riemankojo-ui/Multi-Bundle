@@ -328,9 +328,9 @@ function showProjectsList(){
 
 function cleanIncoming(result){return result.filter(function(f){return f.path&&!f.path.split('/').some(function(p){return p.startsWith('.')&&p!=='.well-known'})}).sort(function(a,b){return a.path.localeCompare(b.path)})}
 
-async function processIncoming(result,defaultName){
+async function processIncoming(result,defaultName,presetName){
   result=cleanIncoming(result);if(!result.length){showToast('No files found','error');return}
-  const name=await showPrompt('Name this project',defaultName||'My project',{message:'Give your project a name. If a project with this name exists, it will be updated.',icon:'+'});
+  const name=(presetName!=null)?presetName:await showPrompt('Name this project',defaultName||'My project',{message:'Give your project a name. If a project with this name exists, it will be updated.',icon:'+'});
   if(!name||!name.trim())return;
   const trimmed=name.trim();const logo=detectProjectLogo(result);
   const all=await dbGetAll();const existing=all.find(function(p){return p.name===trimmed});
@@ -485,12 +485,12 @@ async function importRepo(fullName,branch,isPublic){
     if(!r.ok){statusFn('Could not list files.');return}
     const tree=await r.json();const blobs=(tree.tree||[]).filter(function(x){return x.type==='blob'});window.__ghShas={};blobs.forEach(function(n){window.__ghShas[n.path]=n.sha});
     if(!blobs.length){statusFn('Repo has no files.');return}
-    statusFn('Downloading '+blobs.length+' files…');let done=0;window.__ghRawOK=false;try{const pr=await fetch('https://raw.githubusercontent.com/'+owner+'/'+repo+'/'+encodeURI(bn)+'/'+encodeURI(blobs[0].path)+'?v='+Date.now(),{method:'HEAD'});window.__ghRawOK=pr.ok}catch(e1){}
+    statusFn('Downloading '+blobs.length+' files…');let done=0;window.__ghRawOK=false;const namePromise=showPrompt('Name this project',window.__ghPullName||repo,{message:'Give your project a name. If a project with this name exists, it will be updated.',icon:'+'});
     const result=await Promise.all(blobs.map(async function(node){
       const path=node.path;const isText=textExt.has(ext(path));
       try{
-        const cr=await ghFetch('https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+encodeURIComponent(path).replace(/%2F/g,'/')+'?ref='+encodeURIComponent(bn));
-        if(!cr.ok)return null;const data=await cr.json();let blob;
+        const cr=await fetch('https://api.github.com/repos/'+owner+'/'+repo+'/git/blobs/'+node.sha,{headers:Object.assign({Accept:'application/vnd.github.raw+json'},getToken()?{Authorization:'Bearer '+getToken()}:{})});
+        if(!cr.ok)return null;const rawBlob=new Blob([await cr.blob()],{type:'application/octet-stream'});done++;if(done%10===0)statusFn('Downloading… '+done+'/'+blobs.length);return {path:path,name:base(path),size:rawBlob.size,type:rawBlob.type,blob:rawBlob,text:isText?await rawBlob.text():null};const data=await cr.json();let blob;
         if(data.encoding==='base64'&&data.content){
           const bin=atob(data.content.replace(/\n/g,''));const bytes=new Uint8Array(bin.length);
           for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);blob=new Blob([bytes],{type:'application/octet-stream'});
@@ -500,7 +500,7 @@ async function importRepo(fullName,branch,isPublic){
       }catch(e){return null}
     }));
     const clean=result.filter(function(x){return x});
-    const prevFiles=files;await processIncoming(clean,window.__ghPullName||repo);window.__ghPullName=null;if(files!==prevFiles)await markGithubSource(fullName,bn);
+    const prevFiles=files;const pickedName=await namePromise;if(!pickedName||!String(pickedName).trim()){window.__ghPullName=null;statusFn('Import cancelled.');return}await processIncoming(clean,window.__ghPullName||repo,pickedName);window.__ghPullName=null;if(files!==prevFiles)await markGithubSource(fullName,bn);
     statusFn('Imported '+fullName+' — '+clean.length+' files.');showToast('Imported '+repo,'success');
   }catch(e){statusFn('Import failed: '+e.message)}
 }

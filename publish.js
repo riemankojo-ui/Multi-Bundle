@@ -246,6 +246,18 @@ async function runPublish(){
   }catch(e){S.busy=false;setStatus('');setNote(explain(e,true),'bad');updateGo()}
 }
 function settingsRepo(){try{return JSON.parse(localStorage.getItem('mb_deploy_'+pid())||'null')||{}}catch(e){return {}}}
+function logoBox(p){
+  try{
+    var lp=p.logo||((typeof detectProjectLogo==='function')?detectProjectLogo(curFiles()):null);
+    var lf=lp?curFiles().find(function(f){return f.path===lp}):null;
+    if(lf&&typeof fileBlob==='function'){
+      if(window.__pbLogoUrl){try{URL.revokeObjectURL(window.__pbLogoUrl)}catch(e1){}}
+      var u=URL.createObjectURL(fileBlob(lf));window.__pbLogoUrl=u;
+      return '<img src="'+u+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
+    }
+  }catch(e){}
+  return esc((p.name||'?').slice(0,2).toUpperCase());
+}
 async function openSheet(opts){
   window.__pbOv=(opts&&opts.files)?{pid:opts.pid,files:opts.files}:null;
   if(!pid()||!curFiles().length){toast('Open a project first','error');return}
@@ -258,7 +270,7 @@ async function openSheet(opts){
   var dirty=false;var es=$('editorStatus');if(es&&/\u2022\s*$/.test(es.textContent||''))dirty=true;
   back.innerHTML='<div class="pb-card" id="pbCard">'+
     '<div class="pb-top"><div><div class="pb-eyebrow">PUBLISH</div><div class="pb-title">Send to GitHub</div></div><div style="display:flex;gap:8px"><button class="pb-x pb-rs" id="pbRestore" hidden title="Restore GitHub files into the editor" aria-label="Restore GitHub files into the editor"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg></button><button class="pb-x" id="pbClose" aria-label="Close">\u2715</button></div></div>'+
-    '<div style="display:flex;align-items:center;gap:10px;background:#101115;border:1px solid #25262c;border-radius:12px;padding:10px 12px;margin-bottom:4px"><div style="width:38px;height:38px;border-radius:10px;background:#24252b;display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0">'+esc((p.name||'?').slice(0,2).toUpperCase())+'</div><div style="min-width:0"><div style="font-size:14px;font-weight:800;overflow-wrap:anywhere">'+esc(p.name||'Untitled')+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere">'+curFiles().length+' file'+(curFiles().length===1?'':'s')+(p.githubRepo?' \u00b7 '+esc(p.githubRepo):' \u00b7 not linked to GitHub yet')+(p.lastImport?' \u00b7 imported '+new Date(p.lastImport).toLocaleDateString():'')+'</div></div></div>'+
+    '<div style="display:flex;align-items:center;gap:10px;background:#101115;border:1px solid #25262c;border-radius:12px;padding:10px 12px;margin-bottom:4px"><div style="width:38px;height:38px;border-radius:10px;background:#24252b;display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0;overflow:hidden">'+logoBox(p)+'</div><div style="min-width:0"><div style="font-size:14px;font-weight:800;overflow-wrap:anywhere">'+esc(p.name||'Untitled')+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere">'+curFiles().length+' file'+(curFiles().length===1?'':'s')+(p.githubRepo?' \u00b7 '+esc(p.githubRepo):' \u00b7 not linked to GitHub yet')+(p.lastImport?' \u00b7 imported '+new Date(p.lastImport).toLocaleDateString():'')+'</div></div></div>'+
 (signed?
       '<div class="pb-grid"><div class="pb-f"><label>Repo</label><input id="pbRepo" placeholder="owner/repo" value="'+esc(repo)+'" autocomplete="off" autocapitalize="off"></div>'+
       '<div class="pb-f"><label>Branch</label><input id="pbBranch" placeholder="main" value="'+esc(branch)+'" autocomplete="off" autocapitalize="off"></div></div>'+

@@ -2,7 +2,7 @@
 (function () {
   if (typeof firebase === 'undefined') return;
 
-  const auth = firebase.auth();
+  const auth = firebase.auth(); auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});
   const $ = (id) => document.getElementById(id);
   const loginGate = $("loginGate");
 

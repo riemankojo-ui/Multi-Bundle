@@ -109,7 +109,8 @@
 
   function resetScreen() {
     if (typeof files !== 'undefined') files = [];
-    if (typeof currentProjectId !== 'undefined') currentProjectId = null;
+        if (typeof currentProjectId !== 'undefined') currentProjectId = null;
+    if (typeof window.__edClear === 'function') window.__edClear();
     if (typeof setCurrentProjectName === 'function') setCurrentProjectName('No project loaded');
     // Only go Home on real sign-out — not while you are mid-edit
     try {

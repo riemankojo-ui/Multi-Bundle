@@ -1144,6 +1144,7 @@ window.getToken = getToken;
 window.__reloadGithub=async function(){
   ghToken='';
   if($('githubLoggedIn'))$('githubLoggedIn').hidden=true;if($('githubLoggedOut'))$('githubLoggedOut').hidden=false;
+  if($('ghOauthBtn'))$('ghOauthBtn').style.display='';
   if($('githubToken'))$('githubToken').value='';
   const t=await loadToken();
   if(t){ghToken=t;try{const r=await fetch('https://api.github.com/user',{headers:{Authorization:'Bearer '+t}});if(r.ok){const u=await r.json();await showGithubLoggedIn(u)}}catch(e){}}
@@ -1180,7 +1181,7 @@ async function restoreLastProject() {
       files = deserializeFiles(p.files);
       populatePages(); // Updates the dropdown in Preview
     } else {
-      localStorage.removeItem('mb_active_project'); // Clean up if project was deleted
+      if (all.length) localStorage.removeItem('mb_active_project'); // only clean up when the project list really loaded
     }
   } catch(e) {}
 }

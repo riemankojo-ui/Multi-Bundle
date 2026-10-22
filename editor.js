@@ -979,6 +979,17 @@ if (editorPage) {
 window.__edSetCaret = function (pos) {
   __edSel = { start: pos, end: pos, path: currentPath || '', scroll: ta.scrollTop || 0 };
 };
+window.__edClear = function () {
+  try {
+    ta.value = ''; currentPath = ''; dirty = false; originalText = '';
+    undoStack = []; redoStack = []; fileHistories = {};
+    window.__edPid = '';
+    try { localStorage.removeItem('mb_file'); } catch (e) {}
+    updateGutter(); refreshHighlight(); updateBtns();
+    status.textContent = 'No file open';
+    refreshFileList();
+  } catch (e) {}
+};
 window.__edOpenFile = function (path) {
   try {
     delete fileHistories[path];

@@ -133,7 +133,7 @@
   async function afterGithub(res) {
   const tok = res && res.credential && res.credential.accessToken;
   if (tok && res.user) {
-    await saveGithubTokenFor(res.user.uid, tok);
+    await saveGithubTokenFor(res.user.uid, tok); try { localStorage.setItem('mb_gh_token_at', String(Date.now())); } catch (e) {}
     
     // NEW: Save this token globally so the Projects tab can use it!
     if (typeof ghToken !== 'undefined') {

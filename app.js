@@ -401,6 +401,7 @@ async function saveToken(t){
   const uid = window.getCloudUser() ? window.getCloudUser().uid : 'local';
     ghToken=t;
   try{ if(window.cloudTok) window.cloudTok.save(t); }catch(e){}
+  try{ localStorage.setItem('mb_gh_token_at', String(Date.now())); }catch(e){}
   try { localStorage.setItem('mb_gh_active_token', t); } catch(e) {}
   try{
     const db=await openDB();
@@ -1234,7 +1235,7 @@ async function loadGithubReposForProjects() {
     });
     
     if (res.status === 401) {
-  box.innerHTML = '<div style="color:#ff8a8a;font-size:12px;margin-bottom:8px;">GitHub session expired.</div><button id="ghReconnectBtn" class="pc-btn primary" style="width:100%;">Reconnect GitHub</button>';
+  box.innerHTML = '<div style="color:#ff8a8a;font-size:12px;margin-bottom:8px;">GitHub session expired' + (function(){try{var t=parseInt(localStorage.getItem('mb_gh_token_at'),10);return t?' after '+Math.max(1,Math.round((Date.now()-t)/3600000))+' hr':''}catch(e){return ''}})() + '.</div><button id="ghReconnectBtn" class="pc-btn primary" style="width:100%;">Reconnect GitHub</button>';
   var rb = document.getElementById('ghReconnectBtn');
   if (rb) rb.onclick = function () { var ob = document.getElementById('ghOauthBtn'); if (ob) ob.click(); else showToast('Open the GitHub tab and tap Connect', 'error'); };
   return;
@@ -1284,7 +1285,7 @@ window.importGithubRepoAsProject = async function(fullName, branch) {
 if ($('ghOauthBtn')) {
   $('ghOauthBtn').onclick = async function() {
     const provider = new firebase.auth.GithubAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
+    /* one-tap reconnect: no account chooser */
     provider.addScope('repo');
     try {
       const cu = firebase.auth().currentUser;

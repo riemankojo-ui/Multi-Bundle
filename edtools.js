@@ -100,7 +100,7 @@
   ta.addEventListener('input', sched);
   ta.addEventListener('keyup', sched);
   window.addEventListener('resize', sched);
-  if (window.ResizeObserver) new ResizeObserver(function () { if (!S.ln) return; if (S.wrap) wrapGutter(); else plainGutter(); }).observe(ta);
+  if (window.ResizeObserver) new ResizeObserver(function () { if (S.ln) { if (S.wrap) wrapGutter(); else plainGutter(); } if (ta.clientWidth > 0) document.documentElement.classList.remove('mb-boot'); }).observe(ta);
   var pg = $('editorPage');
   if (pg) new MutationObserver(sched).observe(pg, { attributes: true, attributeFilter: ['hidden'] });
   new MutationObserver(sched).observe(shell, { attributes: true, attributeFilter: ['style'] });

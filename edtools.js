@@ -73,13 +73,13 @@
     });
   }
   function applyWrap() {
-    shell.classList.toggle('mb-wrap', S.wrap);
+    shell.classList.toggle('mb-wrap', S.wrap); document.documentElement.classList.toggle('mb-wrap', S.wrap);
     ta.setAttribute('wrap', S.wrap ? 'soft' : 'off');
     ta.scrollLeft = 0;
     var hl = $('editorHighlight'); if (hl) hl.scrollLeft = 0;
     sched();
   }
-  function applyLn() { shell.classList.toggle('mb-noln', !S.ln); sched(); }
+  function applyLn() { shell.classList.toggle('mb-noln', !S.ln); document.documentElement.classList.toggle('mb-noln', !S.ln); sched(); }
   window.__mbWrapRow = function (idx) {
     if (!S.wrap) return null;
     var cs = getComputedStyle(ta), lh = parseFloat(cs.lineHeight) || 20;

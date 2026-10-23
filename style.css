@@ -369,6 +369,9 @@ main:has(#previewPage:not([hidden])){padding:6px 0 0!important}
   -webkit-text-size-adjust: none !important;
 }
 .editor-code #editorTextarea::placeholder{color:#5c5d66;-webkit-text-fill-color:#5c5d66}
+html.mb-wrap #editorShell .editor-hl,html.mb-wrap #editorShell .editor-code #editorTextarea{white-space:pre-wrap!important;overflow-wrap:anywhere!important;word-break:normal!important;overflow-x:hidden!important}
+html.mb-wrap #editorShell .editor-code #editorTextarea{scrollbar-width:none}
+html.mb-noln #editorShell .editor-gutter{display:none}
 
 /* ========== Syntax colors ========== */
 .editor-hl .tk-cmt{color:var(--cmt);font-style:italic}

@@ -277,7 +277,8 @@ main:has(#previewPage:not([hidden])){padding:6px 0 0!important}
 .editor-shell.th-sw .editor-gutter{background:#f4f4f4;color:#999;border-right-color:#e2e2e2}
 .editor-shell.th-pw .editor-hl,.editor-shell.th-sw .editor-hl{color:#1a1a1a}
 .editor-shell.th-pw,.editor-shell.th-sw{--kw:#c2185b;--str:#2e7d32;--num:#d84315;--cmt:#8a8a92;--fn:#1565c0;--tag:#c2185b;--attr:#b26a00}
-.et-actions{flex-wrap:wrap}
+.et-actions{flex-wrap:nowrap;gap:4px}
+.et-actions .editor-btn{flex:1 1 0;min-width:0;padding:0}
 
 .editor-btn{
   flex:0 0 auto;

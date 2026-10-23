@@ -67,6 +67,7 @@
   function sched() {
     if (raf) return;
     raf = requestAnimationFrame(function () {
+      if (ta.clientWidth > 0) setTimeout(function () { document.documentElement.classList.remove('mb-boot'); }, 60);
       raf = 0;
       if (!S.ln) return;
       if (S.wrap) wrapGutter(); else plainGutter();

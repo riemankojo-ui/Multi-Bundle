@@ -80,6 +80,18 @@
     sched();
   }
   function applyLn() { shell.classList.toggle('mb-noln', !S.ln); sched(); }
+  window.__mbWrapRow = function (idx) {
+    if (!S.wrap) return null;
+    var cs = getComputedStyle(ta), lh = parseFloat(cs.lineHeight) || 20;
+    var w = ta.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    if (w <= 0) return null;
+    var ms = mirror.style;
+    ms.width = w + 'px'; ms.fontFamily = cs.fontFamily; ms.fontSize = cs.fontSize; ms.lineHeight = cs.lineHeight; ms.tabSize = cs.tabSize; ms.letterSpacing = cs.letterSpacing;
+    mirror.textContent = ta.value.slice(0, idx) + '\u200b';
+    var rows = Math.round(mirror.getBoundingClientRect().height / lh);
+    mirror.textContent = '';
+    return Math.max(1, rows);
+  };
 
   new MutationObserver(function () {
     if (S.wrap && S.ln && gutter.textContent !== cache.out) wrapGutter();
@@ -317,7 +329,7 @@
   function lineHeightPx() { var cs = window.getComputedStyle ? getComputedStyle(ta) : null; return (cs && parseFloat(cs.lineHeight)) || 20; }
   function scrollToCaret() {
     var pos = ta.selectionStart, before = ta.value.slice(0, pos), line = before.split('\n').length - 1;
-    var lh = lineHeightPx(), top = line * lh, view = ta.clientHeight || 300;
+    var lh = lineHeightPx(), top = (((typeof window.__mbWrapRow === 'function' && window.__mbWrapRow(pos)) || (line + 1)) - 1) * lh, view = ta.clientHeight || 300;
     if (top < ta.scrollTop || top > ta.scrollTop + view - lh * 2) ta.scrollTop = Math.max(0, top - view / 3);
   }
   function copyText(t, okMsg) {
@@ -347,7 +359,7 @@
     for (var i = 0; i < num - 1; i++) pos += lines[i].length + 1;
     ta.blur();
     ta.setSelectionRange(pos, pos + lines[num - 1].length);
-    ta.scrollTop = Math.max(0, (num - 3) * lineHeightPx()); ta.scrollLeft = 0;
+    ta.scrollTop = Math.max(0, ((typeof window.__mbWrapRow === 'function' && window.__mbWrapRow(pos) || num) - 3) * lineHeightPx()); ta.scrollLeft = 0;
   }
 
   var fs = 13;

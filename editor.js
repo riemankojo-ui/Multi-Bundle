@@ -637,7 +637,7 @@ function scrollToPosition(pos){
   const lh=parseFloat(cs.lineHeight)||(parseFloat(cs.fontSize)*1.55)||20;
   const before=ta.value.slice(0,pos);
   const lineNum=before.split('\n').length;
-  ta.scrollTop=Math.max(0,(lineNum-3)*lh);
+  ta.scrollTop=Math.max(0,((typeof window.__mbWrapRow==='function'&&window.__mbWrapRow(pos)||lineNum)-3)*lh);
   const col=pos-before.lastIndexOf('\n')-1;
   ta.scrollLeft=Math.max(0,col*(parseFloat(cs.fontSize)||13)*0.6-ta.clientWidth/3);
   syncScroll();

@@ -99,6 +99,7 @@
   ta.addEventListener('input', sched);
   ta.addEventListener('keyup', sched);
   window.addEventListener('resize', sched);
+  if (window.ResizeObserver) new ResizeObserver(sched).observe(ta);
   var pg = $('editorPage');
   if (pg) new MutationObserver(sched).observe(pg, { attributes: true, attributeFilter: ['hidden'] });
   new MutationObserver(sched).observe(shell, { attributes: true, attributeFilter: ['style'] });

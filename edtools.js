@@ -502,7 +502,7 @@ let savedLeft = 0, savedTop = 0;
   card.style.right = 'auto';
 }
 
-  btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  btn.addEventListener('mousedown', function (e) { e.preventDefault(); ta.blur(); });
   btn.onclick = function (e) { e.stopPropagation(); if (card.classList.contains('open')) closeCard(); else openCard(); };
   
   card.addEventListener('click', function (e) {

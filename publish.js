@@ -287,6 +287,7 @@ async function openSheet(opts){
       '<div class="pb-grid"><div class="pb-f"><label>Repo</label><input id="pbRepo" placeholder="owner/repo" value="'+esc(repo)+'" autocomplete="off" autocapitalize="off"></div>'+
       '<div class="pb-f"><label>Branch</label><input id="pbBranch" placeholder="main" value="'+esc(branch)+'" autocomplete="off" autocapitalize="off"></div></div>'+
       '<button class="pb-mini" id="pbScan">Check changes</button>'+
+      '<div class="pb-new"><div class="pb-nt">No repo yet? Create one</div><div class="pb-grid"><div class="pb-f"><label>New repo name</label><input id="pbNewName" placeholder="my-app" value="'+esc(String(p.name||'').trim().replace(/[^\w.-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase())+'" autocomplete="off" autocapitalize="off"></div><div class="pb-f"><label>Who can see it</label><select id="pbNewVis"><option value="private">Private</option><option value="public">Public</option></select></div></div><button class="pb-go" id="pbCreate">Create repo &amp; publish</button></div>'+
       (dirty?'<div class="pb-note warn">You have unsaved edits in the editor. Tap the save button first so they are included.</div>':'')+
       '<div class="pb-note" id="pbNote"></div><div class="pb-list" id="pbList"></div>'+
       '<div class="pb-f"><label>Commit message</label><input id="pbMsg" value="Update from Multi Bundle" autocomplete="off"></div>'+
@@ -298,7 +299,7 @@ async function openSheet(opts){
   back.onclick=function(e){if(e.target===back&&!S.busy)closeSheet()};
   $('pbClose').onclick=function(){if(!S.busy)closeSheet()};
   if(signed){
-    $('pbScan').onclick=runScan;$('pbGo').onclick=runPublish;$('pbRestore').onclick=restoreFromGitHub;
+    $('pbScan').onclick=runScan;$('pbCreate').onclick=createRepo;$('pbGo').onclick=runPublish;$('pbRestore').onclick=restoreFromGitHub;
     if(isRepo(repo))runScan();else setNote('Enter your repo to see what will be published.');
   }else{
     $('pbToGh').onclick=function(){closeSheet();if(typeof window.showTab==='function')window.showTab('github')};
@@ -350,6 +351,10 @@ function injectCss(){
     '.pb-f input:focus{border-color:var(--red)}',
     '.pb-mini{margin-top:10px;background:#20222a;color:#cfd0d8;border:1px solid #303139;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .14s ease}',
     '.pb-mini:active,.pb-go:active{transform:scale(.97)}',
+    '.pb-new{margin-top:14px;padding-top:12px;border-top:1px solid #25262c}',
+    '.pb-nt{font-size:12px;font-weight:800;margin-bottom:8px}',
+    '.pb-f select{width:100%;box-sizing:border-box;background:#101115;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:13px;font-family:inherit}',
+    '.pb-new .pb-go{background:#2f3a52}',
     '.pb-note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:10px}',
     '.pb-note.bad{color:#ff8a8a}.pb-note.ok{color:#3ddc84}.pb-note.warn{color:#f5b942}',
     '.pb-list{margin-top:10px;max-height:34vh;overflow-y:auto;border:1px solid #25262c;border-radius:12px;background:#101115}',

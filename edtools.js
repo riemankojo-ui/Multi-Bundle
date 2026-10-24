@@ -588,7 +588,7 @@ if (editorPage) {
     '.ed-tools-card .et-ttl{font-size:9px;font-weight:800;letter-spacing:1.2px;color:var(--red);text-transform:uppercase;margin:4px 4px 6px}',
     '.ed-tools-card .et-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}',
     '.ed-tools-card .et-chars{width:100%;margin-bottom:8px;padding:14px 6px;font-size:14px;background:#2a2d1f;color:#f5d76e;border-color:#4b4a2a}',
-    '.ed-tools-card button{background:#20222a;color:#e5e6ea;border:1px solid #303139;border-radius:10px;padding:12px 6px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .14s ease,background .14s ease}',
+    '.ed-tools-card button{background:#20222a;color:#e5e6ea;border:1px solid #303139;border-radius:8px;padding:7px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .14s ease,background .14s ease}',
     '.ed-tools-card button:active{transform:scale(.95);background:#2d303a}',
     '.ed-tools-card .et-size{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid #25262c}',
     '.ed-tools-card .et-size span{flex:1;font-size:10px;font-weight:700;color:var(--muted)}',
@@ -653,7 +653,7 @@ if (editorPage) {
     '.cc-ttl{font-size:9px;font-weight:800;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase;margin:8px 2px 6px}',
     '.cc-grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}',
     '.cc-grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}',
-    '.cc-b{background:#20222a;color:#e5e6ea;border:1px solid #303139;border-radius:10px;padding:12px 4px;font-size:13px;font-weight:700;font-family:ui-monospace,Menlo,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}',
+    '.cc-b{background:#20222a;color:#e5e6ea;border:1px solid #303139;border-radius:8px;padding:7px 4px;font-size:12px;font-weight:700;font-family:ui-monospace,Menlo,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}',
     '.cc-b:active{transform:scale(.95);background:#2d303a}'
   ].join('\n');
   document.head.appendChild(ccSt);

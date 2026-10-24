@@ -1159,6 +1159,15 @@ window.__refreshProjects = async function() {
       files = []; currentProjectId = null;
       if (typeof setCurrentProjectName === 'function') setCurrentProjectName('No project loaded');
     }
+    if (!currentProjectId) {
+      var __lastId = ''; try { __lastId = localStorage.getItem('mb_active_project') || ''; } catch (e1) {}
+      var __lp = __lastId && __recs.find(function (p) { return p.id === __lastId; });
+      if (__lp) {
+        currentProjectId = __lp.id; setCurrentProjectName(__lp.name); files = deserializeFiles(__lp.files);
+        populatePages();
+        if (typeof window.__restoreEditor === 'function') setTimeout(window.__restoreEditor, 50);
+      }
+    }
     if (typeof renderBundleProjects === 'function') renderBundleProjects();
   } catch (e) {}
   if(__saveTimer)await __flushProjects();__projCache = null;if(typeof window.__reloadGithub==='function')window.__reloadGithub(); 
@@ -1182,7 +1191,7 @@ async function restoreLastProject() {
       files = deserializeFiles(p.files);
       populatePages(); // Updates the dropdown in Preview
     } else {
-      if (all.length) localStorage.removeItem('mb_active_project'); // only clean up when the project list really loaded
+      if (all.length && window.__authKnown) localStorage.removeItem('mb_active_project'); // only clean up when the project list really loaded
     }
   } catch(e) {}
 }

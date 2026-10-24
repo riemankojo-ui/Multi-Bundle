@@ -235,6 +235,54 @@ async function runScan(){
     }
   }catch(e){setNote(explain(e),'bad')}
 }
+function liveSaved(){try{return localStorage.getItem('mb_live_'+pid())||''}catch(e){return ''}}
+async function initLive(){
+  var box=$('pbLive');if(!box)return;
+  var repo=(S.scan&&S.scan.repo)||(($('pbRepo')||{}).value||'').trim();
+  var branch=(S.scan&&S.scan.branch)||(($('pbBranch')||{}).value||'').trim()||'main';
+  if(!isRepo(repo)){box.innerHTML='';return}
+  var own=liveSaved();
+  var head='<div class="pb-lh">LIVE SITE</div>';
+  function ownBtn(label){return '<button class="pb-mini" id="pbLiveOwn">'+label+'</button>'}
+  function wire(){
+    var b=$('pbLiveOwn');if(!b)return;
+    b.onclick=async function(){
+      var v=await window.showPrompt('Your live link',own,{message:'Paste the address of your site, like https://myapp.vercel.app. Leave it empty to remove it.',placeholder:'https://',confirmText:'Save'});
+      if(typeof v!=='string')return;
+      v=v.trim();
+      if(v&&!/^https?:\/\/\S+$/i.test(v)){toast('The link must start with https://','error');return}
+      try{if(v)localStorage.setItem('mb_live_'+pid(),v);else localStorage.removeItem('mb_live_'+pid())}catch(e){}
+      initLive();
+    };
+  }
+  box.innerHTML=head+'<div class="pb-note">Checking\u2026</div>';
+  if(own){
+    box.innerHTML=head+'<a class="pb-link" href="'+esc(own)+'" target="_blank" rel="noopener">Open live site \u2197</a><div class="pb-note">'+esc(own)+'</div>'+ownBtn('Change link');
+    wire();return;
+  }
+  try{
+    var pg=await gh('GET','/repos/'+repo+'/pages');
+    var u=pg.html_url||'';
+    box.innerHTML=head+'<a class="pb-link" href="'+esc(u)+'" target="_blank" rel="noopener">Open live site \u2197</a>'+
+      (pg.status&&pg.status!=='built'?'<div class="pb-note warn">GitHub is still building the site. Give it a minute, then open the link.</div>':'<div class="pb-note">'+esc(u)+'</div>')+ownBtn('Use my own link');
+    wire();
+  }catch(e){
+    if(e&&e.status===404){
+      box.innerHTML=head+'<div class="pb-note">Your project is not live yet. GitHub Pages gives you a free site address.</div><button class="pb-mini" id="pbLiveOn">Turn on live site</button> '+ownBtn('Use my own link');
+      wire();
+      $('pbLiveOn').onclick=async function(){
+        var btn=this;btn.disabled=true;btn.textContent='Turning on\u2026';
+        try{await gh('POST','/repos/'+repo+'/pages',{source:{branch:branch,path:'/'}})}
+        catch(e2){
+          if(!(e2&&e2.status===409)){btn.disabled=false;btn.textContent='Turn on live site';toast((e2&&e2.message)||'Could not turn on the live site','error');return}
+        }
+        toast('Live site turned on','success');initLive();
+      };
+    }else{
+      box.innerHTML=head+'<div class="pb-note bad">Could not check the live site.</div>'+ownBtn('Use my own link');wire();
+    }
+  }
+}
 async function runPublish(){
   if(S.busy||!S.scan)return;
   var n=S.rows.filter(function(r){return r.on}).length;if(!n)return;
@@ -251,8 +299,10 @@ async function runPublish(){
     if(card)card.innerHTML='<div class="pb-done"><div class="pb-check">\u2713</div><div class="pb-title">Published</div>'+
       '<div class="pb-note">'+res.count+' file'+(res.count===1?'':'s')+' sent to '+esc(S.scan.repo)+' ('+esc(S.scan.branch)+').</div>'+
       '<a class="pb-link" href="'+esc(url)+'" target="_blank" rel="noopener">View commit \u2197</a>'+
+      '<div class="pb-live" id="pbLive"></div>'+
       '<button class="pb-go" id="pbDone">Done</button></div>';
     var d=$('pbDone');if(d)d.onclick=closeSheet;
+    initLive();
     toast('Published to GitHub','success');
     S.busy=false;
   }catch(e){S.busy=false;setStatus('');setNote(explain(e,true),'bad');updateGo()}
@@ -287,7 +337,7 @@ async function openSheet(opts){
       '<div class="pb-grid"><div class="pb-f"><label>Repo</label><input id="pbRepo" placeholder="owner/repo" value="'+esc(repo)+'" autocomplete="off" autocapitalize="off"></div>'+
       '<div class="pb-f"><label>Branch</label><input id="pbBranch" placeholder="main" value="'+esc(branch)+'" autocomplete="off" autocapitalize="off"></div></div>'+
       '<button class="pb-mini" id="pbScan">Check changes</button>'+
-      '<div class="pb-new"'+(p.githubRepo?' hidden':'')+'><div class="pb-nt">No repo yet? Create one</div><div class="pb-grid"><div class="pb-f"><label>New repo name</label><input id="pbNewName" placeholder="my-app" value="'+esc(String(p.name||'').trim().replace(/[^\w.-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase())+'" autocomplete="off" autocapitalize="off"></div><div class="pb-f"><label>Who can see it</label><select id="pbNewVis"><option value="private">Private</option><option value="public">Public</option></select></div></div><button class="pb-go" id="pbCreate">Create repo &amp; publish</button></div>'+
+      '<div class="pb-live" id="pbLive"></div>'+'<div class="pb-new"'+(p.githubRepo?' hidden':'')+'><div class="pb-nt">No repo yet? Create one</div><div class="pb-grid"><div class="pb-f"><label>New repo name</label><input id="pbNewName" placeholder="my-app" value="'+esc(String(p.name||'').trim().replace(/[^\w.-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase())+'" autocomplete="off" autocapitalize="off"></div><div class="pb-f"><label>Who can see it</label><select id="pbNewVis"><option value="private">Private</option><option value="public">Public</option></select></div></div><button class="pb-go" id="pbCreate">Create repo &amp; publish</button></div>'+
       (dirty?'<div class="pb-note warn">You have unsaved edits in the editor. Tap the save button first so they are included.</div>':'')+
       '<div class="pb-note" id="pbNote"></div><div class="pb-list" id="pbList"></div>'+
       '<div class="pb-f"><label>Commit message</label><input id="pbMsg" value="Update from Multi Bundle" autocomplete="off"></div>'+
@@ -301,6 +351,7 @@ async function openSheet(opts){
   if(signed){
     $('pbScan').onclick=runScan;$('pbCreate').onclick=createRepo;$('pbGo').onclick=runPublish;$('pbRestore').onclick=restoreFromGitHub;
     if(isRepo(repo))runScan();else setNote('Enter your repo to see what will be published.');
+    initLive();if($('pbRepo'))$('pbRepo').addEventListener('change',initLive);
   }else{
     $('pbToGh').onclick=function(){closeSheet();if(typeof window.showTab==='function')window.showTab('github')};
   }
@@ -371,7 +422,10 @@ function injectCss(){
     '.pb-go:disabled{opacity:.4;cursor:not-allowed}',
     '.pb-done{text-align:center;padding:10px 0}',
     '.pb-check{width:48px;height:48px;border-radius:50%;background:#16331f;color:#3ddc84;display:grid;place-items:center;font-size:24px;margin:0 auto 10px}',
-    '.pb-link{display:inline-block;margin:12px 0 4px;color:#cfe0ff;font-size:13px;font-weight:700;text-decoration:none}'
+    '.pb-link{display:inline-block;margin:12px 0 4px;color:#cfe0ff;font-size:13px;font-weight:700;text-decoration:none}',
+    '.pb-live{margin-top:14px;padding-top:12px;border-top:1px solid #25262c}',
+    '.pb-live:empty{display:none}',
+    '.pb-lh{font-size:10px;font-weight:800;letter-spacing:1px;color:var(--muted);margin-bottom:6px}'
   ].join('\n');
   document.head.appendChild(st);
 }

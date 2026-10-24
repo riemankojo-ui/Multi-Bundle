@@ -402,9 +402,51 @@ function highlightHTML(code){
   out+=escHtml(code.slice(last));
   return out;
 }
+var __LANGS={
+  py:{cmt:/#[^\n]*/,str:/"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'/,kw:'def|class|if|elif|else|for|while|return|import|from|as|try|except|finally|with|lambda|pass|break|continue|in|is|not|and|or|None|True|False|yield|async|await|raise|global|nonlocal|del|assert'},
+  php:{cmt:/\/\/[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\//,str:/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/,kw:'function|class|if|else|elseif|foreach|for|while|return|echo|print|new|public|private|protected|static|const|use|namespace|extends|implements|try|catch|finally|throw|require|require_once|include|include_once|true|false|null|array|isset|empty|as|switch|case|break|continue|default'},
+  sql:{cmt:/--[^\n]*|\/\*[\s\S]*?\*\//,str:/'(?:''|[^'])*'/,flags:'gmi',kw:'select|from|where|insert|into|values|update|set|delete|create|table|alter|drop|join|left|right|inner|outer|on|group|by|order|having|limit|as|and|or|not|null|primary|key|index|distinct|union|like|in|is|case|when|then|else|end|default|foreign|references'},
+  sh:{cmt:/#[^\n]*/,str:/"(?:\\.|[^"\\])*"|'[^']*'/,kw:'if|then|else|elif|fi|for|while|do|done|case|esac|function|return|in|export|local|echo|exit|cd|source'},
+  yml:{cmt:/#[^\n]*/,str:/"(?:\\.|[^"\\\n])*"|'[^'\n]*'/,key:/^[ \t-]*[\w.\-\/]+(?=\s*:)/,kw:'true|false|null|yes|no'},
+  ini:{cmt:/[#;][^\n]*/,str:/"(?:\\.|[^"\\\n])*"|'[^'\n]*'/,key:/^[ \t]*[\w.\-]+(?=\s*=)/,kw:'true|false'},
+  clike:{cmt:/\/\/[^\n]*|\/\*[\s\S]*?\*\//,str:/"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'/,kw:'if|else|for|while|do|return|class|struct|enum|interface|new|this|true|false|null|void|int|long|float|double|char|bool|boolean|string|public|private|protected|static|final|const|let|var|val|fun|func|fn|mut|use|import|package|try|catch|finally|throw|switch|case|break|continue|default|extends|implements|namespace|using|include|define|typedef|async|await|override|abstract'}
+};
+var __EXT={py:'py',php:'php',sql:'sql',sh:'sh',bash:'sh',yml:'yml',yaml:'yml',toml:'ini',ini:'ini',env:'ini',cfg:'ini',conf:'ini',java:'clike',c:'clike',cpp:'clike',h:'clike',cs:'clike',go:'clike',rs:'clike',kt:'clike',swift:'clike'};
+function highlightLang(code,o){
+  const re=new RegExp('('+o.cmt.source+')|('+o.str.source+')|('+(o.key?o.key.source:'(?!)')+')|\\b('+o.kw+')\\b|(\\b\\d+(?:\\.\\d+)?\\b)|(\\b[A-Za-z_]\\w*)(?=\\()|(\\$[A-Za-z_]\\w*)',o.flags||'gm');
+  const cls=['','tk-cmt','tk-str','tk-attr','tk-kw','tk-num','tk-fn','tk-attr'];
+  let out='',last=0,m;
+  while((m=re.exec(code))!==null){
+    if(m[0].length===0){re.lastIndex++;continue}
+    out+=escHtml(code.slice(last,m.index));
+    let g=1;while(g<8&&!m[g])g++;
+    out+=g<8?'<span class="'+cls[g]+'">'+escHtml(m[0])+'</span>':escHtml(m[0]);
+    last=m.index+m[0].length;
+  }
+  out+=escHtml(code.slice(last));
+  return out;
+}
+function highlightMD(code){
+  let inCode=false;
+  return code.split('\n').map(function(line){
+    let e=escHtml(line);
+    if(/^\s*```/.test(line)){inCode=!inCode;return '<span class="tk-cmt">'+e+'</span>'}
+    if(inCode)return '<span class="tk-str">'+e+'</span>';
+    if(/^#{1,6}\s/.test(line))return '<span class="tk-kw">'+e+'</span>';
+    if(/^\s*>/.test(line))return '<span class="tk-cmt">'+e+'</span>';
+    e=e.replace(/(`[^`]+`)/g,'<span class="tk-str">$1</span>').replace(/(\*\*[^*]+\*\*)/g,'<span class="tk-kw">$1</span>').replace(/(\[[^\]]*\]\([^)]*\))/g,'<span class="tk-fn">$1</span>');
+    return e.replace(/^(\s*(?:[-*+]|\d+\.)\s)/,'<span class="tk-attr">$1</span>');
+  }).join('\n');
+}
+function highlightExtra(code,e){
+  if(e==='md'||e==='markdown')return highlightMD(code);
+  const k=__EXT[e];
+  return k?highlightLang(code,__LANGS[k]):null;
+}
 function highlightAll(code){
   const e=(currentPath.split('.').pop()||'').toLowerCase();
-  if(e==='css')return highlightCSS(code);
+  if(e==='css'||e==='scss'||e==='less')return highlightCSS(code);
+  var __g=highlightExtra(code,e);if(__g!==null)return __g;
   if(e==='html'||e==='htm'||e==='svg'||e==='xml')return highlightHTML(code);
   if(['js','mjs','ts','jsx','tsx','json'].includes(e))return highlightJS(code);
   return escHtml(code);
@@ -736,7 +778,7 @@ function refreshFileList(){
 }
 function loadFile(path){
   const f=files.find(function(x){return x.path===path});if(!f||f.text==null)return;
-  if(path!==currentPath&&searchBar.classList.contains('open')){searchInput.value='';closeSearch()}
+  if(path!==currentPath&&searchBar.classList.contains('open')){setTimeout(function(){var q=searchInput.value;if(q&&!/^:\d+$/.test(q))runSearch();else{matches=[];matchLens=[];matchIndex=-1;updateSearchCount();paintMatches()}},0)}
   currentPath=path;
   
   let savedText = f.text;

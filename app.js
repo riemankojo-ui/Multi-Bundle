@@ -26,7 +26,7 @@ let ghToken='';
 try { ghToken = localStorage.getItem('mb_gh_active_token') || ''; } catch(e) {}
 const PROJECT_LIMIT=20;
 
-const textExt=new Set(['html','htm','css','js','mjs','json','txt','md','xml','svg','php','py','sql','yaml','yml','toml','csv','webmanifest','ts','jsx','tsx']);
+const textExt=new Set(['html','htm','css','js','mjs','json','txt','md','xml','svg','php','py','sql','yaml','yml','toml','csv','webmanifest','ts','jsx','tsx','sh','bash','ini','env','cfg','conf','log','java','c','cpp','h','cs','go','rs','kt','swift','rb','lua','vue','scss','less','gitignore']);
 const ext=p=>(p.split('.').pop()||'').toLowerCase();
 const base=p=>p.split('/').pop();
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

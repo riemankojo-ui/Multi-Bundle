@@ -117,6 +117,15 @@
     if (allFolders().some(function (d) { return d.toLowerCase() === low; })) { toast('Folder already exists', 'error'); return; }
     var v = vfGet(); v.push(full); vfSet(v);
     toast('Created folder ' + full, 'success');
+    var starter = full + '/index.html';
+    if (!files.some(function (f) { return f.path.toLowerCase() === starter.toLowerCase(); })) {
+      var html = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>New page</title>\n</head>\n<body>\n  <!-- Start your app here -->\n</body>\n</html>\n';
+      syncCurrent();
+      files.push({ path: starter, name: 'index.html', size: html.length, type: 'text/html', blob: null, text: html });
+      files.sort(function (a, b) { return a.path.localeCompare(b.path); });
+      close();
+      await finish(starter, 'new', 'Created folder', full);
+    }
     paintAll();
   }
   async function doDelete() {

@@ -145,7 +145,7 @@ window.__newFolderApp=async function(){
     mk('style.css','body{font-family:system-ui,sans-serif;margin:0;padding:24px;background:#0d0e12;color:#fff}\nh1{color:#f01424}\n','text/css'),
     mk('app.js','console.log("App ready");\n','text/javascript')
   ];
-  currentProjectId=Date.now().toString();setCurrentProjectName(name);
+  files.forEach(function(f){f.text='';f.size=0});currentProjectId=Date.now().toString();setCurrentProjectName(name);
   await dbUpsertProject({id:currentProjectId,name:name,files:serializeFiles(),savedAt:Date.now(),createdAt:Date.now(),history:[]});
   try{localStorage.setItem('mb_active_project',currentProjectId)}catch(e0){}
   refreshFileList();loadFile('index.html');

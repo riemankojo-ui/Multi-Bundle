@@ -1205,7 +1205,18 @@ restoreLastProject().then(() => {
 });
 
 // --- NEW: GitHub Repos in Projects Tab ---
+var __ghLoading = false, __ghLast = 0;
 async function loadGithubReposForProjects() {
+  if (__ghLoading) return;
+  if (Date.now() - __ghLast < 60000 && document.querySelector('#ghProjectCards .project-card')) {
+    var s0 = $('ghProjectsSection'); if (s0) s0.hidden = false;
+    return;
+  }
+  __ghLoading = true;
+  try { await __loadGhRepos(); } finally { __ghLoading = false; }
+  if (document.querySelector('#ghProjectCards .project-card')) __ghLast = Date.now();
+}
+async function __loadGhRepos() {
   const section = $('ghProjectsSection');
   const box = $('ghProjectCards');
   if (!section || !box) return;
@@ -1227,7 +1238,7 @@ async function loadGithubReposForProjects() {
   }
 
   section.hidden = false;
-  box.innerHTML = '<div style="color:var(--muted);font-size:12px;">Loading your GitHub repos...</div>';
+  if (!box.querySelector('.project-card')) box.innerHTML = '<div style="color:var(--muted);font-size:12px;">Loading your GitHub repos...</div>';
 
   try {
     const res = await fetch('https://api.github.com/user/repos?per_page=10&sort=updated', {

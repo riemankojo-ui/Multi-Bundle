@@ -381,8 +381,8 @@ html.mb-noln #editorShell .editor-gutter{display:none}
 .editor-hl .tk-fn{color:var(--fn)}
 .editor-hl .tk-tag{color:var(--tag)}
 .editor-hl .tk-attr{color:var(--attr)}
-::highlight(srch-all){background:rgba(255,200,50,0.28)}
-::highlight(srch){background:#ffcc33;color:#000}
+::highlight(srch-all){background:rgba(255,200,50,0.24)}
+::highlight(srch){background:rgba(255,200,50,0.52)}
 
 /* ========== Editor full-screen preview ========== */
 .editor-preview-pane{

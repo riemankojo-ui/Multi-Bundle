@@ -459,6 +459,7 @@ ta.addEventListener('scroll',syncScroll);
   function upd(){
     try{
       if(document.activeElement!==ta||ta.selectionStart===ta.selectionEnd){CSS.highlights.delete('mbsel');return}
+      if(searchBar.classList.contains('open')&&matchIndex>=0&&matches[matchIndex]===ta.selectionStart&&ta.selectionEnd-ta.selectionStart===matchLens[matchIndex]){CSS.highlights.delete('mbsel');return}
       var a=pos(ta.selectionStart),b=pos(ta.selectionEnd);
       if(!a||!b){CSS.highlights.delete('mbsel');return}
       var r=new Range();r.setStart(a[0],a[1]);r.setEnd(b[0],b[1]);
@@ -565,7 +566,8 @@ ta.addEventListener('keydown',function(e){
 });
 
 function openSearch(){searchBar.classList.add('open');searchInput.focus();searchInput.select()}
-function closeSearch(){searchBar.classList.remove('open');matches=[];matchIndex=-1;updateSearchCount();paintMatches()}
+function clearMatchSel(){try{var e0=ta.selectionEnd;ta.setSelectionRange(e0,e0);saveEdSel()}catch(x){}}
+function closeSearch(){searchBar.classList.remove('open');matches=[];matchIndex=-1;updateSearchCount();paintMatches();clearMatchSel()}
 function runSearch(){
   const q=searchInput.value;matches=[];matchLens=[];matchIndex=-1;
   const gl=q.match(/^:(\d+)$/);if(gl){goToLine(parseInt(gl[1],10));searchCount.textContent='line '+gl[1];return}
@@ -576,7 +578,7 @@ function runSearch(){
         while((m=re.exec(ta.value))!==null){matches.push(m.index);matchLens.push(m[0].length);if(m[0].length===0)re.lastIndex++}}catch(e){}
     }}
   updateSearchCount();
-  if(matches.length){matchIndex=0;selectMatch()}else paintMatches();
+  if(matches.length){matchIndex=0;selectMatch()}else{paintMatches();if(!q)clearMatchSel()}
 }
 function updateSearchCount(){searchCount.textContent=matches.length?(matchIndex+1)+'/'+matches.length:'0/0'}
 function paintMatches(){
@@ -734,6 +736,7 @@ function refreshFileList(){
 }
 function loadFile(path){
   const f=files.find(function(x){return x.path===path});if(!f||f.text==null)return;
+  if(path!==currentPath&&searchBar.classList.contains('open')){searchInput.value='';closeSearch()}
   currentPath=path;
   
   let savedText = f.text;
@@ -994,9 +997,12 @@ if (ta) {
 // Save when you leave the app, restore when you come back
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) saveEdSel();
-  else setTimeout(restoreEdSel, 80);
+  else setTimeout(function () {
+    restoreEdSel();
+    try { var c0 = ta.parentNode; if (c0) c0.classList.remove('mb-sel'); refreshHighlight(); syncScroll(); paintMatches(); document.dispatchEvent(new Event('selectionchange')); } catch (e) {}
+  }, 80);
 });
-window.addEventListener('pageshow', function () { setTimeout(restoreEdSel, 80); });
+window.addEventListener('pageshow', function () { setTimeout(function () { restoreEdSel(); try { refreshHighlight(); syncScroll(); paintMatches(); } catch (e) {} }, 80); });
 var __edRestoring = false, __edTouching = false;
 if (ta) {
   ta.addEventListener('touchstart', function () { __edTouching = true; }, { passive: true });

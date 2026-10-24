@@ -166,7 +166,7 @@
         body: body
       });
       if (r.status === 401) { driveTok = null; driveTokExp = 0; }
-      if (!r.ok) throw new Error('Google Drive said no (' + r.status + '). Check the Drive API is enabled for your Firebase project.');
+      if (!r.ok) { var em = ''; try { var ej = await r.json(); em = (ej.error && ej.error.message) || ''; } catch (x) {} throw new Error('Drive ' + r.status + ': ' + em); }
       var d = await r.json();
       toast('Saved to Google Drive: ' + d.name, 'success');
       window.open(d.webViewLink || 'https://drive.google.com/drive/my-drive', '_blank');

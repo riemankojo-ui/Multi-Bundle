@@ -78,6 +78,7 @@
       '<div class="bk-actions">' +
   '<button class="btn primary" id="bkZip">Make ZIP</button>' +
   '<button class="btn secondary" id="bkRaw">Raw files</button>' +
+  '<button class="btn secondary" id="bkDrive">Google Drive</button>' +
   '<button class="btn secondary" id="bkDel" style="color:#ff8a8a;border-color:#5a2430;background:#25131a">Delete</button>' +
 '</div>' +
 '<div class="bk-hint">ZIP puts everything in one file. Raw files saves each file on its own with its own name. Delete removes the selected files from the project (a snapshot is saved first).</div></section>';
@@ -90,7 +91,7 @@
     var c = $('bkCount'); if (c) c.textContent = n + ' selected';
     var a = $('bkAll');
     if (a) { a.checked = n > 0 && n === fl.length; a.indeterminate = n > 0 && n < fl.length; }
-    ['bkZip', 'bkRaw', 'bkDel'].forEach(function (id) { var b = $(id); if (b) b.disabled = !n || state.busy; });
+    ['bkZip', 'bkRaw', 'bkDrive', 'bkDel'].forEach(function (id) { var b = $(id); if (b) b.disabled = !n || state.busy; });
   }
 
   function download(blob, name) {
@@ -117,6 +118,62 @@
       download(z.blob, z.name);
       toast('ZIP ready: ' + z.name + ' (' + list.length + ' file' + (list.length === 1 ? '' : 's') + ')', 'success');
     } catch (e) { toast(e.message || 'Could not make the ZIP', 'error'); }
+    state.busy = false; updateBar(p);
+  }
+
+  var driveTok = null, driveTokExp = 0;
+  async function getDriveToken() {
+    if (driveTok && Date.now() < driveTokExp) return driveTok;
+    var auth = firebase.auth(), cu = auth.currentUser;
+    var provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/drive.file');
+    if (cu && cu.email) provider.setCustomParameters({ login_hint: cu.email });
+    var res;
+    try {
+      var linked = !!(cu && cu.providerData && cu.providerData.some(function (x) { return x.providerId === 'google.com'; }));
+      res = await (cu ? (linked ? cu.reauthenticateWithPopup(provider) : cu.linkWithPopup(provider)) : auth.signInWithPopup(provider));
+    } catch (e) {
+      if (e && e.code === 'auth/credential-already-in-use' && e.credential && e.credential.accessToken) {
+        driveTok = e.credential.accessToken; driveTokExp = Date.now() + 50 * 60 * 1000; return driveTok;
+      }
+      throw e;
+    }
+    driveTok = res.credential && res.credential.accessToken;
+    if (!driveTok) throw new Error('Google did not give Drive access');
+    driveTokExp = Date.now() + 50 * 60 * 1000;
+    return driveTok;
+  }
+
+  async function runDrive(p) {
+    var list = selectedFiles(p); if (!list.length || state.busy) return;
+    state.busy = true; updateBar(p);
+    try {
+      toast('Connecting to Google Drive\u2026');
+      var tok = await getDriveToken();
+      toast('Uploading to Google Drive\u2026');
+      var z = await makeZip(p, list);
+      var b = 'mbdrive' + Date.now();
+      var body = new Blob([
+        '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n',
+        JSON.stringify({ name: z.name }),
+        '\r\n--' + b + '\r\nContent-Type: application/zip\r\n\r\n',
+        z.blob,
+        '\r\n--' + b + '--'
+      ]);
+      var r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'multipart/related; boundary=' + b },
+        body: body
+      });
+      if (r.status === 401) { driveTok = null; driveTokExp = 0; }
+      if (!r.ok) throw new Error('Google Drive said no (' + r.status + '). Check the Drive API is enabled for your Firebase project.');
+      var d = await r.json();
+      toast('Saved to Google Drive: ' + d.name, 'success');
+      window.open(d.webViewLink || 'https://drive.google.com/drive/my-drive', '_blank');
+    } catch (e) {
+      if (e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')) toast('Google Drive cancelled');
+      else toast((e && e.message) || 'Could not save to Google Drive', 'error');
+    }
     state.busy = false; updateBar(p);
   }
 
@@ -223,6 +280,7 @@
     };
     $('bkZip').onclick = function () { runZip(p); };
 $('bkRaw').onclick = function () { runRaw(p); };
+$('bkDrive').onclick = function () { runDrive(p); };
 $('bkDel').onclick = function () { runDelete(p); };
     updateBar(p);
     window.scrollTo && window.scrollTo(0, 0);

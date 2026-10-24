@@ -177,6 +177,71 @@
     state.busy = false; updateBar(p);
   }
 
+  async function driveFail(r) {
+    if (r.status === 401) { driveTok = null; driveTokExp = 0; }
+    var m = '';
+    try { var j = await r.json(); m = (j.error && j.error.message) || ''; } catch (x) {}
+    return new Error('Drive ' + r.status + ': ' + m);
+  }
+
+  async function runDriveSingles(p) {
+    var list = selectedFiles(p); if (!list.length || state.busy) return;
+    state.busy = true; updateBar(p);
+    try {
+      toast('Connecting to Google Drive\u2026');
+      var tok = await getDriveToken();
+      var fr = await fetch('https://www.googleapis.com/drive/v3/files?fields=id,webViewLink', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: safeName(p.name), mimeType: 'application/vnd.google-apps.folder' })
+      });
+      if (!fr.ok) throw await driveFail(fr);
+      var folder = await fr.json();
+      var names = uniqueNames(list);
+      for (var i = 0; i < list.length; i++) {
+        toast('Uploading ' + (i + 1) + ' of ' + list.length + '\u2026');
+        var blob = fileBlob(list[i]);
+        var b = 'mbdrive' + Date.now() + i;
+        var body = new Blob([
+          '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n',
+          JSON.stringify({ name: names[i], parents: [folder.id] }),
+          '\r\n--' + b + '\r\nContent-Type: ' + (blob.type || 'application/octet-stream') + '\r\n\r\n',
+          blob,
+          '\r\n--' + b + '--'
+        ]);
+        var r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'multipart/related; boundary=' + b },
+          body: body
+        });
+        if (!r.ok) throw await driveFail(r);
+      }
+      toast('Saved ' + list.length + ' file' + (list.length === 1 ? '' : 's') + ' to Drive folder ' + safeName(p.name), 'success');
+      window.open(folder.webViewLink || 'https://drive.google.com/drive/my-drive', '_blank');
+    } catch (e) {
+      if (e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')) toast('Google Drive cancelled');
+      else toast((e && e.message) || 'Could not save to Google Drive', 'error');
+    }
+    state.busy = false; updateBar(p);
+  }
+
+  function driveChooser(p) {
+    var old = document.getElementById('bkDrvPick'); if (old) old.remove();
+    var ov = document.createElement('div'); ov.id = 'bkDrvPick';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+    ov.innerHTML = '<div style="width:100%;max-width:320px;background:#17181c;border:1px solid #25262c;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;color:#fff">' +
+      '<div style="font-weight:800;font-size:16px">Save to Google Drive</div>' +
+      '<div style="font-size:12px;opacity:.7">Save ZIP uploads one ZIP file. Singles makes a folder named ' + esc(safeName(p.name)) + ' with your files inside.</div>' +
+      '<div style="display:flex;gap:8px"><button class="btn primary" id="bkDrvZip" style="flex:1">Save ZIP</button><button class="btn secondary" id="bkDrvSingles" style="flex:1">Singles</button></div>' +
+      '<button class="btn secondary" id="bkDrvCancel">Cancel</button></div>';
+    document.body.appendChild(ov);
+    function close() { ov.remove(); }
+    ov.onclick = function (e) { if (e.target === ov) close(); };
+    document.getElementById('bkDrvCancel').onclick = close;
+    document.getElementById('bkDrvZip').onclick = function () { close(); runDrive(p); };
+    document.getElementById('bkDrvSingles').onclick = function () { close(); runDriveSingles(p); };
+  }
+
   async function runRaw(p) {
     var list = selectedFiles(p); if (!list.length || state.busy) return;
     state.busy = true; updateBar(p);
@@ -280,7 +345,7 @@
     };
     $('bkZip').onclick = function () { runZip(p); };
 $('bkRaw').onclick = function () { runRaw(p); };
-$('bkDrive').onclick = function () { runDrive(p); };
+$('bkDrive').onclick = function () { driveChooser(p); };
 $('bkDel').onclick = function () { runDelete(p); };
     updateBar(p);
     window.scrollTo && window.scrollTo(0, 0);

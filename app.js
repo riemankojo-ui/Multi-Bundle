@@ -622,7 +622,7 @@ function htmlRewrite(html,path){
   });
   doc.querySelectorAll('script[src]').forEach(function(el){
     const src=el.getAttribute('src');const f=relative(path,src);
-    if(f&&f.text!=null){const s=doc.createElement('script');const t=el.getAttribute('type');if(t)s.setAttribute('type',t);s.textContent=f.text;el.replaceWith(s)}
+    if(f&&f.text!=null){const s=doc.createElement('script');const t=el.getAttribute('type');if(t)s.setAttribute('type',t);s.textContent=f.text.replace(/<\/(script)/gi,'<\\/$1');el.replaceWith(s)}
     else el.setAttribute('src',assetUrl(path,src));
   });
   doc.querySelectorAll('style').forEach(function(el){if(el.textContent)el.textContent=cssRewrite(el.textContent,path)});

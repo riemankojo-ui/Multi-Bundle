@@ -458,10 +458,10 @@ delfiles: function () { closeCard(); if (typeof window.__openDeleteFiles === 'fu
   var card = document.createElement('div');
   card.id = 'editorToolsCard'; card.className = 'ed-tools-card';
   card.innerHTML =
-    '<div class="et-ttl">Select &amp; clear</div><div class="et-grid">' +
+    '<button data-a="chars" class="et-chars">&lt;/&gt; Code characters</button><div hidden><div class="et-grid">' +
     '<button data-a="all">Select all</button><button data-a="copy">Copy all</button>' +
     '<button data-a="cut">Cut selected</button><button data-a="delsel">Delete selected</button>' +
-    '<button data-a="clear">Clear all code</button><button data-a="bksp">\u232b Backspace</button></div>' +
+    '<button data-a="clear">Clear all code</button><button data-a="bksp">\u232b Backspace</button></div></div>' +
     '<div class="et-ttl" style="margin-top:10px">Move &amp; edit</div><div class="et-grid">' +
     '<button data-a="top">Go to top</button><button data-a="last">Go to last</button>' +
     '<button data-a="line">Go to line</button><button data-a="sel">Select line</button>' +
@@ -469,7 +469,7 @@ delfiles: function () { closeCard(); if (typeof window.__openDeleteFiles === 'fu
     '<button data-a="cmt">Comment line</button><button data-a="paste">Paste</button>' +
     '<button data-a="renthis">Rename this file</button><button data-a="renfiles">Rename file</button>' +
     '<button data-a="delthis">Delete this file</button><button data-a="delfiles">Delete file</button>' +
-    '<button data-a="dedup" id="etDedup" style="grid-column:1 / -1;padding:10px 4px;font-size:12px">Remove DBT (0)</button></div>' +
+    '<button data-a="dedup" id="etDedup" style="grid-column:1 / -1;padding:12px 6px;font-size:13px">Remove DBT (0)</button></div>' +
     '<div class="et-size"><span>Text size</span><button data-a="fsm" aria-label="Smaller">A\u2212</button><b id="etFs">' + fs + '</b><button data-a="fsp" aria-label="Bigger">A+</button></div>';
   
   // APPEND TO BODY (Floats over everything)
@@ -494,7 +494,7 @@ let savedLeft = 0, savedTop = 0;
   } else {
     // Default position under the button
     var rect = btn.getBoundingClientRect();
-    var cardWidth = 200;
+    var cardWidth = 270;
     var leftPos = Math.min(rect.left, window.innerWidth - cardWidth - 10);
     card.style.left = leftPos + 'px';
     card.style.top = (rect.bottom + 6) + 'px';
@@ -583,11 +583,12 @@ if (editorPage) {
   var st = document.createElement('style'); st.id = 'edToolsStyle';
   st.textContent = [
     '.et-file-row #editorToolsBtn{height:42px;min-width:42px;flex-shrink:0;border-radius:10px;background:#2a2d1f;color:#f5d76e;border-color:#4b4a2a}',
-    '.ed-tools-card{display:none;position:fixed;z-index:9999;width:200px;max-height:65vh;overflow-y:auto;padding:6px;background:#17181c;border:1px solid #2c2d34;border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.55);touch-action:none;right:auto!important;bottom:auto!important;}',
+    '.ed-tools-card{display:none;position:fixed;z-index:9999;width:270px;max-height:70vh;overflow-y:auto;padding:6px;background:#17181c;border:1px solid #2c2d34;border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.55);touch-action:none;right:auto!important;bottom:auto!important;}',
     '.ed-tools-card.open{display:block}',
     '.ed-tools-card .et-ttl{font-size:9px;font-weight:800;letter-spacing:1.2px;color:var(--red);text-transform:uppercase;margin:4px 4px 6px}',
-    '.ed-tools-card .et-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}',
-    '.ed-tools-card button{background:#20222a;color:#e5e6ea;border:1px solid #303139;border-radius:8px;padding:6px 4px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .14s ease,background .14s ease}',
+    '.ed-tools-card .et-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}',
+    '.ed-tools-card .et-chars{width:100%;margin-bottom:8px;padding:14px 6px;font-size:14px;background:#2a2d1f;color:#f5d76e;border-color:#4b4a2a}',
+    '.ed-tools-card button{background:#20222a;color:#e5e6ea;border:1px solid #303139;border-radius:10px;padding:12px 6px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .14s ease,background .14s ease}',
     '.ed-tools-card button:active{transform:scale(.95);background:#2d303a}',
     '.ed-tools-card .et-size{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid #25262c}',
     '.ed-tools-card .et-size span{flex:1;font-size:10px;font-weight:700;color:var(--muted)}',
@@ -599,6 +600,89 @@ if (editorPage) {
   ].join('\n');
   document.head.appendChild(st);
   setFs(fs);
+
+  /* ---------- code characters panel ---------- */
+  var CC_TAGS = [
+    ['<!DOCTYPE html>', '<!DOCTYPE html>\n', 0],
+    ['<html></html>', '<html></html>', 7], ['<head></head>', '<head></head>', 7],
+    ['<body></body>', '<body></body>', 7], ['</head>'], ['</body>'],
+    ['<div></div>', '<div></div>', 6], ['</div>'],
+    ['<script><\/script>', '<script><\/script>', 9], ['<\/script>'],
+    ['<style></style>', '<style></style>', 8], ['</style>'],
+    ['<meta charset>', '<meta charset="utf-8">', 0],
+    ['<meta viewport>', '<meta name="viewport" content="width=device-width,initial-scale=1">', 0],
+    ['<link css>', '<link rel="stylesheet" href="">', 2],
+    ['<script src>', '<script src=""><\/script>', 11],
+    ['<a href>', '<a href=""></a>', 6], ['<img>', '<img src="" alt="">', 9],
+    ['<p></p>', '<p></p>', 4], ['<span></span>', '<span></span>', 7],
+    ['<h1></h1>', '<h1></h1>', 5], ['<button></button>', '<button></button>', 9],
+    ['<!-- -->', '<!--  -->', 4]
+  ];
+  var CC_SYMS = [
+    ['{'], ['}'], ['('], [')'], ['['], [']'], ['<'], ['>'], ['/'], ['\\'], [';'], [':'],
+    ['='], ['"'], ["'"], ['`'], [','], ['.'], ['!'], ['?'], ['&'], ['|'], ['_'], ['-'],
+    ['+'], ['*'], ['#'], ['$'], ['%'], ['@'], ['~'], ['^'],
+    ['{}', '{}', 1], ['()', '()', 1], ['[]', '[]', 1], ['""', '""', 1], ["''", "''", 1], ['``', '``', 1],
+    ['=>'], ['</'], ['/>'], ['&&'], ['||'], ['==='], ['!=='], ['${}', '${}', 1], ['Tab', '  ', 0]
+  ];
+  var ccItems = [];
+  var cc = document.createElement('div');
+  cc.id = 'ccPanel'; cc.className = 'cc-panel';
+  cc.innerHTML = '<div class="cc-head"><span>Code characters</span><button type="button" id="ccClose" aria-label="Close">\u2715</button></div><div class="cc-body"></div>';
+  var ccBody = cc.querySelector('.cc-body');
+  function ccSection(title, list, cls) {
+    var t = document.createElement('div'); t.className = 'cc-ttl'; t.textContent = title; ccBody.appendChild(t);
+    var g = document.createElement('div'); g.className = cls;
+    list.forEach(function (it) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'cc-b';
+      b.textContent = it[0]; b.dataset.i = ccItems.length; ccItems.push(it); g.appendChild(b);
+    });
+    ccBody.appendChild(g);
+  }
+  ccSection('Tags and blocks', CC_TAGS, 'cc-grid2');
+  ccSection('Single characters', CC_SYMS, 'cc-grid6');
+  document.body.appendChild(cc);
+
+  var ccSt = document.createElement('style'); ccSt.id = 'ccStyle';
+  ccSt.textContent = [
+    '.cc-panel{position:fixed;left:0;right:0;bottom:0;z-index:9998;background:#17181c;border-top:1px solid #2c2d34;border-radius:16px 16px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.5);padding:8px 10px calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(100%);visibility:hidden;transition:transform .26s ease,visibility 0s .26s}',
+    '.cc-panel.open{transform:translateX(0);visibility:visible;transition:transform .26s ease,visibility 0s}',
+    '.cc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:10px;font-weight:800;letter-spacing:1.2px;color:var(--red);text-transform:uppercase}',
+    '#ccClose{background:#20222a;color:#e5e6ea;border:1px solid #303139;border-radius:8px;width:36px;height:30px;font-size:14px;cursor:pointer}',
+    '.cc-body{max-height:34vh;overflow-y:auto;-webkit-overflow-scrolling:touch}',
+    '.cc-ttl{font-size:9px;font-weight:800;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase;margin:8px 2px 6px}',
+    '.cc-grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}',
+    '.cc-grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}',
+    '.cc-b{background:#20222a;color:#e5e6ea;border:1px solid #303139;border-radius:10px;padding:12px 4px;font-size:13px;font-weight:700;font-family:ui-monospace,Menlo,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}',
+    '.cc-b:active{transform:scale(.95);background:#2d303a}'
+  ].join('\n');
+  document.head.appendChild(ccSt);
+
+  function ccPlace() {
+    var vv = window.visualViewport;
+    cc.style.bottom = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + 'px' : '0px';
+  }
+  if (window.visualViewport) { visualViewport.addEventListener('resize', ccPlace); visualViewport.addEventListener('scroll', ccPlace); }
+  function ccOpen() { closeCard(); ccPlace(); cc.classList.add('open'); }
+  function ccClose() { cc.classList.remove('open'); }
+  function ccInsert(text, back) {
+    if (!haveFile()) return toast('Open a file first');
+    var a = ta.selectionStart, b = ta.selectionEnd, v = ta.value;
+    var pos = a + text.length - (back || 0);
+    ta.value = v.slice(0, a) + text + v.slice(b);
+    ta.setSelectionRange(pos, pos);
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    scrollToCaret();
+  }
+  cc.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  cc.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('button'); if (!b) return;
+    if (b.id === 'ccClose') { ccClose(); return; }
+    var it = ccItems[Number(b.dataset.i)]; if (!it) return;
+    ccInsert(it[1] !== undefined ? it[1] : it[0], it[2] || 0);
+  });
+  ACTIONS.chars = function () { if (cc.classList.contains('open')) ccClose(); else ccOpen(); };
+  if (editorPage) new MutationObserver(function () { if (editorPage.hidden) ccClose(); }).observe(editorPage, { attributes: true });
 
   window.__edt = { ops: { lineRange: lineRange, selectLineOp: selectLineOp, dupOp: dupOp, delOp: delOp, indentOp: indentOp, outdentOp: outdentOp, commentOp: commentOp, kindFor: kindFor }, actions: ACTIONS };
 })();

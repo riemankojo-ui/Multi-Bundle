@@ -416,5 +416,208 @@ $('bkDel').onclick = function () { runDelete(p); };
   }, true);
   try { var nav = JSON.parse(localStorage.getItem('mb_nav') || 'null'); if (nav && nav.tab === 'backups') setTimeout(render, 300); } catch (e) {}
 
+  /* ---- Google Drive manager (menu page) ---- */
+  var dv = { folder: 'root', trail: [{ id: 'root', name: 'My Drive' }], items: [], busy: false };
+  var DV_API = 'https://www.googleapis.com/drive/v3/files';
+  var DV_FOLDER = 'application/vnd.google-apps.folder';
+
+  function dvHasToken() { return !!(driveTok && Date.now() < driveTokExp); }
+  function dvPage() { return document.getElementById('drivePage'); }
+
+  async function dvCall(path, method, body) {
+    if (!dvHasToken()) { var a1 = new Error('Connect Google Drive again'); a1.dvAuth = true; throw a1; }
+    var r = await fetch(path, {
+      method: method || 'GET',
+      headers: Object.assign({ Authorization: 'Bearer ' + driveTok }, body ? { 'Content-Type': 'application/json' } : {}),
+      body: body ? JSON.stringify(body) : undefined
+    });
+    if (r.status === 401) { driveTok = null; driveTokExp = 0; var a2 = new Error('Connect Google Drive again'); a2.dvAuth = true; throw a2; }
+    if (!r.ok) throw await driveFail(r);
+    return r.status === 204 ? null : r.json();
+  }
+
+  async function dvList() {
+    var q = "'" + dv.folder + "' in parents and trashed=false";
+    var d = await dvCall(DV_API + '?q=' + encodeURIComponent(q) +
+      '&fields=' + encodeURIComponent('files(id,name,mimeType,size,modifiedTime,webViewLink,parents)') +
+      '&orderBy=' + encodeURIComponent('folder,name') + '&pageSize=200');
+    dv.items = d.files || [];
+  }
+
+  function dvErr(e) {
+    if (e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')) { toast('Google Drive cancelled'); return; }
+    if (e && e.dvAuth) { dvRender(); toast('Tap Connect Google Drive to continue', 'error'); return; }
+    toast((e && e.message) || 'Google Drive problem', 'error');
+  }
+
+  async function dvLoad() {
+    if (dv.busy) return;
+    dv.busy = true;
+    try { await dvList(); dvRender(); } catch (e) { dvErr(e); }
+    dv.busy = false;
+  }
+
+  async function dvConnect() {
+    try { toast('Connecting to Google Drive\u2026'); await getDriveToken(); await dvLoad(); } catch (e) { dvErr(e); }
+  }
+
+  function dvOpen() { if (dvHasToken()) dvLoad(); else dvRender(); }
+
+  function dvRender() {
+    var pg = dvPage(); if (!pg) return;
+    var head = '<section class="card"><label class="eyebrow">GOOGLE DRIVE</label><h1>Your <span>Drive</span></h1><p>Files and folders Multi Bundle saved to your Google Drive. Rename, move or delete them here.</p></section>';
+    if (!dvHasToken()) {
+      pg.innerHTML = head + '<section class="card"><button class="btn primary" id="dvConnect" style="width:100%">Connect Google Drive</button></section>';
+      return;
+    }
+    var crumbs = dv.trail.map(function (t, i) {
+      return '<button class="dv-crumb" data-i="' + i + '">' + esc(t.name) + '</button>';
+    }).join('<span class="dv-sep">\u203a</span>');
+    var rows = dv.items.map(function (f, i) {
+      var isF = f.mimeType === DV_FOLDER;
+      var sub = isF ? 'Folder' : (f.size ? fmtSize(Number(f.size)) : 'File');
+      return '<div class="dv-row"><button class="dv-main" data-i="' + i + '" data-a="open"><span class="dv-ic">' + (isF ? '\uD83D\uDCC1' : '\uD83D\uDCC4') +
+        '</span><span class="dv-nm"><b>' + esc(f.name) + '</b><i>' + sub + '</i></span></button>' +
+        '<button class="dv-more" data-i="' + i + '" data-a="menu" aria-label="Options">\u22EE</button></div>';
+    }).join('') || '<div class="dv-empty">Nothing here yet. Upload with the Google Drive button in Files.</div>';
+    pg.innerHTML = head + '<section class="card"><div class="dv-bar">' + crumbs + '</div>' +
+      '<div class="dv-tools"><button class="btn secondary" id="dvNew">New folder</button><button class="btn secondary" id="dvRefresh">Refresh</button></div>' +
+      '<div class="dv-list">' + rows + '</div></section>';
+  }
+
+  function dvSheet(title, btns) {
+    var old = document.getElementById('dvSheet'); if (old) old.remove();
+    var ov = document.createElement('div'); ov.id = 'dvSheet'; ov.className = 'dv-ov';
+    ov.innerHTML = '<div class="dv-sheet"><div class="dv-st">' + esc(title) + '</div><div class="dv-sb"></div></div>';
+    var box = ov.querySelector('.dv-sb');
+    btns.concat([{ label: 'Cancel' }]).forEach(function (b) {
+      var el = document.createElement('button');
+      el.className = 'btn secondary' + (b.danger ? ' dv-danger' : '');
+      el.textContent = b.label;
+      el.onclick = function () { ov.remove(); if (b.fn) b.fn(); };
+      box.appendChild(el);
+    });
+    ov.onclick = function (e) { if (e.target === ov) ov.remove(); };
+    document.body.appendChild(ov);
+  }
+
+  function dvOpenItem(f) {
+    if (f.mimeType === DV_FOLDER) { dv.trail.push({ id: f.id, name: f.name }); dv.folder = f.id; dvLoad(); }
+    else window.open(f.webViewLink || 'https://drive.google.com/drive/my-drive', '_blank');
+  }
+
+  function dvMenu(f) {
+    var isF = f.mimeType === DV_FOLDER;
+    dvSheet(f.name, [
+      { label: isF ? 'Open folder' : 'Open in Drive', fn: function () { dvOpenItem(f); } },
+      { label: 'Rename', fn: function () { dvRename(f); } },
+      { label: 'Move to\u2026', fn: function () { dvMove(f); } },
+      { label: 'Move to trash', danger: true, fn: function () { dvTrash(f); } }
+    ]);
+  }
+
+  async function dvRename(f) {
+    var n = await window.showPrompt('Rename', f.name, { confirmText: 'Rename' });
+    if (typeof n !== 'string') return;
+    n = n.trim(); if (!n || n === f.name) return;
+    try { await dvCall(DV_API + '/' + f.id + '?fields=id', 'PATCH', { name: n }); toast('Renamed', 'success'); await dvLoad(); } catch (e) { dvErr(e); }
+  }
+
+  async function dvTrash(f) {
+    var ok = await window.showConfirm('Move "' + f.name + '" to your Google Drive trash? You can restore it from the trash in Drive.', { title: 'Move to trash', confirmText: 'Move to trash', cancelText: 'Keep' });
+    if (!ok) return;
+    try { await dvCall(DV_API + '/' + f.id + '?fields=id', 'PATCH', { trashed: true }); toast('Moved to trash', 'success'); await dvLoad(); } catch (e) { dvErr(e); }
+  }
+
+  async function dvMove(f) {
+    try {
+      var q = "mimeType='" + DV_FOLDER + "' and trashed=false";
+      var d = await dvCall(DV_API + '?q=' + encodeURIComponent(q) + '&fields=' + encodeURIComponent('files(id,name,modifiedTime)') + '&orderBy=name&pageSize=200');
+      var dests = [{ id: 'root', label: 'My Drive (top level)' }].concat((d.files || []).filter(function (x) { return x.id !== f.id; }).map(function (x) {
+        return { id: x.id, label: x.name + '  \u00B7  ' + new Date(x.modifiedTime).toLocaleDateString() };
+      }));
+      dvSheet('Move "' + f.name + '" to', dests.map(function (x) { return { label: x.label, fn: function () { dvDoMove(f, x); } }; }));
+    } catch (e) { dvErr(e); }
+  }
+
+  async function dvDoMove(f, dest) {
+    if (dest.id === dv.folder) { toast('Already in that folder'); return; }
+    var from = (f.parents && f.parents[0]) || dv.folder;
+    try {
+      await dvCall(DV_API + '/' + f.id + '?addParents=' + encodeURIComponent(dest.id) + '&removeParents=' + encodeURIComponent(from) + '&fields=id', 'PATCH', {});
+      toast('Moved', 'success'); await dvLoad();
+    } catch (e) { dvErr(e); }
+  }
+
+  async function dvNewFolder() {
+    var n = await window.showPrompt('New folder', '', { placeholder: 'Folder name', confirmText: 'Create' });
+    if (typeof n !== 'string' || !n.trim()) return;
+    try { await dvCall(DV_API + '?fields=id', 'POST', { name: n.trim(), mimeType: DV_FOLDER, parents: [dv.folder] }); toast('Folder created', 'success'); await dvLoad(); } catch (e) { dvErr(e); }
+  }
+
+  function dvClick(e) {
+    var b = e.target.closest && e.target.closest('button'); if (!b) return;
+    if (b.id === 'dvConnect') return dvConnect();
+    if (b.id === 'dvNew') return dvNewFolder();
+    if (b.id === 'dvRefresh') return dvLoad();
+    if (b.classList.contains('dv-crumb')) {
+      var i = Number(b.dataset.i); dv.trail = dv.trail.slice(0, i + 1); dv.folder = dv.trail[i].id; return dvLoad();
+    }
+    var f = dv.items[Number(b.dataset.i)]; if (!f) return;
+    if (b.dataset.a === 'open') return dvOpenItem(f);
+    if (b.dataset.a === 'menu') return dvMenu(f);
+  }
+
+  function dvBuild() {
+    if (dvPage()) return;
+    var main = document.querySelector('main'); if (!main) return;
+    var pg = document.createElement('section'); pg.id = 'drivePage'; pg.className = 'tab-page'; pg.hidden = true;
+    main.appendChild(pg);
+    pg.addEventListener('click', dvClick);
+    var nav = document.querySelector('.drawer-nav');
+    if (nav && !nav.querySelector('[data-tab="drive"]')) {
+      var a = document.createElement('a'); a.setAttribute('data-tab', 'drive');
+      a.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg><span>Google Drive</span>';
+      nav.insertBefore(a, nav.querySelector('[data-tab="settings"]') || null);
+    }
+    var st = document.createElement('style'); st.id = 'dvStyle';
+    st.textContent = [
+      '.dv-bar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:10px}',
+      '.dv-crumb{background:none;border:0;color:var(--text);font-weight:700;font-size:13px;padding:4px 2px;cursor:pointer;font-family:inherit}',
+      '.dv-sep{color:var(--muted)}',
+      '.dv-tools{display:flex;gap:8px;margin-bottom:10px}',
+      '.dv-tools .btn{flex:1}',
+      '.dv-list{display:flex;flex-direction:column;gap:6px}',
+      '.dv-row{display:flex;align-items:center;background:#17181c;border:1px solid #25262c;border-radius:12px}',
+      '.dv-main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;color:var(--text);text-align:left;padding:10px 11px;cursor:pointer;font-family:inherit}',
+      '.dv-ic{font-size:20px}',
+      '.dv-nm{display:flex;flex-direction:column;min-width:0}',
+      '.dv-nm b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.dv-nm i{font-size:11px;color:var(--muted);font-style:normal}',
+      '.dv-more{background:none;border:0;color:var(--text);font-size:22px;padding:8px 14px;cursor:pointer}',
+      '.dv-empty{color:var(--muted);font-size:13px;padding:14px 4px}',
+      '.dv-ov{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;padding:14px}',
+      '.dv-sheet{width:100%;max-width:420px;background:#17181c;border:1px solid #25262c;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;color:#fff}',
+      '.dv-st{font-weight:800;font-size:15px;word-break:break-word}',
+      '.dv-sb{display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto}',
+      '.dv-danger{color:#ff8a8a!important;border-color:#5a2430!important;background:#25131a!important}'
+    ].join('\n');
+    document.head.appendChild(st);
+  }
+  dvBuild();
+
+  var origShowDv = window.showTab;
+  window.showTab = function (name) {
+    if (typeof origShowDv === 'function') origShowDv(name);
+    var pg = dvPage(); if (pg) pg.hidden = (name !== 'drive');
+    if (name === 'drive') dvOpen();
+  };
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest && e.target.closest('[data-tab]'); if (!el) return;
+    var pg = dvPage(); if (!pg) return;
+    if (el.dataset.tab === 'drive') window.showTab('drive'); else pg.hidden = true;
+  }, true);
+  try { var navDv = JSON.parse(localStorage.getItem('mb_nav') || 'null'); if (navDv && navDv.tab === 'drive') setTimeout(function () { window.showTab('drive'); }, 300); } catch (e) {}
+
   window.__bk = { uniqueNames: uniqueNames, fmtSize: fmtSize, safeName: safeName, listHtml: listHtml, detailHtml: detailHtml, makeZip: makeZip, _state: state };
 })();

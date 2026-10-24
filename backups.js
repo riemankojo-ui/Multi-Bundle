@@ -122,7 +122,10 @@
   }
 
   var driveTok = null, driveTokExp = 0;
-  async function getDriveToken() {
+  try { var sv = JSON.parse(localStorage.getItem('mb_drive_tok') || 'null'); if (sv && sv.t && Date.now() < sv.e) { driveTok = sv.t; driveTokExp = sv.e; } } catch (e) {}
+  function driveSave() { try { if (driveTok) localStorage.setItem('mb_drive_tok', JSON.stringify({ t: driveTok, e: driveTokExp })); else localStorage.removeItem('mb_drive_tok'); } catch (e) {} }
+  async function getDriveToken() { var t = await getDriveToken0(); driveSave(); return t; }
+  async function getDriveToken0() {
     if (driveTok && Date.now() < driveTokExp) return driveTok;
     var auth = firebase.auth(), cu = auth.currentUser;
     var provider = new firebase.auth.GoogleAuthProvider();
@@ -431,7 +434,7 @@ $('bkDel').onclick = function () { runDelete(p); };
       headers: Object.assign({ Authorization: 'Bearer ' + driveTok }, body ? { 'Content-Type': 'application/json' } : {}),
       body: body ? JSON.stringify(body) : undefined
     });
-    if (r.status === 401) { driveTok = null; driveTokExp = 0; var a2 = new Error('Connect Google Drive again'); a2.dvAuth = true; throw a2; }
+    if (r.status === 401) { driveTok = null; driveTokExp = 0; driveSave(); var a2 = new Error('Connect Google Drive again'); a2.dvAuth = true; throw a2; }
     if (!r.ok) throw await driveFail(r);
     return r.status === 204 ? null : r.json();
   }

@@ -634,11 +634,24 @@ $('bkDel').onclick = function () { runDelete(p); };
   }
   dvBuild();
 
+  function dvAddProjBtn() {
+    var inp = document.getElementById('zipInput');
+    var lab = inp && inp.parentNode;
+    if (!lab || !lab.parentNode || document.getElementById('projImportDrive')) return;
+    var b = document.createElement('button');
+    b.id = 'projImportDrive'; b.className = 'btn secondary'; b.type = 'button';
+    b.textContent = 'Google Drive';
+    b.onclick = function () { window.showTab('drive'); };
+    lab.parentNode.insertBefore(b, lab.nextSibling);
+  }
+  dvAddProjBtn();
+
   var origShowDv = window.showTab;
   window.showTab = function (name) {
     if (typeof origShowDv === 'function') origShowDv(name);
     var pg = dvPage(); if (pg) pg.hidden = (name !== 'drive');
     if (name === 'drive') dvOpen();
+    if (name === 'projects') dvAddProjBtn();
   };
   document.addEventListener('click', function (e) {
     var el = e.target.closest && e.target.closest('[data-tab]'); if (!el) return;

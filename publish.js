@@ -298,8 +298,7 @@ async function runPublish(){
     var card=$('pbCard');
     if(card)card.innerHTML='<div class="pb-done"><div class="pb-check">\u2713</div><div class="pb-title">Published</div>'+
       '<div class="pb-note">'+res.count+' file'+(res.count===1?'':'s')+' sent to '+esc(S.scan.repo)+' ('+esc(S.scan.branch)+').</div>'+
-      '<a class="pb-link" href="'+esc(url)+'" target="_blank" rel="noopener">View commit \u2197</a>'+
-      '<div class="pb-live" id="pbLive"></div>'+
+      '<a class="pb-link" href="'+esc(url)+'" target="_blank" rel="noopener">View commit \u2197</a>'+      
       '<button class="pb-go" id="pbDone">Done</button></div>';
     var d=$('pbDone');if(d)d.onclick=closeSheet;
     initLive();
@@ -337,7 +336,7 @@ async function openSheet(opts){
       '<div class="pb-grid"><div class="pb-f"><label>Repo</label><input id="pbRepo" placeholder="owner/repo" value="'+esc(repo)+'" autocomplete="off" autocapitalize="off"></div>'+
       '<div class="pb-f"><label>Branch</label><input id="pbBranch" placeholder="main" value="'+esc(branch)+'" autocomplete="off" autocapitalize="off"></div></div>'+
       '<button class="pb-mini" id="pbScan">Check changes</button>'+
-      '<div class="pb-live" id="pbLive"></div>'+'<div class="pb-new"'+(p.githubRepo?' hidden':'')+'><div class="pb-nt">No repo yet? Create one</div><div class="pb-grid"><div class="pb-f"><label>New repo name</label><input id="pbNewName" placeholder="my-app" value="'+esc(String(p.name||'').trim().replace(/[^\w.-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase())+'" autocomplete="off" autocapitalize="off"></div><div class="pb-f"><label>Who can see it</label><select id="pbNewVis"><option value="private">Private</option><option value="public">Public</option></select></div></div><button class="pb-go" id="pbCreate">Create repo &amp; publish</button></div>'+
+      '<div class="pb-new"'+(p.githubRepo?' hidden':'')+'><div class="pb-nt">No repo yet? Create one</div><div class="pb-grid"><div class="pb-f"><label>New repo name</label><input id="pbNewName" placeholder="my-app" value="'+esc(String(p.name||'').trim().replace(/[^\w.-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase())+'" autocomplete="off" autocapitalize="off"></div><div class="pb-f"><label>Who can see it</label><select id="pbNewVis"><option value="private">Private</option><option value="public">Public</option></select></div></div><button class="pb-go" id="pbCreate">Create repo &amp; publish</button></div>'+
       (dirty?'<div class="pb-note warn">You have unsaved edits in the editor. Tap the save button first so they are included.</div>':'')+
       '<div class="pb-note" id="pbNote"></div><div class="pb-list" id="pbList"></div>'+
       '<div class="pb-f"><label>Commit message</label><input id="pbMsg" value="Update from Multi Bundle" autocomplete="off"></div>'+

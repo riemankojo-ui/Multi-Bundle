@@ -463,6 +463,31 @@ $('bkDel').onclick = function () { runDelete(p); };
 
   function dvOpen() { if (dvHasToken()) dvLoad(); else dvRender(); }
 
+  function dvIcon(f) {
+    var n = String(f.name || '').toLowerCase(), m = f.mimeType || '';
+    var e = n.indexOf('.') > -1 ? n.split('.').pop() : '';
+    function S(c, d) { return '<svg viewBox="0 0 24 24" width="24" height="24" fill="' + c + '" fill-rule="evenodd"><path d="' + d + '"/></svg>'; }
+    var DOC = 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z';
+    if (m === DV_FOLDER) return S('#c9cacc', 'M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z');
+    if (/^(zip|rar|7z|gz|tar)$/.test(e) || /zip/.test(m)) {
+      return '<svg viewBox="0 0 24 24" width="24" height="24"><rect x="3" y="3" width="18" height="18" rx="2.5" fill="#9aa0a6"/><g fill="#1f2025"><rect x="10" y="4.5" width="2" height="2"/><rect x="12" y="6.5" width="2" height="2"/><rect x="10" y="8.5" width="2" height="2"/><rect x="12" y="10.5" width="2" height="2"/></g><rect x="10" y="13.5" width="4" height="5.5" rx="1" fill="#1f2025"/></svg>';
+    }
+    if (/^(mp3|wav|m4a|ogg|flac|aac)$/.test(e) || m.indexOf('audio/') === 0) {
+      return S('#ea4335', 'M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z');
+    }
+    if (/^(png|jpg|jpeg|gif|webp|bmp)$/.test(e) || m.indexOf('image/') === 0 && e !== 'svg') {
+      return S('#ea4335', 'M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z');
+    }
+    if (/^(mp4|mov|webm|mkv|avi)$/.test(e) || m.indexOf('video/') === 0) {
+      return S('#ea4335', 'M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V4h-4z');
+    }
+    if (e === 'pdf' || m === 'application/pdf') return S('#ea4335', DOC);
+    if (/^(csv|xls|xlsx|tsv)$/.test(e) || /spreadsheet/.test(m)) {
+      return S('#0f9d58', 'M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM11 19H5v-4h6v4zm0-6H5V9h6v4zm8 6h-6v-4h6v4zm0-6h-6V9h6v4zM19 7H5V5h14v2z');
+    }
+    return S('#4285f4', DOC);
+  }
+
   function dvRender() {
     var pg = dvPage(); if (!pg) return;
     var head = '<section class="card"><label class="eyebrow">GOOGLE DRIVE</label><h1>Your <span>Drive</span></h1><p>Files and folders Multi Bundle saved to your Google Drive. Rename, move or delete them here.</p></section>';
@@ -476,7 +501,7 @@ $('bkDel').onclick = function () { runDelete(p); };
     var rows = dv.items.map(function (f, i) {
       var isF = f.mimeType === DV_FOLDER;
       var sub = isF ? 'Folder' : (f.size ? fmtSize(Number(f.size)) : 'File');
-      return '<div class="dv-row"><button class="dv-main" data-i="' + i + '" data-a="open"><span class="dv-ic">' + (isF ? '\uD83D\uDCC1' : '\uD83D\uDCC4') +
+      return '<div class="dv-row"><button class="dv-main" data-i="' + i + '" data-a="open"><span class="dv-ic">' + dvIcon(f) +
         '</span><span class="dv-nm"><b>' + esc(f.name) + '</b><i>' + sub + '</i></span></button>' +
         '<button class="dv-more" data-i="' + i + '" data-a="menu" aria-label="Options">\u22EE</button></div>';
     }).join('') || '<div class="dv-empty">Nothing here yet. Upload with the Google Drive button in Files.</div>';
@@ -590,7 +615,7 @@ $('bkDel').onclick = function () { runDelete(p); };
       '.dv-list{display:flex;flex-direction:column;gap:6px}',
       '.dv-row{display:flex;align-items:center;background:#17181c;border:1px solid #25262c;border-radius:12px}',
       '.dv-main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;color:var(--text);text-align:left;padding:10px 11px;cursor:pointer;font-family:inherit}',
-      '.dv-ic{font-size:20px}',
+      '.dv-ic{flex:none;width:44px;height:44px;border-radius:12px;background:#202126;display:flex;align-items:center;justify-content:center}',
       '.dv-nm{display:flex;flex-direction:column;min-width:0}',
       '.dv-nm b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.dv-nm i{font-size:11px;color:var(--muted);font-style:normal}',

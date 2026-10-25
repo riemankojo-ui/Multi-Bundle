@@ -285,6 +285,12 @@
   // ---------- login state watcher ----------
   auth.onAuthStateChanged(async (user) => {
   const previousUid = rememberedUid;
+  if (!user && previousUid && !signingOut && !window.__authRetried) {
+    window.__authRetried = true;
+    await new Promise(function (r) { setTimeout(r, 3000); });
+    user = auth.currentUser || null;
+  }
+  if (user) window.__authRetried = false;
   authKnown = true;
   cloudUser = user;
   
@@ -317,6 +323,7 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
       resetScreen();
     }
     if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
+    if (user && typeof window.__cloudSweep === "function") window.__cloudSweep();
   });
 
   // ---------- sign out, in steps ----------

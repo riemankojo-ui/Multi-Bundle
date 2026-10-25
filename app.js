@@ -86,7 +86,7 @@ async function dbGetAllRaw(){
       if(old&&old.length){d=old;localStorage.setItem('mb_legacy_claimed',uid);const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(d,__key(uid))}
     }
         if(!d&&uid!=='local'&&window.cloudProj){
-      const cp=await window.cloudProj.load();
+      const __dl=__tombs();const cp=(await window.cloudProj.load()).filter(function(p){return __dl.indexOf(p.id)<0});
       if(cp&&cp.length){const txr=db.transaction(DB_STORE,'readwrite');txr.objectStore(DB_STORE).put(cp,__key(uid));await new Promise(function(res){txr.oncomplete=res;txr.onerror=res;txr.onabort=res});return cp}
     }
     return d||[];
@@ -104,7 +104,27 @@ async function dbSetAllNow(arr,uid){
   try{if(window.cloudProj&&uid&&uid!=='local'&&arr&&arr.length){window.__cpLatest=arr;clearTimeout(window.__cpT);window.__cpT=setTimeout(function(){window.cloudProj.save(window.__cpLatest)},5000)}}catch(e){}
 }
 async function dbUpsertProject(p){const all=await dbGetAll();const i=all.findIndex(function(x){return x.id===p.id});if(i>=0)all[i]=p;else all.unshift(p);await dbSetAll(all)}
-async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all.filter(function(x){return x.id!==id}))}
+function __tombKey(){const u=window.getCloudUser&&window.getCloudUser();return 'mb_deleted_'+((u&&u.uid)||'local')}
+function __tombs(){try{return JSON.parse(localStorage.getItem(__tombKey())||'[]')}catch(e){return[]}}
+function __setTombs(a){try{localStorage.setItem(__tombKey(),JSON.stringify(a.slice(-500)))}catch(e){}}
+async function __cloudRemoveProject(id){
+  const cu=firebase.auth().currentUser;if(!cu)throw new Error('no user');
+  const db=firebase.firestore();
+  const ref=db.doc('users/'+cu.uid+'/projects/'+encodeURIComponent(id));
+  const snap=await ref.collection('files').get();
+  for(let i=0;i<snap.docs.length;i+=400){const b=db.batch();snap.docs.slice(i,i+400).forEach(function(d){b.delete(d.ref)});await b.commit()}
+  await ref.delete();
+}
+async function __cloudSweep(){
+  try{
+    const t=__tombs();if(!t.length||typeof firebase==='undefined'||!firebase.auth().currentUser)return;
+    const left=[];
+    for(const id of t){try{await __cloudRemoveProject(id)}catch(e){left.push(id)}}
+    __setTombs(left);
+  }catch(e){}
+}
+window.__cloudSweep=__cloudSweep;
+async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all.filter(function(x){return x.id!==id}));const t=__tombs();if(t.indexOf(id)<0){t.push(id);__setTombs(t)}__cloudSweep()}
 
 function serializeFiles(){return files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})}
 function deserializeFiles(arr){return arr.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})}

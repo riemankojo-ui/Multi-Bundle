@@ -492,6 +492,15 @@ async function __githubLogoutNow(){
   if($('githubToken'))$('githubToken').value='';setGhStatus('Signed out.');showToast('Signed out');
 }
 async function showGithubLoggedIn(user){
+  try{
+    if(!user||!user.login){
+      var __t=(typeof ghToken!=='undefined'&&ghToken)||localStorage.getItem('mb_gh_active_token')||'';
+      if(__t){var __r=await fetch('https://api.github.com/user',{headers:{Authorization:'Bearer '+__t}});if(__r.ok)user=await __r.json()}
+    }
+  }catch(e){}
+  user=user||{};
+  if(!user.login)user.login=String(user.displayName||user.email||'github').split('@')[0];
+  if(!user.avatar_url)user.avatar_url=user.photoURL||'';
   setTimeout(function(){if(typeof loadGithubReposForProjects==='function')loadGithubReposForProjects()},0);
   // Hide the big connect button
   var oauthBtn = $('ghOauthBtn');

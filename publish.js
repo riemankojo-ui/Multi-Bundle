@@ -185,7 +185,7 @@ async function restoreFromGitHub(){
     var r=document.createElement('button');
     r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #23252c;padding:14px 4px;color:#fff;font:inherit;cursor:pointer';
     r.innerHTML='<span style="min-width:0"><span style="display:block;font-weight:700;font-size:13px">'+esc(when)+(i===0?' <span style="color:#5ed69a;font-size:11px;font-weight:800;margin-left:6px">LATEST</span>':'')+'</span><span style="display:block;font-size:12px;color:#a2a3ad;margin-top:3px;word-break:break-all">'+esc(repoUrl)+'</span></span><span style="text-align:right;white-space:nowrap"><span class="vcount" style="display:block;font-size:12px;color:#a2a3ad">\u2026</span><span style="display:block;font-size:11px;color:#7d7e89;margin-top:3px">'+esc(rel)+' \u00b7 '+esc(String(c.sha).slice(0,7))+'</span></span>';
-    r.onclick=function(){ov.remove();restoreVersion(c.sha,when)};
+    r.onclick=function(){ov.remove();__versionSheet(c.sha,when,scan.repo)};
     sc.appendChild(r);
   });
   box.appendChild(sc);
@@ -228,9 +228,73 @@ async function __restorePickerV1(){
   ov.onclick=function(e){if(e.target===ov)ov.remove()};
   document.body.appendChild(ov);
 }
-async function restoreVersion(sha,label){
+function __versionSheet(sha,when,repo){
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10001;display:flex;align-items:flex-end;justify-content:center';
+  var box=document.createElement('div');
+  box.style.cssText='width:100%;max-width:520px;background:#15171c;border-top:1px solid #2a2c34;border-radius:16px 16px 0 0;padding:18px 18px calc(6px + env(safe-area-inset-bottom,0px));font-family:system-ui,sans-serif;color:#fff';
+  box.innerHTML='<div style="font-size:16px;font-weight:800">'+esc(when)+'</div><div style="font-size:12px;color:#a2a3ad;margin:3px 0 10px">github.com/'+esc(repo)+'</div>';
+  function row(label,desc,color,fn){
+    var b=document.createElement('button');
+    b.style.cssText='display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid #23252c;padding:14px 0;color:#fff;font:inherit;cursor:pointer';
+    b.innerHTML='<span style="display:block;font-weight:800;font-size:16px;color:'+color+'">'+label+'</span><span style="display:block;font-size:12px;color:#a2a3ad;margin-top:3px">'+desc+'</span>';
+    b.onclick=function(){ov.remove();fn()};
+    box.appendChild(b);
+  }
+  row('Deploy back','Restore this version and publish it to GitHub now','#ff5560',function(){__deployBack(sha,when)});
+  row('Save','Keep a copy in Backups. Your files stay as they are','#fff',function(){__saveVersion(sha,when)});
+  row('Restore','Put its files in the editor. Publish later','#fff',function(){restoreVersion(sha,when,{skipConfirm:true})});
+  var x=document.createElement('button');x.textContent='Cancel';
+  x.style.cssText='display:block;width:100%;background:none;border:0;border-top:1px solid #23252c;color:#a2a3ad;font:inherit;font-weight:700;padding:14px 0;cursor:pointer';
+  x.onclick=function(){ov.remove()};
+  box.appendChild(x);ov.appendChild(box);
+  ov.onclick=function(e){if(e.target===ov)ov.remove()};
+  document.body.appendChild(ov);
+}
+async function __deployBack(sha,when){
+  window.__rvOK=false;
+  await restoreVersion(sha,when,{skipConfirm:true,quiet:true});
+  if(!window.__rvOK)return;
+  S.rows.forEach(function(r){r.on=true});
+  if($('pbMsg'))$('pbMsg').value='Go back to version from '+when;
+  await runPublish();
+}
+async function __saveVersion(sha,when){
   if(S.busy||!S.scan)return;
-  var ok=typeof window.showConfirm==='function'?await window.showConfirm('Replace your editor files with the GitHub version "'+label+'"? Your current files are saved as a snapshot first (Backups tab). Files added after that version are kept.',{title:'Go back to this version',confirmText:'Go back',cancelText:'Cancel'}):true;
+  S.busy=true;updateGo();setStatus('Saving a copy\u2026');
+  try{
+    var scan=S.scan;
+    var tree=await gh('GET','/repos/'+scan.repo+'/git/trees/'+sha+'?recursive=1');
+    var isText=/\.(html?|css|js|mjs|json|md|txt|svg|xml|webmanifest|ts|tsx|jsx|csv)$/i;
+    var todo=(tree.tree||[]).filter(function(n){return n.type==='blob'&&isText.test(n.path)}).slice(0,200);
+    var out=[],idx=0;
+    var worker=async function(){
+      while(idx<todo.length){
+        var n=todo[idx++];
+        var bl=await gh('GET','/repos/'+scan.repo+'/git/blobs/'+n.sha);
+        var bin=atob(String(bl.content||'').replace(/\s/g,''));var u8=new Uint8Array(bin.length);
+        for(var i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+        var t=new TextDecoder('utf-8').decode(u8);
+        out.push({path:n.path,name:n.path.split('/').pop(),size:t.length,type:'text/plain',blob:null,text:t});
+        setStatus('Saving '+out.length+'/'+todo.length+'\u2026');
+      }
+    };
+    await Promise.all([worker(),worker(),worker()]);
+    out.sort(function(a,b){return a.path<b.path?-1:1});
+    var recs=await dbGetAll();var p=recs.find(function(x){return x.id===pid()});
+    if(!p)throw new Error('Project not found');
+    p.snapshots=p.snapshots||[];
+    p.snapshots.unshift({ts:Date.now(),label:'GitHub version '+when,files:out});
+    if(p.snapshots.length>20)p.snapshots.length=20;
+    await dbSetAll(recs);
+    if(typeof __flushProjects==='function')await __flushProjects();
+    toast('Saved to Backups ('+out.length+' file'+(out.length===1?'':'s')+')','success');
+    setStatus('');S.busy=false;updateGo();
+  }catch(e){S.busy=false;setStatus('');setNote(explain(e),'bad');updateGo()}
+}
+async function restoreVersion(sha,label,opts){
+  if(S.busy||!S.scan)return;
+  var ok=(opts&&opts.skipConfirm)?true:typeof window.showConfirm==='function'?await window.showConfirm('Replace your editor files with the GitHub version "'+label+'"? Your current files are saved as a snapshot first (Backups tab). Files added after that version are kept.',{title:'Go back to this version',confirmText:'Go back',cancelText:'Cancel'}):true;
   if(!ok)return;
   S.busy=true;updateGo();
   var scan=S.scan,projId=pid(),texts={},idx=0,done=0;
@@ -286,7 +350,7 @@ async function restoreVersion(sha,label){
     if(typeof window.renderProjectCards==='function')window.renderProjectCards();
     if(typeof populatePages==='function')populatePages();
     if(typeof render==='function')render();
-    toast('Went back to that version ('+paths.length+' file'+(paths.length===1?'':'s')+'). Tap Publish to put it on GitHub.','success');
+    window.__rvOK=true;if(!(opts&&opts.quiet))toast('Went back to that version ('+paths.length+' file'+(paths.length===1?'':'s')+'). Tap Publish to put it on GitHub.','success');
     setStatus('');S.busy=false;
     await runScan();
   }catch(e){S.busy=false;setStatus('');setNote(explain(e),'bad');updateGo()}

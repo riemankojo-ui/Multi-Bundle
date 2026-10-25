@@ -158,7 +158,7 @@ function disarm(reset){
 }
 function updateRestore(){
   var b=$('pbRestore');if(!b)return;
-  var any=!!S.scan;
+  var any=S.rows.length>0;
   b.hidden=!any;b.disabled=!!S.busy;
   if(!any)disarm(false);
 }

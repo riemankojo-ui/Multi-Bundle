@@ -628,6 +628,49 @@
   };
 })();
 </script>
+<script>
+(function(){
+  var sig={},warned=false;
+  function who(){return new Promise(function(r){var un=firebase.auth().onAuthStateChanged(function(u){un();r(u)})})}
+  function hash(s){var h=0;for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0}return h+':'+s.length}
+  function bytes(s){try{return new TextEncoder().encode(s).length}catch(e){return s.length*3}}
+  window.cloudProj.save=async function(arr){
+    var u=await who();if(!u||!arr)return;
+    var db=firebase.firestore();
+    for(var p of arr){
+      try{
+        if(!p||!p.id)continue;
+        var base='users/'+u.uid+'/projects/'+encodeURIComponent(p.id);
+        var tf=(p.files||[]).filter(function(f){return typeof f.text==='string'&&!f.blob&&bytes(f.text)<900000});
+        var ops=[];
+        tf.forEach(function(f){var k=p.id+'|'+f.path,h=hash(f.text);if(sig[k]!==h)ops.push({f:f,k:k,h:h,sz:bytes(f.text)+600})});
+        var mk=p.id+'|meta',ms=(p.savedAt||0)+':'+(p.name||'')+':'+tf.length;
+        var part=[],size=0;
+        var commit=async function(){
+          if(!part.length)return;
+          var b=db.batch();
+          part.forEach(function(o){b.set(db.doc(base+'/files/'+encodeURIComponent(o.f.path)),{path:o.f.path,name:o.f.name||'',type:o.f.type||'',size:o.f.size||0,text:o.f.text})});
+          await b.commit();
+          part.forEach(function(o){sig[o.k]=o.h});
+          part=[];size=0;
+        };
+        for(var o of ops){
+          if(part.length&&(size+o.sz>1500000||part.length>=100))await commit();
+          part.push(o);size+=o.sz;
+        }
+        await commit();
+        if(sig[mk]!==ms||ops.length){
+          await db.doc(base).set({id:p.id,name:p.name||'',savedAt:p.savedAt||0,createdAt:p.createdAt||0,source:p.source||'',githubRepo:p.githubRepo||'',githubBranch:p.githubBranch||'',paths:tf.map(function(f){return f.path})});
+          sig[mk]=ms;
+        }
+      }catch(e){
+        console.warn('Cloud save failed',p&&p.name,e);
+        if(!warned){warned=true;if(window.showToast)window.showToast('Cloud backup failed for "'+((p&&p.name)||'a project')+'". '+((e&&e.code)||''),'error')}
+      }
+    }
+  };
+})();
+</script>
 <script src="sync.js"></script>
 <script src="app.js"></script>
 <script src="editor.js"></script>

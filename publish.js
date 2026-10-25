@@ -168,7 +168,7 @@ async function restoreFromGitHub(){
   if(S.busy||!S.scan)return;
   var scan=S.scan,list;
   S.busy=true;updateGo();setStatus('Loading versions\u2026');
-  try{list=await gh('GET','/repos/'+scan.repo+'/commits?sha='+encodeURIComponent(scan.branch)+'&per_page=30')}
+  try{list=await gh('GET','/repos/'+scan.repo+'/commits?sha='+encodeURIComponent(scan.branch)+'&per_page=40')}
   catch(e){S.busy=false;setStatus('');setNote(explain(e),'bad');updateGo();return}
   S.busy=false;setStatus('');updateGo();
   if(!list||!list.length){toast('No versions found','error');return}
@@ -185,7 +185,7 @@ async function restoreFromGitHub(){
     var r=document.createElement('button');
     r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #23252c;padding:14px 4px;color:#fff;font:inherit;cursor:pointer';
     r.innerHTML='<span style="min-width:0"><span style="display:block;font-weight:700;font-size:13px">'+esc(when)+(i===0?' <span style="color:#5ed69a;font-size:11px;font-weight:800;margin-left:6px">LATEST</span>':'')+'</span><span style="display:block;font-size:12px;color:#a2a3ad;margin-top:3px;word-break:break-all">'+esc(repoUrl)+'</span></span><span style="text-align:right;white-space:nowrap"><span class="vcount" style="display:block;font-size:12px;color:#a2a3ad">\u2026</span><span style="display:block;font-size:11px;color:#7d7e89;margin-top:3px">'+esc(rel)+' \u00b7 '+esc(String(c.sha).slice(0,7))+'</span></span>';
-    r.onclick=function(){ov.remove();__versionSheet(c.sha,when,scan.repo)};
+    r.onclick=function(){ov.remove();__versionSheet(c.sha,when,scan.repo)};r.dataset.i=i;
     sc.appendChild(r);
   });
   box.appendChild(sc);
@@ -241,9 +241,9 @@ function __versionSheet(sha,when,repo){
     b.onclick=function(){ov.remove();fn()};
     box.appendChild(b);
   }
-  row('Deploy back','Restore this version and publish it to GitHub now','#ff5560',function(){__deployBack(sha,when)});
-  row('Save','Keep a copy in Backups. Your files stay as they are','#fff',function(){__saveVersion(sha,when)});
-  row('Restore','Put its files in the editor. Publish later','#fff',function(){restoreVersion(sha,when,{skipConfirm:true})});
+
+  async function __saveFile(sha2,when2){if(S.busy||!S.scan)return;if(!window.JSZip){toast('ZIP tool did not load. Check internet and refresh.','error');return}S.busy=true;updateGo();setStatus('Saving a file\u2026');try{var scan=S.scan;var tree=await gh('GET','/repos/'+scan.repo+'/git/trees/'+sha2+'?recursive=1');var todo=(tree.tree||[]).filter(function(n){return n.type==='blob'}).slice(0,200);var z=new JSZip(),idx=0,done=0;var worker=async function(){while(idx<todo.length){var n=todo[idx++];var bl=await gh('GET','/repos/'+scan.repo+'/git/blobs/'+n.sha);var bin=atob(String(bl.content||'').replace(/\s/g,''));var u8=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);z.file(n.path,u8);done++;setStatus('Saving '+done+'/'+todo.length+'\u2026')}};await Promise.all([worker(),worker(),worker()]);var blob=await z.generateAsync({type:'blob'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=String(scan.repo).split('/').pop()+'-'+String(sha2).slice(0,7)+'.zip';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},4000);toast('Saved to your phone ('+done+' file'+(done===1?'':'s')+')','success');setStatus('');S.busy=false;updateGo()}catch(e){S.busy=false;setStatus('');setNote(explain(e),'bad');updateGo()}}
+  row('Restore','Put its files in the editor. Publish later','#fff',function(){restoreVersion(sha,when,{skipConfirm:true})});row('Deploy back','Restore this version and publish it to GitHub now','#fff',function(){__deployBack(sha,when)});
   var x=document.createElement('button');x.textContent='Cancel';
   x.style.cssText='display:block;width:100%;background:none;border:0;border-top:1px solid #23252c;color:#a2a3ad;font:inherit;font-weight:700;padding:14px 0;cursor:pointer';
   x.onclick=function(){ov.remove()};

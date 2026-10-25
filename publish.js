@@ -163,7 +163,43 @@ function updateRestore(){
   if(!any)disarm(false);
 }
 function ago(ts){var s=Math.max(1,Math.round((Date.now()-ts)/1000));if(s<60)return s+'s ago';var m=Math.round(s/60);if(m<60)return m+' min ago';var h=Math.round(m/60);if(h<24)return h+' hr ago';var d=Math.round(h/24);return d+' day'+(d===1?'':'s')+' ago'}
+function __fmtWhen(iso){var d=new Date(iso);if(isNaN(d))return '';var t=d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});var n=new Date(),y=new Date(Date.now()-864e5);var day=d.toDateString()===n.toDateString()?'Today':(d.toDateString()===y.toDateString()?'Yesterday':d.toLocaleDateString(undefined,{month:'short',day:'numeric'}));return day+' \u00b7 '+t}
 async function restoreFromGitHub(){
+  if(S.busy||!S.scan)return;
+  var scan=S.scan,list;
+  S.busy=true;updateGo();setStatus('Loading versions\u2026');
+  try{list=await gh('GET','/repos/'+scan.repo+'/commits?sha='+encodeURIComponent(scan.branch)+'&per_page=30')}
+  catch(e){S.busy=false;setStatus('');setNote(explain(e),'bad');updateGo();return}
+  S.busy=false;setStatus('');updateGo();
+  if(!list||!list.length){toast('No versions found','error');return}
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10001;display:flex;align-items:flex-end;justify-content:center';
+  var box=document.createElement('div');
+  box.style.cssText='width:100%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;background:#15171c;border:1px solid #2a2c34;border-radius:18px 18px 0 0;padding:18px 16px calc(10px + env(safe-area-inset-bottom,0px));font-family:system-ui,sans-serif;color:#fff';
+  box.innerHTML='<div style="font-size:18px;font-weight:800">GitHub versions</div><div style="font-size:13px;color:#a2a3ad;margin:4px 0 8px">Last '+list.length+' deploys. Tap one to restore it.</div>';
+  var sc=document.createElement('div');sc.style.cssText='overflow:auto;flex:1;min-height:0;border-top:1px solid #23252c';
+  list.forEach(function(c,i){
+    var iso=(c.commit&&c.commit.author&&c.commit.author.date)||'';
+    var when=__fmtWhen(iso)||String(c.sha).slice(0,7);
+    var repoUrl='github.com/'+scan.repo;var rel=iso?ago(new Date(iso).getTime()):'';
+    var r=document.createElement('button');
+    r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #23252c;padding:14px 4px;color:#fff;font:inherit;cursor:pointer';
+    r.innerHTML='<span style="min-width:0"><span style="display:block;font-weight:700;font-size:13px">'+esc(when)+(i===0?' <span style="color:#5ed69a;font-size:11px;font-weight:800;margin-left:6px">LATEST</span>':'')+'</span><span style="display:block;font-size:12px;color:#a2a3ad;margin-top:3px;word-break:break-all">'+esc(repoUrl)+'</span></span><span style="text-align:right;white-space:nowrap"><span class="vcount" style="display:block;font-size:12px;color:#a2a3ad">\u2026</span><span style="display:block;font-size:11px;color:#7d7e89;margin-top:3px">'+esc(rel)+' \u00b7 '+esc(String(c.sha).slice(0,7))+'</span></span>';
+    r.onclick=function(){ov.remove();restoreVersion(c.sha,when)};
+    sc.appendChild(r);
+  });
+  box.appendChild(sc);
+  var __rows=sc.querySelectorAll('.vcount'),__qi=0;
+  var __cw=async function(){while(__qi<list.length){var k=__qi++;try{var cm=await gh('GET','/repos/'+scan.repo+'/commits/'+list[k].sha);var cnt=(cm.files||[]).length;if(__rows[k])__rows[k].textContent=cnt+' file'+(cnt===1?'':'s')+(cnt>=300?'+':'')}catch(e){if(__rows[k])__rows[k].textContent=''}}};
+  __cw();__cw();__cw();
+  var x=document.createElement('button');x.textContent='Cancel';
+  x.style.cssText='width:100%;background:none;border:0;color:#a2a3ad;font:inherit;font-weight:700;padding:14px;cursor:pointer';
+  x.onclick=function(){ov.remove()};
+  box.appendChild(x);ov.appendChild(box);
+  ov.onclick=function(e){if(e.target===ov)ov.remove()};
+  document.body.appendChild(ov);
+}
+async function __restorePickerV1(){
   if(S.busy||!S.scan)return;
   var scan=S.scan,list;
   S.busy=true;updateGo();setStatus('Loading versions\u2026');

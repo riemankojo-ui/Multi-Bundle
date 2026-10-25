@@ -481,6 +481,7 @@ async function githubLogout(){
     if($('githubToken'))$('githubToken').value='';
     ghToken='';
     await __githubLogoutNow();
+    document.querySelectorAll('#ghOauthBtn').forEach(function(b){b.style.display='';b.disabled=false});
     await new Promise(function(r){setTimeout(r,500)});
   }catch(e){showToast('Could not sign out of GitHub. Try again.','error')}
   try{ov.remove()}catch(e){}

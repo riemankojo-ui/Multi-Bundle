@@ -468,6 +468,25 @@ async function githubLogin(){
   }catch(e){setGhStatus('Network error: '+e.message)}
 }
 async function githubLogout(){
+  if(window.__ghOut)return;
+  const ok=await showConfirm('Sign out of GitHub on this account? Your projects stay saved and you can connect again anytime.',{title:'Sign out of GitHub',confirmText:'Sign out',cancelText:'Cancel'});
+  if(!ok)return;
+  window.__ghOut=true;
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(13,14,18,.92);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#a2a3ad;font-size:16px;font-weight:bold;font-family:system-ui,sans-serif';
+  ov.innerHTML='<div class="spinner" style="margin:0 auto 16px"></div>Signing out of GitHub...';
+  document.body.appendChild(ov);
+  try{
+    await new Promise(function(r){setTimeout(r,700)});
+    if($('githubToken'))$('githubToken').value='';
+    ghToken='';
+    await __githubLogoutNow();
+    await new Promise(function(r){setTimeout(r,500)});
+  }catch(e){showToast('Could not sign out of GitHub. Try again.','error')}
+  try{ov.remove()}catch(e){}
+  window.__ghOut=false;
+}
+async function __githubLogoutNow(){
   await clearToken();if($('githubLoggedIn'))$('githubLoggedIn').hidden=true;if($('githubLoggedOut'))$('githubLoggedOut').hidden=false;
   if($('githubToken'))$('githubToken').value='';setGhStatus('Signed out.');showToast('Signed out');
 }

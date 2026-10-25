@@ -111,7 +111,7 @@ async function __cloudRemoveProject(id){
   const cu=firebase.auth().currentUser;if(!cu)throw new Error('no user');
   const db=firebase.firestore();
   const ref=db.doc('users/'+cu.uid+'/projects/'+encodeURIComponent(id));
-  const snap=await ref.collection('files').get();
+  const snap0=await ref.collection('files').get();const snapB=await ref.collection('blobs').get();const snap={docs:snap0.docs.concat(snapB.docs)};
   for(let i=0;i<snap.docs.length;i+=400){const b=db.batch();snap.docs.slice(i,i+400).forEach(function(d){b.delete(d.ref)});await b.commit()}
   await ref.delete();
 }

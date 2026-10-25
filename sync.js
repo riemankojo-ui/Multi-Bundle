@@ -15,7 +15,7 @@
   try { rememberedUid = localStorage.getItem('mb_uid') || ''; } catch (e) {}
 
   // Until Google answers, act as the account that was signed in last time so a refresh keeps your projects.
-  window.getCloudUser = () => cloudUser || (!authKnown && rememberedUid ? { uid: rememberedUid, email: ((cachedProfile() || {}).email || '') } : null);
+  window.getCloudUser = () => cloudUser || ((!authKnown || window.__softSession) && rememberedUid ? { uid: rememberedUid, email: ((cachedProfile() || {}).email || '') } : null);
   window.isCloudSignedIn = () => !!cloudUser;
   Object.defineProperty(window, '__authKnown', { get: () => authKnown, configurable: true });
 
@@ -310,11 +310,30 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
     if (user) {
       try { localStorage.setItem('mb_uid', user.uid); } catch (e) {}
       rememberedUid = user.uid;
+      window.__softSession = false;
+      var __sp = document.getElementById('softPill'); if (__sp) __sp.remove();
+      try { if (window.__cpLatest && window.cloudProj) setTimeout(function () { window.cloudProj.save(window.__cpLatest); }, 4000); } catch (e) {}
       if (loginGate) loginGate.style.display = "none";
       setBusy(false);
       // A different account than the one on screen: clear the old project from memory first
       if (previousUid && previousUid !== user.uid) resetScreen();
     } else {
+      if (previousUid && !signingOut) {
+        window.__softSession = true;
+        try { localStorage.setItem('mb_lastout', new Date().toISOString()); } catch (e) {}
+        if (loginGate) loginGate.style.display = "none";
+        setBusy(false);
+        toast('Cloud session expired. Your projects are safe on this phone. Tap the red button to sign in and resume backup.', 'error');
+        if (!document.getElementById('softPill')) {
+          var sp = document.createElement('button'); sp.id = 'softPill'; sp.textContent = 'Cloud backup paused · Sign in';
+          sp.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:9999;background:#f01428;color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:700;font-size:14px';
+          sp.onclick = function () { if (loginGate) loginGate.style.display = 'flex'; };
+          document.body.appendChild(sp);
+        }
+        if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
+        return;
+      }
+      window.__softSession = false;
       try { localStorage.removeItem('mb_uid'); } catch (e) {}
       if (previousUid && !signingOut) { try { localStorage.setItem('mb_lastout', new Date().toISOString()); } catch (e) {} toast('Your session ended on its own. Please sign in again.', 'error'); }
       rememberedUid = '';

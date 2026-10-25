@@ -671,6 +671,98 @@
   };
 })();
 </script>
+<script>
+(function(){
+  var sig=null,warned=false,skipped=0,CH=700000,MAXB=8*1024*1024;
+  function who(){return new Promise(function(r){var un=firebase.auth().onAuthStateChanged(function(u){un();r(u)})})}
+  function bytes(s){try{return new TextEncoder().encode(s).length}catch(e){return s.length*3}}
+  function hash(s){var h=0;for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0}return h+':'+s.length}
+  function toB64(blob){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1]||'')};r.onerror=function(){rej(r.error)};r.readAsDataURL(blob)})}
+  function fromB64(b64,type){var bin=atob(b64),n=bin.length,u=new Uint8Array(n);for(var i=0;i<n;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:type||'application/octet-stream'})}
+  function loadSig(u){if(sig)return;try{sig=JSON.parse(localStorage.getItem('mb_cloudsig_'+u.uid)||'{}')}catch(e){sig={}}}
+  function saveSig(u){try{localStorage.setItem('mb_cloudsig_'+u.uid,JSON.stringify(sig))}catch(e){}}
+  window.cloudProj.save=async function(arr){
+    var u=await who();if(!u||!arr)return;
+    loadSig(u);
+    var db=firebase.firestore();
+    for(var p of arr){
+      try{
+        if(!p||!p.id)continue;
+        var base='users/'+u.uid+'/projects/'+encodeURIComponent(p.id);
+        var all=p.files||[];
+        var tf=all.filter(function(f){return typeof f.text==='string'&&!f.blob&&bytes(f.text)<900000});
+        var bf=all.filter(function(f){return f.blob&&typeof f.text!=='string'&&f.blob.size<=MAXB});
+        skipped+=all.filter(function(f){return f.blob&&typeof f.text!=='string'&&f.blob.size>MAXB}).length;
+        var changed=false;
+        var ops=[];
+        tf.forEach(function(f){var k=p.id+'|'+f.path,h=hash(f.text);if(sig[k]!==h)ops.push({f:f,k:k,h:h,sz:bytes(f.text)+600})});
+        var part=[],size=0;
+        var commit=async function(){
+          if(!part.length)return;
+          var b=db.batch();
+          part.forEach(function(o){b.set(db.doc(base+'/files/'+encodeURIComponent(o.f.path)),{path:o.f.path,name:o.f.name||'',type:o.f.type||'',size:o.f.size||0,text:o.f.text})});
+          await b.commit();
+          part.forEach(function(o){sig[o.k]=o.h});
+          part=[];size=0;changed=true;
+        };
+        for(var o of ops){
+          if(part.length&&(size+o.sz>1500000||part.length>=100))await commit();
+          part.push(o);size+=o.sz;
+        }
+        await commit();
+        for(var f of bf){
+          var bk=p.id+'|b|'+f.path,bs=f.blob.size+':'+(f.blob.type||'');
+          if(sig[bk]===bs)continue;
+          var b64=await toB64(f.blob),n=Math.max(1,Math.ceil(b64.length/CH));
+          for(var i=0;i<n;i+=2){
+            var wb=db.batch();
+            for(var j=i;j<Math.min(n,i+2);j++){
+              wb.set(db.doc(base+'/blobs/'+encodeURIComponent(f.path)+'__'+j),{path:f.path,name:f.name||'',type:f.blob.type||f.type||'',size:f.blob.size,i:j,n:n,data:b64.slice(j*CH,(j+1)*CH)});
+            }
+            await wb.commit();
+          }
+          sig[bk]=bs;changed=true;
+        }
+        var mk=p.id+'|meta',ms=(p.savedAt||0)+':'+(p.name||'')+':'+tf.length+':'+bf.length;
+        if(sig[mk]!==ms||changed){
+          await db.doc(base).set({id:p.id,name:p.name||'',savedAt:p.savedAt||0,createdAt:p.createdAt||0,source:p.source||'',githubRepo:p.githubRepo||'',githubBranch:p.githubBranch||'',paths:tf.map(function(f){return f.path}),bpaths:bf.map(function(f){return f.path})});
+          sig[mk]=ms;
+        }
+        saveSig(u);
+      }catch(e){
+        console.warn('Cloud save failed',p&&p.name,e);
+        if(!warned){warned=true;if(window.showToast)window.showToast('Cloud backup failed for "'+((p&&p.name)||'a project')+'". '+((e&&e.code)||''),'error')}
+      }
+    }
+    if(skipped&&!window.__bigWarned){window.__bigWarned=true;if(window.showToast)window.showToast(skipped+' file(s) over 8 MB are not backed up. Keep them on GitHub.','error')}
+  };
+  window.cloudProj.load=async function(){
+    try{
+      var u=await who();if(!u)return[];
+      var db=firebase.firestore(),out=[];
+      var ps=await db.collection('users/'+u.uid+'/projects').get();
+      for(var d of ps.docs){
+        var m=d.data(),files=[];
+        var snap=await d.ref.collection('files').get();
+        snap.forEach(function(x){var f=x.data();if(!m.paths||m.paths.indexOf(f.path)>=0)files.push({path:f.path,name:f.name,size:f.size,type:f.type,text:f.text})});
+        if(m.bpaths&&m.bpaths.length){
+          var bs=await d.ref.collection('blobs').get(),g={};
+          bs.forEach(function(x){var c=x.data();if(m.bpaths.indexOf(c.path)<0)return;var o=g[c.path]=g[c.path]||{meta:c,parts:[]};o.parts[c.i]=c.data});
+          Object.keys(g).forEach(function(pth){
+            var o=g[pth],ok=o.parts.length===o.meta.n;
+            for(var k=0;ok&&k<o.meta.n;k++){if(!o.parts[k])ok=false}
+            if(!ok)return;
+            try{files.push({path:pth,name:o.meta.name,size:o.meta.size,type:o.meta.type,text:null,blob:fromB64(o.parts.join(''),o.meta.type)})}catch(e){}
+          });
+        }
+        out.push({id:m.id,name:m.name,savedAt:m.savedAt,createdAt:m.createdAt,source:m.source||undefined,githubRepo:m.githubRepo||undefined,githubBranch:m.githubBranch||undefined,files:files,history:[]});
+      }
+      if(out.length&&window.showToast)window.showToast('Restored '+out.length+' project(s) from cloud','success');
+      return out;
+    }catch(e){return[]}
+  };
+})();
+</script>
 <script src="sync.js"></script>
 <script src="app.js"></script>
 <script src="editor.js"></script>

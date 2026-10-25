@@ -30,7 +30,7 @@
   function profileOf(u) {
     if (!u) return null;
     const pd = u.providerData && u.providerData[0];
-    return { displayName: u.displayName || '', email: u.email || (pd && pd.email) || '', photoURL: u.photoURL || '', provider: (pd && pd.providerId) || '' };
+    return { displayName: u.displayName || '', email: u.email || (pd && pd.email) || (function () { try { return localStorage.getItem('mb_gh_email_' + u.uid) || ''; } catch (e) { return ''; } })(), photoURL: u.photoURL || '', provider: (pd && pd.providerId) || '' };
   }
   function nameOf(p) { return p.displayName || (p.email ? p.email.split('@')[0] : 'Signed in'); }
   function providerLabel(p) { return p.provider === 'google.com' ? 'Google' : p.provider === 'github.com' ? 'GitHub' : p.provider === 'password' ? 'Email' : ''; }
@@ -131,6 +131,30 @@
     } catch (e) {}
   }
   async function afterGithub(res) {
+    await __afterGithubCore(res);
+    try { await enrichGithubProfile(res); } catch (e) {}
+  }
+  async function enrichGithubProfile(res) {
+    const tok = res && res.credential && res.credential.accessToken, u = res && res.user;
+    if (!tok || !u) return;
+    const h = { headers: { Authorization: 'Bearer ' + tok } };
+    const r = await fetch('https://api.github.com/user', h); if (!r.ok) return;
+    const g = await r.json();
+    let email = g.email || u.email || '';
+    if (!email) {
+      try {
+        const er = await fetch('https://api.github.com/user/emails', h);
+        if (er.ok) { const L = await er.json(); const pr = (L || []).find(function (x) { return x.primary && x.verified; }) || (L || [])[0]; if (pr) email = pr.email; }
+      } catch (e) {}
+    }
+    if (email) { try { localStorage.setItem('mb_gh_email_' + u.uid, email); } catch (e) {} }
+    if (!u.displayName || !u.photoURL) {
+      try { await u.updateProfile({ displayName: u.displayName || g.name || g.login || '', photoURL: u.photoURL || g.avatar_url || '' }); } catch (e) {}
+    }
+    const cu = auth.currentUser || u;
+    saveProfile(cu); showProfile(profileOf(cu));
+  }
+  async function __afterGithubCore(res) {
   const tok = res && res.credential && res.credential.accessToken;
   if (tok && res.user) {
     await saveGithubTokenFor(res.user.uid, tok); try { localStorage.setItem('mb_gh_token_at', String(Date.now())); } catch (e) {}
@@ -265,7 +289,7 @@
   }
   
   if ($('gateLoginBtn')) $('gateLoginBtn').onclick = googleLogin;
-    if ($('gateGithubBtn')) $('gateGithubBtn').style.display = 'none';
+    if ($('gateGithubBtn')) $('gateGithubBtn').onclick = githubLogin;
     if ($('gateEmailBtn')) $('gateEmailBtn').onclick = emailSubmit;
     if ($('gateForgot')) $('gateForgot').onclick = forgotPassword;
     if ($('gateModeBtn')) $('gateModeBtn').onclick = function () { mode = mode === 'signin' ? 'signup' : 'signin'; applyMode(); };

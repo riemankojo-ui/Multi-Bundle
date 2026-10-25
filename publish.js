@@ -158,11 +158,104 @@ function disarm(reset){
 }
 function updateRestore(){
   var b=$('pbRestore');if(!b)return;
-  var any=S.rows.some(function(r){return !r.isNew&&r.f&&r.f.text!=null});
+  var any=!!S.scan;
   b.hidden=!any;b.disabled=!!S.busy;
   if(!any)disarm(false);
 }
+function ago(ts){var s=Math.max(1,Math.round((Date.now()-ts)/1000));if(s<60)return s+'s ago';var m=Math.round(s/60);if(m<60)return m+' min ago';var h=Math.round(m/60);if(h<24)return h+' hr ago';var d=Math.round(h/24);return d+' day'+(d===1?'':'s')+' ago'}
 async function restoreFromGitHub(){
+  if(S.busy||!S.scan)return;
+  var scan=S.scan,list;
+  S.busy=true;updateGo();setStatus('Loading versions\u2026');
+  try{list=await gh('GET','/repos/'+scan.repo+'/commits?sha='+encodeURIComponent(scan.branch)+'&per_page=5')}
+  catch(e){S.busy=false;setStatus('');setNote(explain(e),'bad');updateGo();return}
+  S.busy=false;setStatus('');updateGo();
+  if(!list||!list.length){toast('No versions found','error');return}
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10001;display:flex;align-items:flex-end;justify-content:center';
+  var box=document.createElement('div');
+  box.style.cssText='width:100%;max-width:520px;max-height:80vh;overflow:auto;background:#15171c;border:1px solid #2a2c34;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));font-family:system-ui,sans-serif;color:#fff';
+  box.innerHTML='<div style="font-size:18px;font-weight:800;margin-bottom:4px">Go back to a version</div><div style="font-size:13px;color:#a2a3ad;margin-bottom:14px">Pick a version. Its files go into the editor, then tap Publish to put it on GitHub.</div>';
+  list.forEach(function(c,i){
+    var msg=String((c.commit&&c.commit.message)||'').split('\n')[0]||'(no message)';
+    var when=(c.commit&&c.commit.author&&c.commit.author.date)?ago(new Date(c.commit.author.date).getTime()):'';
+    var b=document.createElement('button');
+    b.style.cssText='display:block;width:100%;text-align:left;background:#1d2027;border:1px solid #2a2c34;border-radius:12px;padding:12px 14px;margin-bottom:8px;color:#fff;font:inherit;cursor:pointer';
+    b.innerHTML='<div style="font-weight:800;font-size:15px">Last '+(i+1)+(i===0?' (newest)':'')+'</div><div style="font-size:13px;color:#cfd0d8;margin-top:2px;word-break:break-word">'+esc(msg)+'</div><div style="font-size:12px;color:#a2a3ad;margin-top:2px">'+esc(when)+' \u00b7 '+esc(String(c.sha).slice(0,7))+'</div>';
+    b.onclick=function(){ov.remove();restoreVersion(c.sha,'Last '+(i+1)+' \u00b7 '+msg)};
+    box.appendChild(b);
+  });
+  var x=document.createElement('button');x.textContent='Cancel';
+  x.style.cssText='width:100%;background:none;border:0;color:#a2a3ad;font:inherit;font-weight:700;padding:12px;cursor:pointer';
+  x.onclick=function(){ov.remove()};
+  box.appendChild(x);ov.appendChild(box);
+  ov.onclick=function(e){if(e.target===ov)ov.remove()};
+  document.body.appendChild(ov);
+}
+async function restoreVersion(sha,label){
+  if(S.busy||!S.scan)return;
+  var ok=typeof window.showConfirm==='function'?await window.showConfirm('Replace your editor files with the GitHub version "'+label+'"? Your current files are saved as a snapshot first (Backups tab). Files added after that version are kept.',{title:'Go back to this version',confirmText:'Go back',cancelText:'Cancel'}):true;
+  if(!ok)return;
+  S.busy=true;updateGo();
+  var scan=S.scan,projId=pid(),texts={},idx=0,done=0;
+  try{
+    setStatus('Reading that version\u2026');
+    var tree=await gh('GET','/repos/'+scan.repo+'/git/trees/'+sha+'?recursive=1');
+    if(tree.truncated)throw new Error('This repo is too large to restore here.');
+    var isText=/\.(html?|css|js|mjs|json|md|txt|svg|xml|webmanifest|ts|tsx|jsx|csv)$/i;
+    var cur={};curFiles().forEach(function(f){cur[f.path]=f});
+    var todo=[];
+    for(var n of (tree.tree||[])){
+      if(n.type!=='blob'||!isText.test(n.path))continue;
+      var f0=cur[n.path],same=false;
+      if(f0){var bb=await fileBytes(f0);if(bb&&(await sha1blob(bb))===n.sha)same=true}
+      if(!same)todo.push(n);
+    }
+    if(!todo.length){S.busy=false;setStatus('');updateGo();toast('Your files already match that version','success');return}
+    var worker=async function(){
+      while(idx<todo.length){
+        var n2=todo[idx++];
+        var bl=await gh('GET','/repos/'+scan.repo+'/git/blobs/'+n2.sha);
+        var bin=atob(String(bl.content||'').replace(/\s/g,''));var u8=new Uint8Array(bin.length);
+        for(var i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+        texts[n2.path]=new TextDecoder('utf-8').decode(u8);
+        done++;setStatus('Downloading '+done+'/'+todo.length+'\u2026');
+      }
+    };
+    await Promise.all([worker(),worker(),worker()]);
+    var paths=Object.keys(texts);
+    var recs=await dbGetAll();var p=recs.find(function(x){return x.id===projId});
+    if(p){
+      p.files=p.files||[];p.snapshots=p.snapshots||[];p.history=p.history||[];
+      p.snapshots.unshift({ts:Date.now(),label:'Before going back to '+label,files:p.files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})});
+      if(p.snapshots.length>20)p.snapshots.length=20;
+      paths.forEach(function(path){
+        var t=texts[path],f=p.files.find(function(x){return x.path===path});
+        if(f){f.text=t;f.blob=null;f.size=t.length}
+        else p.files.push({path:path,name:path.split('/').pop(),size:t.length,type:'text/plain',blob:null,text:t});
+        p.history.unshift({ts:Date.now(),type:'edit',path:path,note:'Went back to '+label,text:t.length<300000?t:undefined});
+      });
+      p.savedAt=Date.now();
+      await dbSetAll(recs);
+      if(typeof __flushProjects==='function')await __flushProjects();
+    }
+    var cf=curFiles();
+    paths.forEach(function(path){
+      var t=texts[path],m=cf.find(function(x){return x.path===path});
+      if(m){m.text=t;m.blob=null;m.size=t.length}
+      else cf.push({path:path,name:path.split('/').pop(),size:t.length,type:'text/plain',blob:null,text:t});
+      try{localStorage.removeItem('mb_draft_'+projId+'_'+path)}catch(e1){}
+    });
+    if(typeof window.__edReloadCurrent==='function')window.__edReloadCurrent(paths);
+    if(typeof window.renderProjectCards==='function')window.renderProjectCards();
+    if(typeof populatePages==='function')populatePages();
+    if(typeof render==='function')render();
+    toast('Went back to that version ('+paths.length+' file'+(paths.length===1?'':'s')+'). Tap Publish to put it on GitHub.','success');
+    setStatus('');S.busy=false;
+    await runScan();
+  }catch(e){S.busy=false;setStatus('');setNote(explain(e),'bad');updateGo()}
+}
+async function __restoreHeadOld(){
   if(S.busy||!S.scan)return;
   var rows=S.rows.filter(function(r){return !r.isNew&&r.f&&r.f.text!=null});
   if(!rows.length){toast('Nothing to restore from GitHub','error');return}

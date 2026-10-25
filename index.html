@@ -520,7 +520,7 @@
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyBsZ-4kET9GM99MdSpaaHbqUdaFtOFApjo",
-    authDomain: "multi-bundle-app.firebaseapp.com",
+    authDomain: /^(localhost|127\.)/.test(location.hostname) ? "multi-bundle-app.firebaseapp.com" : location.hostname,
     projectId: "multi-bundle-app",
     storageBucket: "multi-bundle-app.firebasestorage.app",
     messagingSenderId: "426558428895",

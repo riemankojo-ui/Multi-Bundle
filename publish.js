@@ -191,7 +191,43 @@ async function restoreFromGitHub(){
   box.appendChild(sc);
   var __rows=sc.querySelectorAll('.vcount'),__qi=0;
   var __cw=async function(){while(__qi<list.length){var k=__qi++;try{var cm=await gh('GET','/repos/'+scan.repo+'/commits/'+list[k].sha);var cnt=(cm.files||[]).length;if(__rows[k])__rows[k].textContent=cnt+' file'+(cnt===1?'':'s')+(cnt>=300?'+':'')}catch(e){if(__rows[k])__rows[k].textContent=''}}};
-  __cw();__cw();__cw();
+  (function(){
+    var CK='mb_vcount_'+scan.repo,cache={};
+    try{cache=JSON.parse(localStorage.getItem(CK)||'{}')}catch(e){}
+    function show(k,cnt){if(__rows[k])__rows[k].textContent=cnt+' file'+(cnt===1?'':'s')+(cnt>=300?'+':'')}
+    function keep(sha,cnt){cache[sha]=cnt;try{var ks=Object.keys(cache);if(ks.length>300)delete cache[ks[0]];localStorage.setItem(CK,JSON.stringify(cache))}catch(e){}}
+    var todo=[];
+    list.forEach(function(c,k){if(cache[c.sha]!=null)show(k,cache[c.sha]);else todo.push(k)});
+    if(!todo.length)return;
+    (async function(){
+      try{
+        var pr=scan.repo.split('/');if(1)throw 0;
+        var res=await fetch('https://api.github.com/graphql',{method:'POST',headers:{'Authorization':'Bearer '+(window.getToken?window.getToken():''),'Content-Type':'application/json'},body:JSON.stringify({query:'query($o:String!,$n:String!,$e:String!){repository(owner:$o,name:$n){object(expression:$e){... on Commit{history(first:'+list.length+'){nodes{oid changedFilesIfAvailable}}}}}}',variables:{o:pr[0],n:pr[1],e:scan.branch}})});
+        if(res.ok){
+          var d=await res.json();
+          var nodes=(((d.data||{}).repository||{}).object||{}).history;nodes=(nodes&&nodes.nodes)||[];
+          var m={};nodes.forEach(function(n){if(n&&n.changedFilesIfAvailable!=null)m[n.oid]=n.changedFilesIfAvailable});
+          todo=todo.filter(function(k){var v=m[list[k].sha];if(v==null)return true;show(k,v);keep(list[k].sha,v);return false});
+        }
+      }catch(e){}
+      var qi=0;
+      var w=async function(){while(qi<todo.length){var k=todo[qi++];try{var cm=await gh('GET','/repos/'+scan.repo+'/commits/'+list[k].sha);var cnt=(cm.files||[]).length;show(k,cnt);keep(list[k].sha,cnt)}catch(e){if(__rows[k])__rows[k].textContent=''}}};
+      var w2=async function(){
+        while(qi<todo.length){
+          var k=todo[qi++];
+          try{
+            var r2=await fetch('https://api.github.com/repos/'+scan.repo+'/commits/'+list[k].sha+'?per_page=1',{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+(window.getToken?window.getToken():'')}});
+            if(!r2.ok)throw 0;
+            var lk=r2.headers.get('Link')||'',mm=lk.match(/[?&]page=(\d+)>;\s*rel="last"/);
+            var cnt;
+            if(mm)cnt=parseInt(mm[1],10);else{var j2=await r2.json();cnt=(j2.files||[]).length}
+            show(k,cnt);keep(list[k].sha,cnt);
+          }catch(e){if(__rows[k])__rows[k].textContent=''}
+        }
+      };
+      for(var t=0;t<8;t++)w2();
+    })();
+  })();
   var x=document.createElement('button');x.textContent='Cancel';
   x.style.cssText='width:100%;background:none;border:0;color:#a2a3ad;font:inherit;font-weight:700;padding:14px;cursor:pointer';
   x.onclick=function(){ov.remove()};

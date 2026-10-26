@@ -679,6 +679,11 @@
   function hash(s){var h=0;for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0}return h+':'+s.length}
   function toB64(blob){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1]||'')};r.onerror=function(){rej(r.error)};r.readAsDataURL(blob)})}
   function fromB64(b64,type){var bin=atob(b64),n=bin.length,u=new Uint8Array(n);for(var i=0;i<n;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:type||'application/octet-stream'})}
+  var zc={},ZP='\u0001gz:';
+  function u8b64(u){var s='';for(var i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)}
+  function b64u8(b){var bin=atob(b),n=bin.length,u=new Uint8Array(n);for(var i=0;i<n;i++)u[i]=bin.charCodeAt(i);return u}
+  async function gzText(s){if(typeof CompressionStream==='undefined')return null;try{var st=new Blob([s]).stream().pipeThrough(new CompressionStream('gzip'));return u8b64(new Uint8Array(await new Response(st).arrayBuffer()))}catch(e){return null}}
+  async function unGzText(b){var st=new Blob([b64u8(b)]).stream().pipeThrough(new DecompressionStream('gzip'));return await new Response(st).text()}
   function loadSig(u){if(sig)return;try{sig=JSON.parse(localStorage.getItem('mb_cloudsig_'+u.uid)||'{}')}catch(e){sig={}}}
   function saveSig(u){try{localStorage.setItem('mb_cloudsig_'+u.uid,JSON.stringify(sig))}catch(e){}}
   window.cloudProj.save=async function(arr){
@@ -690,7 +695,19 @@
         if(!p||!p.id)continue;
         var base='users/'+u.uid+'/projects/'+encodeURIComponent(p.id);
         var all=p.files||[];
-        var tf=all.filter(function(f){return typeof f.text==='string'&&!f.blob&&bytes(f.text)<900000});
+        var tf=[];
+        for(var f0 of all){
+          if(typeof f0.text!=='string'||f0.blob)continue;
+          var raw=bytes(f0.text);
+          if(raw<20000){tf.push(f0);continue}
+          var zk=p.id+'|'+f0.path,zh=hash(f0.text),zt=zc[zk]&&zc[zk].h===zh?zc[zk].t:null;
+          if(!zt){var z=await gzText(f0.text);if(z){zt=ZP+z;zc[zk]={h:zh,t:zt}}}
+          if(zt){
+            if(zt.length<900000)tf.push({path:f0.path,name:f0.name,type:f0.type,size:f0.size,text:zt});
+            else skipped++;
+          }else if(raw<900000)tf.push(f0);
+          else skipped++;
+        }
         var bf=all.filter(function(f){return f.blob&&typeof f.text!=='string'&&f.blob.size<=MAXB});
         skipped+=all.filter(function(f){return f.blob&&typeof f.text!=='string'&&f.blob.size>MAXB}).length;
         var changed=false;
@@ -734,7 +751,7 @@
         if(!warned){warned=true;if(window.showToast)window.showToast('Cloud backup failed for "'+((p&&p.name)||'a project')+'". '+((e&&e.code)||''),'error')}
       }
     }
-    if(skipped&&!window.__bigWarned){window.__bigWarned=true;if(window.showToast)window.showToast(skipped+' file(s) over 8 MB are not backed up. Keep them on GitHub.','error')}
+    if(skipped&&!window.__bigWarned){window.__bigWarned=true;if(window.showToast)window.showToast(skipped+' file(s) are too big to back up even compressed. Keep them on GitHub.','error')}
   };
   window.cloudProj.load=async function(){
     try{
@@ -745,6 +762,7 @@
         var m=d.data(),files=[];
         var snap=await d.ref.collection('files').get();
         snap.forEach(function(x){var f=x.data();if(!m.paths||m.paths.indexOf(f.path)>=0)files.push({path:f.path,name:f.name,size:f.size,type:f.type,text:f.text})});
+        for(var zi=files.length-1;zi>=0;zi--){var zf=files[zi];if(typeof zf.text==='string'&&zf.text.indexOf(ZP)===0){try{zf.text=await unGzText(zf.text.slice(ZP.length))}catch(e){files.splice(zi,1)}}}
         if(m.bpaths&&m.bpaths.length){
           var bs=await d.ref.collection('blobs').get(),g={};
           bs.forEach(function(x){var c=x.data();if(m.bpaths.indexOf(c.path)<0)return;var o=g[c.path]=g[c.path]||{meta:c,parts:[]};o.parts[c.i]=c.data});

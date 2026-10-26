@@ -1280,7 +1280,7 @@ async function __loadGhRepos() {
   if (!section || !box) return;
 
   // NEW: If no one is logged into Google, hide GitHub repos completely
-  if (typeof window.isCloudSignedIn === 'function' && !window.isCloudSignedIn()) {
+  if (typeof window.getCloudUser === 'function' && !window.getCloudUser()) {
     section.hidden = true;
     return;
   }

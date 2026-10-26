@@ -377,12 +377,6 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
   window.signOutGoogle = async function () {
   if (signingOut) return;
   if (typeof closeDrawer === 'function') { try { closeDrawer(); } catch (e) {} }
-  
-  // NEW: Wipe the GitHub connection completely
-  try { localStorage.removeItem('mb_gh_active_token'); } catch(e) {}
-  if (typeof ghToken !== 'undefined') ghToken = '';
-  if (typeof $('githubLoggedIn') !== 'undefined' && $('githubLoggedIn')) $('githubLoggedIn').hidden = true;
-  if (typeof $('githubLoggedOut') !== 'undefined' && $('githubLoggedOut')) $('githubLoggedOut').hidden = false;
     const who = (cloudUser && (cloudUser.email || cloudUser.displayName)) || 'this account';
     const ask = typeof window.showConfirm === 'function' ? window.showConfirm : null;
     if (ask) {
@@ -396,6 +390,10 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
       }
     }
     // Step 3: save, then sign out
+    try { localStorage.removeItem('mb_gh_active_token'); } catch(e) {}
+    if (typeof ghToken !== 'undefined') ghToken = '';
+    if ($('githubLoggedIn')) $('githubLoggedIn').hidden = true;
+    if ($('githubLoggedOut')) $('githubLoggedOut').hidden = false;
     signingOut = true; const so = document.createElement('div'); so.style.cssText = 'position:fixed;inset:0;background:#0d0e12;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#a2a3ad;font-size:16px;font-weight:bold;font-family:system-ui,sans-serif'; so.innerHTML = '<div class="spinner" style="margin:0 auto 16px"></div>Signing out...'; document.body.appendChild(so); setTimeout(function () { try { so.remove(); } catch (e0) {} }, 1600);
     try {
       toast('Saving your projects\u2026');

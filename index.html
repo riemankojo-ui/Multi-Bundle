@@ -740,9 +740,9 @@
           }
           sig[bk]=bs;changed=true;
         }
-        var mk=p.id+'|meta',ms=(p.savedAt||0)+':'+(p.name||'')+':'+tf.length+':'+bf.length;
+        var mk=p.id+'|meta',ms=(p.savedAt||0)+':'+(p.name||'')+':'+tf.length+':'+bf.length+':'+(p.logo||'')+':'+(p.githubShas?Object.keys(p.githubShas).length:0);
         if(sig[mk]!==ms||changed){
-          await db.doc(base).set({id:p.id,name:p.name||'',savedAt:p.savedAt||0,createdAt:p.createdAt||0,source:p.source||'',githubRepo:p.githubRepo||'',githubBranch:p.githubBranch||'',paths:tf.map(function(f){return f.path}),bpaths:bf.map(function(f){return f.path})});
+          await db.doc(base).set({id:p.id,name:p.name||'',savedAt:p.savedAt||0,createdAt:p.createdAt||0,source:p.source||'',githubRepo:p.githubRepo||'',githubBranch:p.githubBranch||'',paths:tf.map(function(f){return f.path}),bpaths:bf.map(function(f){return f.path}),logo:p.logo||'',githubShas:p.githubShas||null});
           sig[mk]=ms;
         }
         saveSig(u);
@@ -775,6 +775,8 @@
         }
         out.push({id:m.id,name:m.name,savedAt:m.savedAt,createdAt:m.createdAt,source:m.source||undefined,githubRepo:m.githubRepo||undefined,githubBranch:m.githubBranch||undefined,files:files,history:[]});
       }
+      ps.docs.forEach(function(d,i){var m=d.data();if(out[i]){if(m.logo)out[i].logo=m.logo;if(m.githubShas)out[i].githubShas=m.githubShas}});
+      window.__cloudLoadOK=true;
       if(out.length&&window.showToast)window.showToast('Restored '+out.length+' project(s) from cloud','success');
       return out;
     }catch(e){return[]}

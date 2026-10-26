@@ -124,6 +124,37 @@ async function __cloudSweep(){
   }catch(e){}
 }
 window.__cloudSweep=__cloudSweep;
+async function __restoreFromCloud(){
+  try{
+    const cu=firebase.auth().currentUser;if(!cu||!window.cloudProj)return false;
+    const fk='mb_restored_'+cu.uid;
+    const all=await dbGetAll();
+    if(localStorage.getItem(fk)&&all.length)return false;
+    window.__cloudLoadOK=false;
+    const dead=__tombs();
+    const cloud=(await window.cloudProj.load()).filter(function(p){return dead.indexOf(p.id)<0});
+    if(!window.__cloudLoadOK){if(!window.__restoreRetry){window.__restoreRetry=true;setTimeout(function(){window.__restoreRetry=false;__restoreFromCloud()},10000)}return false}
+    let changed=false;
+    for(const cp of cloud){
+      const lp=all.find(function(x){return x.id===cp.id});
+      if(!lp){all.push(cp);changed=true;continue}
+      const newer=(cp.savedAt||0)>(lp.savedAt||0);
+      if(!lp.files)lp.files=[];
+      for(const f of (cp.files||[])){
+        const i=lp.files.findIndex(function(x){return x.path===f.path});
+        if(i<0){lp.files.push(f);changed=true}
+        else if(newer&&!lp.files[i].blob&&typeof f.text==='string'&&lp.files[i].text!==f.text){lp.files[i]=f;changed=true}
+      }
+      if(cp.logo&&!lp.logo){lp.logo=cp.logo;changed=true}
+      if(cp.githubShas&&!lp.githubShas){lp.githubShas=cp.githubShas;changed=true}
+      if(cp.githubRepo&&!lp.githubRepo){lp.githubRepo=cp.githubRepo;lp.githubBranch=cp.githubBranch;changed=true}
+    }
+    localStorage.setItem(fk,String(Date.now()));
+    if(changed){await dbSetAll(all);await __flushProjects();if(typeof window.__refreshProjects==='function')window.__refreshProjects()}
+    return changed;
+  }catch(e){return false}
+}
+window.__restoreFromCloud=__restoreFromCloud;
 async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all.filter(function(x){return x.id!==id}));const t=__tombs();if(t.indexOf(id)<0){t.push(id);__setTombs(t)}__cloudSweep()}
 
 function serializeFiles(){return files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})}

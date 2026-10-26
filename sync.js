@@ -343,7 +343,7 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
       if (previousUid && previousUid !== user.uid) resetScreen();
     } else {
       if (previousUid && !signingOut) {
-        window.__softSession = true;
+        window.__softSession = true; try { localStorage.removeItem('mb_restored_' + previousUid); } catch (e) {}
         try { localStorage.setItem('mb_lastout', new Date().toISOString()); } catch (e) {}
         if (loginGate) loginGate.style.display = "none";
         setBusy(false);
@@ -358,7 +358,7 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
         return;
       }
       window.__softSession = false;
-      try { localStorage.removeItem('mb_uid'); } catch (e) {}
+      try { localStorage.removeItem('mb_uid'); localStorage.removeItem('mb_restored_' + previousUid); } catch (e) {}
       if (previousUid && !signingOut) { try { localStorage.setItem('mb_lastout', new Date().toISOString()); } catch (e) {} toast('Your session ended on its own. Please sign in again.', 'error'); }
       rememberedUid = '';
       if (loginGate) loginGate.style.display = "flex";
@@ -367,6 +367,7 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
     }
     if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
     if (user && typeof window.__cloudSweep === "function") window.__cloudSweep();
+    if (user && typeof window.__restoreFromCloud === "function") window.__restoreFromCloud();
   });
 
   // ---------- sign out, in steps ----------

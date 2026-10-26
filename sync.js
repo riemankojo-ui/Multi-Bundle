@@ -306,6 +306,30 @@
     setBusy(false);
   });
 
+  // ---------- why did it sign out? ----------
+  var __lastTokErr = '';
+  function __logAuth(msg) {
+    try { var L = JSON.parse(localStorage.getItem('mb_authlog') || '[]'); L.push(new Date().toISOString() + ' ' + msg); localStorage.setItem('mb_authlog', JSON.stringify(L.slice(-30))); } catch (e) {}
+  }
+  async function __checkSession() {
+    var cu = auth.currentUser; if (!cu) return;
+    try { await cu.getIdToken(); } catch (e) {
+      __lastTokErr = (e && e.code) || String(e);
+      __logAuth('token refresh failed: ' + __lastTokErr);
+      if (window.showToast) window.showToast('Sign-in check failed: ' + __lastTokErr, 'error');
+    }
+  }
+  setInterval(__checkSession, 30 * 60 * 1000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') __checkSession(); });
+  auth.onAuthStateChanged(async function (u) {
+    if (u) { __logAuth('signed in'); return; }
+    if (!rememberedUid || signingOut) return;
+    var kept = 'n/a';
+    try { if (navigator.storage && navigator.storage.persisted) kept = String(await navigator.storage.persisted()); } catch (e) {}
+    var why = 'online=' + navigator.onLine + ', storage protected=' + kept + (__lastTokErr ? ', last error=' + __lastTokErr : '');
+    __logAuth('signed out by itself: ' + why);
+    if (window.showToast) window.showToast('Signed out by itself (' + why + ')', 'error');
+  });
   // ---------- login state watcher ----------
   auth.onAuthStateChanged(async (user) => {
   const previousUid = rememberedUid;

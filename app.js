@@ -1223,6 +1223,8 @@ window.clearToken = clearToken;
 window.getToken = getToken;
 
 window.__reloadGithub=async function(){
+  try{localStorage.removeItem('mb_gh_active_token')}catch(e){}
+  try{var __gb=document.getElementById('ghProjectCards');if(__gb)__gb.innerHTML='';var __gs=document.getElementById('ghProjectsSection');if(__gs)__gs.hidden=true}catch(e){}
   ghToken='';
   if($('githubLoggedIn'))$('githubLoggedIn').hidden=true;if($('githubLoggedOut'))$('githubLoggedOut').hidden=false;
   if($('ghOauthBtn'))$('ghOauthBtn').style.display='';
@@ -1385,7 +1387,7 @@ window.importGithubRepoAsProject = async function(fullName, branch) {
 if ($('ghOauthBtn')) {
   $('ghOauthBtn').onclick = async function() {
     const provider = new firebase.auth.GithubAuthProvider();
-    /* one-tap reconnect: no account chooser */
+    provider.setCustomParameters({ prompt: 'select_account' });
     provider.addScope('repo');
     try {
       const cu = firebase.auth().currentUser;

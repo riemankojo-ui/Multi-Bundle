@@ -684,7 +684,7 @@
   function b64u8(b){var bin=atob(b),n=bin.length,u=new Uint8Array(n);for(var i=0;i<n;i++)u[i]=bin.charCodeAt(i);return u}
   async function gzText(s){if(typeof CompressionStream==='undefined')return null;try{var st=new Blob([s]).stream().pipeThrough(new CompressionStream('gzip'));return u8b64(new Uint8Array(await new Response(st).arrayBuffer()))}catch(e){return null}}
   async function unGzText(b){var st=new Blob([b64u8(b)]).stream().pipeThrough(new DecompressionStream('gzip'));return await new Response(st).text()}
-  function loadSig(u){if(sig)return;try{sig=JSON.parse(localStorage.getItem('mb_cloudsig_'+u.uid)||'{}')}catch(e){sig={}}}
+  function loadSig(u){if(sig&&window.__sigUid===u.uid)return;window.__sigUid=u.uid;try{sig=JSON.parse(localStorage.getItem('mb_cloudsig_'+u.uid)||'{}')}catch(e){sig={}}}
   function saveSig(u){try{localStorage.setItem('mb_cloudsig_'+u.uid,JSON.stringify(sig))}catch(e){}}
   window.cloudProj.save=async function(arr){
     var u=await who();if(!u||!arr)return;

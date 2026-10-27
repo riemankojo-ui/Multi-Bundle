@@ -75,6 +75,7 @@ async function dbGetAllRaw(){
     const db=await openDB();
     function read(k){return new Promise(function(res){const req=db.transaction(DB_STORE,'readonly').objectStore(DB_STORE).get(k);req.onsuccess=function(){res(req.result)};req.onerror=function(){res(null)}})}
     let d=await read(__key(uid));
+    if(d&&d.length&&uid!=='local'&&!localStorage.getItem('mb_legacy_claimed'))localStorage.setItem('mb_legacy_claimed',uid);
     if(!d&&typeof uid==='string'&&uid.indexOf('e:')===0){
       try{
         const cu=window.getCloudUser&&window.getCloudUser();

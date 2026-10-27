@@ -360,7 +360,10 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
       rememberedUid = user.uid;
       window.__softSession = false;
       var __sp = document.getElementById('softPill'); if (__sp) __sp.remove();
-      try { if (window.__cpLatest && window.cloudProj) setTimeout(function () { window.cloudProj.save(window.__cpLatest); }, 4000); } catch (e) {}
+      try {
+        if (previousUid && previousUid !== user.uid) { clearTimeout(window.__cpT); window.__cpLatest = null; }
+        else if (window.__cpLatest && window.cloudProj) setTimeout(function () { window.cloudProj.save(window.__cpLatest); }, 4000);
+      } catch (e) {}
       if (loginGate) loginGate.style.display = "none";
       setBusy(false);
       // A different account than the one on screen: clear the old project from memory first
@@ -382,6 +385,7 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
         return;
       }
       window.__softSession = false;
+      try { clearTimeout(window.__cpT); window.__cpLatest = null; } catch (e) {}
       try { localStorage.removeItem('mb_uid'); localStorage.removeItem('mb_restored_' + previousUid); } catch (e) {}
       if (previousUid && !signingOut) { try { localStorage.setItem('mb_lastout', new Date().toISOString()); } catch (e) {} toast('Your session ended on its own. Please sign in again.', 'error'); }
       rememberedUid = '';

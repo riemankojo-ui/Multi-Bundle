@@ -865,10 +865,45 @@ function renderPreview(){
   const loader=$('editorPreviewLoader');
   if(loader)loader.classList.add('show');
   previewFrame.onload=function(){if(loader)loader.classList.remove('show');previewFrame.onload=null};clearTimeout(window.__pvLT);window.__pvLT=setTimeout(function(){if(loader)loader.classList.remove('show')},2500);
-  previewFrame.srcdoc=(typeof htmlRewrite==='function')?htmlRewrite(ta.value,currentPath):ta.value;
+  pvDraw();
 }
 $('editorPreviewRefresh').onclick=renderPreview;
-$('editorPreviewBtn').onclick=function(){$('editorPreviewPane').classList.add('open');ta.readOnly=true;ta.blur();renderPreview()};
+$('editorPreviewBtn').onclick=function(){pvOpen();$('editorPreviewPane').classList.add('open');ta.readOnly=true;ta.blur();renderPreview()};
+var pvPath='',pvHist=[];
+function pvIsHtml(p){return /\.html?$/i.test(p||'')}
+function pvPages(){return (typeof htmlPages==='function')?htmlPages():[]}
+function pvOpen(){
+  pvHist=[];
+  if(pvIsHtml(currentPath)){pvPath=currentPath;return}
+  var pg=pvPages();
+  var ix=pg.find(function(f){return /(^|\/)index\.html?$/i.test(f.path)})||pg[0];
+  pvPath=ix?ix.path:currentPath;
+}
+function pvFill(){
+  var sel=$('editorPreviewPage'),bk=$('editorPreviewBack');if(!sel)return;
+  var pg=pvPages();sel.innerHTML='';
+  pg.forEach(function(f){sel.add(new Option(f.path,f.path))});
+  if(pvPath&&!pg.some(function(f){return f.path===pvPath}))sel.add(new Option(pvPath,pvPath));
+  sel.value=pvPath;
+  if(bk)bk.disabled=!pvHist.length;
+}
+function pvDraw(){
+  var f=files.find(function(x){return x.path===pvPath});
+  var txt=(pvPath===currentPath||!f||f.text==null)?ta.value:f.text;
+  pvFill();
+  previewFrame.srcdoc=(typeof htmlRewrite==='function')?htmlRewrite(txt,pvPath||currentPath):txt;
+}
+function pvGo(p,push){
+  if(!p)return;
+  if(push!==false&&pvPath&&pvPath!==p)pvHist.push(pvPath);
+  pvPath=p;renderPreview();
+}
+window.__edPvNav=function(href){
+  var t=(typeof relative==='function')?relative(pvPath||currentPath,href):null;
+  if(t&&t.text!=null&&pvIsHtml(t.path)){pvPath=t.path;loadFile(t.path)}
+  else toast('Page not found: '+href,'error');
+};
+
 (function(){
   var cb=$('editorPreviewClose'),pane=$('editorPreviewPane');
   function closePv(){

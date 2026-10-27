@@ -86,7 +86,7 @@ async function dbGetAllRaw(){
       const old=await read('projects');
       if(old&&old.length){d=old;localStorage.setItem('mb_legacy_claimed',uid);const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(d,__key(uid))}
     }
-        if(!d&&uid!=='local'&&window.cloudProj){
+        if(false&&!d&&uid!=='local'&&window.cloudProj){
       const __dl=__tombs();const cp=(await window.cloudProj.load()).filter(function(p){return __dl.indexOf(p.id)<0});
       if(cp&&cp.length){const txr=db.transaction(DB_STORE,'readwrite');txr.objectStore(DB_STORE).put(cp,__key(uid));await new Promise(function(res){txr.oncomplete=res;txr.onerror=res;txr.onabort=res});return cp}
     }
@@ -729,6 +729,7 @@ window.htmlRewrite=htmlRewrite;
 window.addEventListener('message',function(e){
   if(!e.data||e.data.type!=='mb-nav')return;
   const href=e.data.href;if(!href||href==='form-submit')return;
+  var __epp=document.getElementById('editorPreviewPane');if(__epp&&__epp.classList.contains('open')&&typeof window.__edPvNav==='function'){window.__edPvNav(href);return}
   const target=relative(currentPagePath,href);
   if(target){openPage(target.path)}else{showToast('Page not found: '+href,'error')}
 });

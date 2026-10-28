@@ -82,7 +82,7 @@ async function dbGetAllRaw(){
         if(cu&&cu.uid){const own=await read('projects_'+cu.uid);if(own&&own.length){d=own;const txc=db.transaction(DB_STORE,'readwrite');txc.objectStore(DB_STORE).put(d,__key(uid))}}
       }catch(e8){}
     }
-    if(!d&&uid!=='local'&&!localStorage.getItem('mb_legacy_claimed')){
+    if(false&&!d&&uid!=='local'&&!localStorage.getItem('mb_legacy_claimed')){
       const old=await read('projects');
       if(old&&old.length){d=old;localStorage.setItem('mb_legacy_claimed',uid);const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(d,__key(uid))}
     }

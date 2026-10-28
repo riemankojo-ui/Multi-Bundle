@@ -689,6 +689,7 @@
   window.cloudProj.save=async function(arr){
     var u=await who();if(!u||!arr)return;
     loadSig(u);
+    if(window.__cpUid&&window.__cpUid!=='local'){var __em=(u.email||(u.providerData&&u.providerData[0]&&u.providerData[0].email)||'').toLowerCase();var __ck=__em?('e:'+__em):u.uid;if(window.__cpUid!==__ck)return}
     var db=firebase.firestore();
     for(var p of arr){
       try{

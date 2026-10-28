@@ -30,7 +30,7 @@
   function profileOf(u) {
     if (!u) return null;
     const pd = u.providerData && u.providerData[0];
-    return { displayName: u.displayName || '', email: u.email || (pd && pd.email) || (function () { try { return localStorage.getItem('mb_gh_email_' + u.uid) || ''; } catch (e) { return ''; } })(), photoURL: u.photoURL || '', provider: (pd && pd.providerId) || '' };
+    return { displayName: u.displayName || '', email: u.email || (pd && pd.email) || (function () { try { return localStorage.getItem('mb_gh_email_' + u.uid) || ''; } catch (e) { return ''; } })(), photoURL: (function () { try { return localStorage.getItem('mb_photo_' + u.uid) || ''; } catch (e) { return ''; } })() || u.photoURL || '', provider: (pd && pd.providerId) || '' };
   }
   function nameOf(p) { return p.displayName || (p.email ? p.email.split('@')[0] : 'Signed in'); }
   function providerLabel(p) { return p.provider === 'google.com' ? 'Google' : p.provider === 'github.com' ? 'GitHub' : p.provider === 'password' ? 'Email' : ''; }

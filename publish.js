@@ -164,6 +164,16 @@ function updateRestore(){
 }
 function ago(ts){var s=Math.max(1,Math.round((Date.now()-ts)/1000));if(s<60)return s+'s ago';var m=Math.round(s/60);if(m<60)return m+' min ago';var h=Math.round(m/60);if(h<24)return h+' hr ago';var d=Math.round(h/24);return d+' day'+(d===1?'':'s')+' ago'}
 function __fmtWhen(iso){var d=new Date(iso);if(isNaN(d))return '';var t=d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});var n=new Date(),y=new Date(Date.now()-864e5);var day=d.toDateString()===n.toDateString()?'Today':(d.toDateString()===y.toDateString()?'Yesterday':d.toLocaleDateString(undefined,{month:'short',day:'numeric'}));return day+' \u00b7 '+t}
+function __prefetchCounts(){
+  var scan=S.scan;if(!scan)return;
+  gh('GET','/repos/'+scan.repo+'/commits?sha='+encodeURIComponent(scan.branch)+'&per_page=40').then(function(list){
+    var CK='mb_vcount_'+scan.repo,cache={};
+    try{cache=JSON.parse(localStorage.getItem(CK)||'{}')}catch(e){}
+    var todo=(list||[]).filter(function(c){return cache[c.sha]==null}),qi=0;
+    var w=async function(){while(qi<todo.length){var c=todo[qi++];try{var cm=await gh('GET','/repos/'+scan.repo+'/commits/'+c.sha);var fresh={};try{fresh=JSON.parse(localStorage.getItem(CK)||'{}')}catch(e){}fresh[c.sha]=(cm.files||[]).length;localStorage.setItem(CK,JSON.stringify(fresh))}catch(e){}}};
+    for(var t=0;t<6;t++)w();
+  }).catch(function(){});
+}
 async function restoreFromGitHub(){
   if(S.busy||!S.scan)return;
   var scan=S.scan,list;
@@ -453,7 +463,7 @@ async function runScan(){
   try{
     var recs=await dbGetAll();var p=recs.find(function(x){return x.id===pid()})||null;
     var r=await computeScan(repo,branch,p,curFiles());
-    S.scan=r.scan;S.rows=r.rows;renderRows();
+    S.scan=r.scan;S.rows=r.rows;renderRows();try{__prefetchCounts()}catch(e){}
     if(!r.rows.length){setNote('Everything here is already on GitHub.','ok')}
     else{
       var warn=r.rows.filter(function(x){return x.conflict}).length;

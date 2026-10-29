@@ -132,8 +132,8 @@
     } catch (e) {}
   }
   async function afterGithub(res) {
-    await __afterGithubCore(res);
-    try { await enrichGithubProfile(res); } catch (e) {}
+    const __enr = enrichGithubProfile(res).catch(function () {});
+    try { await __afterGithubCore(res); } finally { await __enr; }
   }
   async function enrichGithubProfile(res) {
     const tok = res && res.credential && res.credential.accessToken, u = res && res.user;

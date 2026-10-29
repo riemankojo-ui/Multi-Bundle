@@ -212,6 +212,7 @@
     if (busy) return;
     setBusy(true); setMsg('');
     const provider = new firebase.auth.GithubAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     provider.addScope('repo');
     try {
         const res = await auth.signInWithPopup(provider);

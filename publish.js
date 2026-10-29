@@ -601,7 +601,13 @@ async function createRepo(){
   if(!/^[\w.-]+$/.test(name)){setNote('Use only letters, numbers, dashes, dots and underscores in the repo name.','bad');return}
   var btn=$('pbCreate');S.busy=true;if(btn){btn.disabled=true;btn.textContent='Creating\u2026'}
   try{
-    var r=await gh('POST','/user/repos',{name:name,description:desc,private:priv,auto_init:true});
+    var r;
+    try{r=await gh('POST','/user/repos',{name:name,description:desc,private:priv,auto_init:false})}
+    catch(e9){if(!(e9&&e9.status===422))throw e9;var __u=await gh('GET','/user');r=await gh('GET','/repos/'+__u.login+'/'+name);if(Date.now()-new Date(r.created_at).getTime()>9e5)throw new Error('You already have a repo with that name. Pick another name.')}
+    await sleep(800);
+    var __ff=curFiles(),__f0=null,__b0=null;
+    for(var __i=0;__i<__ff.length&&!__b0;__i++){var __bb=await fileBytes(__ff[__i]);if(__bb){__f0=__ff[__i];__b0=__bb}}
+    if(__f0){for(var __t=0;__t<4;__t++){try{await gh('PUT','/repos/'+r.full_name+'/contents/'+__f0.path.split('/').map(encodeURIComponent).join('/'),{message:'Initial commit from Multi Bundle',content:b64(__b0)});break}catch(e8){if(e8&&e8.status===422)break;if(__t===3)throw e8;await sleep(1500)}}}
     $('pbRepo').value=r.full_name;$('pbBranch').value=r.default_branch||'main';
     if($('pbMsg'))$('pbMsg').value='Initial commit from Multi Bundle';
     setNote('Repo created. Preparing your files\u2026');

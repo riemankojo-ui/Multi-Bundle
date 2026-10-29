@@ -232,10 +232,12 @@
     const email = (($('gateEmail') && $('gateEmail').value) || '').trim();
     const pw = ($('gatePassword') && $('gatePassword').value) || '';
     if (!email || !pw) { setMsg('Enter your email and password.'); return; }
+    window.__gateNameVal = (($('gateName') && $('gateName').value) || '').trim();
+    ['gateEmail', 'gatePassword', 'gateName'].forEach(function (id) { if ($(id)) $(id).value = ''; });
     setBusy(true); setMsg('');
     try {
     if (mode === 'signup') {
-      const name = (($('gateName') && $('gateName').value) || '').trim();
+      const name = window.__gateNameVal || '';
       const cred = await auth.createUserWithEmailAndPassword(email, pw);
       if (name) {
         await cred.user.updateProfile({ displayName: name });
@@ -433,6 +435,8 @@ if (loginGate) loginGate.style.display = "flex";
 if ($('gateLoading')) $('gateLoading').style.display = 'block';
 if ($('gateContent')) $('gateContent').style.display = 'none';
 
+['gateEmail', 'gatePassword', 'gateName'].forEach(function (id) { if ($(id)) $(id).value = ''; });
+window.__gateNameVal = '';
 await auth.signOut();
       toast('Signed out');
     } catch (e) {

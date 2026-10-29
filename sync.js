@@ -106,6 +106,7 @@
     else heroEyebrow.textContent = 'YOUR LOCAL WORKSPACE';
   }
   function showProfile(p) { renderAuthUi(p); renderDrawerAccount(p); updateGreeting(p); }
+  window.__refreshProfile = function () { try { var u = auth.currentUser; if (u) { saveProfile(u); showProfile(profileOf(u)); } } catch (e) {} };
 
   function resetScreen() {
     if (typeof files !== 'undefined') files = [];

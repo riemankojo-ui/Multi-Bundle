@@ -25,6 +25,51 @@ import java.io.OutputStream;
 public class FolderAccessPlugin extends Plugin {
 
     @PluginMethod
+    public void saveAs(PluginCall call) {
+        String name = call.getString("name");
+        String data = call.getString("data");
+        if (name == null || data == null) {
+            call.reject("name and data required");
+            return;
+        }
+        String mime = call.getString("mime", "application/octet-stream");
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType(mime);
+        intent.putExtra(Intent.EXTRA_TITLE, name);
+        startActivityForResult(call, intent, "saveAsResult");
+    }
+
+    @ActivityCallback
+    private void saveAsResult(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) {
+            call.reject("cancelled");
+            return;
+        }
+        Uri uri = result.getData().getData();
+        boolean b64 = Boolean.TRUE.equals(call.getBoolean("base64", false));
+        OutputStream out = null;
+        try {
+            String data = call.getString("data");
+            out = getContext().getContentResolver().openOutputStream(uri, "wt");
+            byte[] bytes = b64 ? Base64.decode(data, Base64.DEFAULT) : data.getBytes("UTF-8");
+            out.write(bytes);
+            out.flush();
+            JSObject ret = new JSObject();
+            ret.put("uri", uri.toString());
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject(String.valueOf(e.getMessage()));
+        } finally {
+            try {
+                if (out != null) out.close();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    @PluginMethod
     public void pickFolder(PluginCall call) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         intent.addFlags(

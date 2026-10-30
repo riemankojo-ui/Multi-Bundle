@@ -54,6 +54,36 @@
     try { return localStorage.getItem('mb_folder_uri'); } catch (e) { return null; }
   }
 
+  function blobToBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(String(r.result).split(',')[1] || ''); };
+      r.onerror = function () { reject(r.error); };
+      r.readAsDataURL(blob);
+    });
+  }
+  if (native) {
+    var origClick = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function () {
+      var a = this;
+      if (a.hasAttribute('download') && a.href && a.href.indexOf('blob:') === 0) {
+        var name = a.getAttribute('download') || 'file';
+        fetch(a.href).then(function (r) { return r.blob(); }).then(function (blob) {
+          return blobToBase64(blob).then(function (b64) {
+            return P.saveAs({ name: name, data: b64, base64: true, mime: blob.type || 'application/octet-stream' });
+          });
+        }).then(function () {
+          if (window.showToast) window.showToast('Saved ' + name, 'success');
+        }).catch(function (err) {
+          var m = String(err && err.message || err);
+          if (m !== 'cancelled' && window.showToast) window.showToast('Could not save file', 'error');
+        });
+        return;
+      }
+      return origClick.apply(this, arguments);
+    };
+  }
+
   window.FolderAccess = {
     available: native,
     importFolder: importFolder,

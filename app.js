@@ -158,8 +158,8 @@ async function __restoreFromCloud(){
 window.__restoreFromCloud=__restoreFromCloud;
 async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all.filter(function(x){return x.id!==id}));const t=__tombs();if(t.indexOf(id)<0){t.push(id);__setTombs(t)}__cloudSweep()}
 
-function serializeFiles(){return files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})}
-function deserializeFiles(arr){return arr.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})}
+function serializeFiles(){return files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob,uri:f.uri,parentId:f.parentId}})}
+function deserializeFiles(arr){return arr.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob,uri:f.uri,parentId:f.parentId}})}
 
 function timeAgo(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return 'just now';const m=Math.floor(s/60);if(m<60)return m+' min ago';const h=Math.floor(m/60);if(h<24)return h+' hr ago';const d=Math.floor(h/24);return d+' day'+(d>1?'s':'')+' ago'}
 function timeAgoLong(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return 'just now';const m=Math.floor(s/60);if(m<60)return m+' min ago';const h=Math.floor(m/60);if(h<24)return h+' hr ago';const d=Math.floor(h/24);if(d<30)return d+' day'+(d>1?'s':'')+' ago';return new Date(ts).toLocaleDateString()}
@@ -406,6 +406,7 @@ async function processIncoming(result,defaultName,presetName){
   await renderProjectCards();populatePages();render();
 }
 
+if(window.FolderAccess&&FolderAccess.available&&$('folderInput'))$('folderInput').addEventListener('click',async function(e){e.preventDefault();try{const r=await FolderAccess.importFolder();const list=r.files.map(function(f){return{path:f.path,name:f.name,size:f.size||0,type:'',blob:f.binary?new Blob([Uint8Array.from(atob(f.base64),function(c){return c.charCodeAt(0)})]):null,text:f.binary?null:f.text,uri:f.uri,parentId:f.parentId}});await processIncoming(cleanIncoming(list),r.name)}catch(err){if(String(err&&err.message||err)!=='cancelled')showToast('Could not open folder','error')}});
 if($('folderInput'))$('folderInput').addEventListener('change',async function(e){
   const list=[].slice.call(e.target.files);if(!list.length)return;
   const name=(list[0].webkitRelativePath||'').split('/')[0]||'Website';

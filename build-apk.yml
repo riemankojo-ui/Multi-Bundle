@@ -23,6 +23,11 @@ jobs:
           cp *.html *.js *.css www/ 2>/dev/null || true
           cp manifest.json icon-192.png icon-512.png www/ 2>/dev/null || true
       - run: npx cap add android
+      - name: Add phone folder access plugin
+        run: |
+          D=android/app/src/main/java/com/multibundle/app
+          mkdir -p $D
+          cp android-plugin/FolderAccessPlugin.java android-plugin/MainActivity.java $D/
       - name: Use the MB icon
         continue-on-error: true
         run: |

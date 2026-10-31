@@ -535,6 +535,13 @@ function __keepSynced(){
 }
 ta.addEventListener('scroll',__keepSynced,{passive:true});
 ta.addEventListener('touchmove',__keepSynced,{passive:true});
+function __kbFix(){
+  [0,120,350,700].forEach(function(ms){setTimeout(function(){
+    try{if(ta.__plain)return;__lastHlText=ta.value;__refreshHighlightCore();updateGutter();syncScroll()}catch(e){}
+  },ms)});
+}
+ta.addEventListener('focus',__kbFix);
+if(window.visualViewport)visualViewport.addEventListener('resize',function(){if(document.activeElement===ta)__kbFix()});
 let highlightTimer;
 let draftTimer;
 let lastLineCount = 0;

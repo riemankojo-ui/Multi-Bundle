@@ -114,6 +114,32 @@
     };
   }
 
+  var prevClick = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function () {
+    var a = this;
+    var isDl = a.hasAttribute('download') && a.href && a.href.indexOf('blob:') === 0;
+    if (!isDl) return prevClick.apply(this, arguments);
+    var name = a.getAttribute('download') || 'file';
+    fetch(a.href).then(function (r) { return r.blob(); }).then(function (blob) {
+      var mime = blob.type || 'application/octet-stream';
+      if (P) {
+        return blobToBase64(blob).then(function (b64) {
+          return P.saveAs({ name: name, data: b64, base64: true, mime: mime });
+        });
+      }
+      var file = new File([blob], name, { type: mime });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        return navigator.share({ files: [file], title: name });
+      }
+      return prevClick.call(a);
+    }).then(function () {
+      if (window.showToast) window.showToast('Saved ' + name, 'success');
+    }).catch(function (err) {
+      var m = String(err && err.message || err);
+      if (m !== 'cancelled' && m.indexOf('AbortError') < 0 && window.showToast) window.showToast('Could not save: ' + m, 'error');
+    });
+  };
+
   window.FolderAccess = {
     available: native,
     importFolder: importFolder,

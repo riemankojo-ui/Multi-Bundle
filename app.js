@@ -406,7 +406,8 @@ async function processIncoming(result,defaultName,presetName){
   await renderProjectCards();populatePages();render();
 }
 
-if(window.FolderAccess&&FolderAccess.available&&$('folderInput'))$('folderInput').addEventListener('click',async function(e){e.preventDefault();try{const r=await FolderAccess.importFolder();const list=r.files.map(function(f){return{path:f.path,name:f.name,size:f.size||0,type:'',blob:f.binary?new Blob([Uint8Array.from(atob(f.base64),function(c){return c.charCodeAt(0)})]):null,text:f.binary?null:f.text,uri:f.uri,parentId:f.parentId}});await processIncoming(cleanIncoming(list),r.name)}catch(err){if(String(err&&err.message||err)!=='cancelled')showToast('Could not open folder','error')}});
+if(!(window.FolderAccess&&FolderAccess.available)&&/Android/i.test(navigator.userAgent)&&$('folderInput'))$('folderInput').addEventListener('click',function(){showToast('Phone folder access is OFF: this is not the Capacitor APK','error')});
+if(window.FolderAccess&&FolderAccess.available&&$('folderInput'))$('folderInput').addEventListener('click',async function(e){e.preventDefault();try{const r=await FolderAccess.importFolder();const list=r.files.map(function(f){return{path:f.path,name:f.name,size:f.size||0,type:'',blob:f.binary?new Blob([Uint8Array.from(atob(f.base64),function(c){return c.charCodeAt(0)})]):null,text:f.binary?null:f.text,uri:f.uri,parentId:f.parentId}});await processIncoming(cleanIncoming(list),r.name)}catch(err){if(String(err&&err.message||err)!=='cancelled')showToast('Could not open folder: '+String(err&&err.message||err),'error')}});
 if($('folderInput'))$('folderInput').addEventListener('change',async function(e){
   const list=[].slice.call(e.target.files);if(!list.length)return;
   const name=(list[0].webkitRelativePath||'').split('/')[0]||'Website';

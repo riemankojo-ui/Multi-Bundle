@@ -792,9 +792,19 @@
     if(window.innerWidth!==bw){bw=window.innerWidth;base=0}
     var vh=window.visualViewport?window.visualViewport.height:window.innerHeight;
     if(vh>base)base=vh;
+    document.documentElement.style.setProperty('--vvh',vh+'px');
+    document.documentElement.style.setProperty('--vvt',(window.visualViewport?window.visualViewport.offsetTop:0)+'px');
     var ae=document.activeElement;
     var typing=!!(ae&&/^(TEXTAREA|INPUT)$/.test(ae.tagName));
-    document.body.classList.toggle('kb-open',typing&&vh<base-120);
+    var was=document.body.classList.contains('kb-open');
+    var now=typing&&vh<base-120;
+    document.body.classList.toggle('kb-open',now);
+    if(was!==now){[0,60,200,500].forEach(function(ms){setTimeout(function(){
+      var t=document.getElementById('editorTextarea');
+      var h=document.querySelector('.editor-hl'),g=document.querySelector('.editor-gutter'),s=document.getElementById('editorShell');
+      if(t){t.dispatchEvent(new Event('scroll'));if(h){h.scrollTop=t.scrollTop;h.scrollLeft=t.scrollLeft}if(g)g.scrollTop=t.scrollTop}
+      if(s){s.style.transform='translateZ(0)';void s.offsetHeight;s.style.transform=''}
+    },ms)})}
   }
   window.addEventListener('resize',upd);
   if(window.visualViewport)window.visualViewport.addEventListener('resize',upd);

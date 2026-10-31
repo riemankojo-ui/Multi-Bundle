@@ -540,8 +540,15 @@ function __kbFix(){
     try{if(ta.__plain)return;__lastHlText=ta.value;__refreshHighlightCore();updateGutter();syncScroll()}catch(e){}
   },ms)});
 }
-ta.addEventListener('focus',__kbFix);
-if(window.visualViewport)visualViewport.addEventListener('resize',function(){if(document.activeElement===ta)__kbFix()});
+var __fullH=0,__fhT=0;
+ta.addEventListener('focus',function(){var h=shell.offsetHeight;if(h>300&&!__fhT&&!shell.classList.contains('fullscreen'))__fullH=h});
+ta.addEventListener('blur',function(){
+  if(!__fullH||shell.classList.contains('fullscreen'))return;
+  shell.style.height=__fullH+'px';
+  clearTimeout(__fhT);
+  __fhT=setTimeout(function(){shell.style.height='';__fhT=0},1300);
+});
+
 let highlightTimer;
 let draftTimer;
 let lastLineCount = 0;

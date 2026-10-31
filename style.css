@@ -404,6 +404,8 @@ html.mb-noln #editorShell .editor-gutter{display:none}
 }
 .editor-shell.fullscreen{position:fixed;inset:0;z-index:100;height:100dvh;border-radius:0;border:0}
 body.editor-full .bottom{display:none!important}
+body.kb-open .bottom{display:none!important}
+body.kb-open .editor-shell{height:calc(100dvh - 90px);min-height:0}
 body.editor-full main{padding:0}
 
 /* ========== Project cards ========== */

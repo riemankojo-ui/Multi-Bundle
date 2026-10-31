@@ -785,6 +785,24 @@
 })();
 </script>
 <script src="folder-access.js"></script>
+<script>
+(function(){
+  var base=0,bw=window.innerWidth;
+  function upd(){
+    if(window.innerWidth!==bw){bw=window.innerWidth;base=0}
+    var vh=window.visualViewport?window.visualViewport.height:window.innerHeight;
+    if(vh>base)base=vh;
+    var ae=document.activeElement;
+    var typing=!!(ae&&/^(TEXTAREA|INPUT)$/.test(ae.tagName));
+    document.body.classList.toggle('kb-open',typing&&vh<base-120);
+  }
+  window.addEventListener('resize',upd);
+  if(window.visualViewport)window.visualViewport.addEventListener('resize',upd);
+  document.addEventListener('focusin',function(){setTimeout(upd,300)});
+  document.addEventListener('focusout',function(){setTimeout(upd,150)});
+  upd();
+})();
+</script>
 <script src="sync.js"></script>
 <script src="app.js"></script>
 <script src="editor.js"></script>

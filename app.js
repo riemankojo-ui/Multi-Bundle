@@ -322,10 +322,10 @@ async function applyDraft(projectId,onlyPath){
   var all=await dbGetAll();var p=all.find(function(x){return x.id===projectId});if(!p||!p.draft)return;
   var d=p.draft;var items=onlyPath?d.items.filter(function(i){return i.path===onlyPath}):d.items;
   var pf=deserializeFiles(p.files||[]);
-  items.forEach(function(it){var nf={path:it.path,name:it.name,size:it.size,type:it.type,blob:it.blob,text:it.text};var ix=pf.findIndex(function(f){return f.path===it.path});if(ix>-1)pf[ix]=nf;else pf.push(nf)});
+  items.forEach(function(it){var old0=pf.find(function(f){return f.path===it.path});var nf={path:it.path,name:it.name,size:it.size,type:it.type,blob:it.blob,text:it.text,uri:old0&&old0.uri,parentId:old0&&old0.parentId};var ix=pf.findIndex(function(f){return f.path===it.path});if(ix>-1)pf[ix]=nf;else pf.push(nf)});
   if(!onlyPath){var rm=d.removed||[];pf=pf.filter(function(f){return rm.indexOf(f.path)===-1})}
   pf.sort(function(a,b){return a.path.localeCompare(b.path)});
-  p.files=pf.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}});
+  p.files=pf.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob,uri:f.uri,parentId:f.parentId}});
   var shas=Object.assign({},p.githubShas||d.base||{});
   items.forEach(function(it){if(d.shas[it.path])shas[it.path]=d.shas[it.path]});
   if(!onlyPath)(d.removed||[]).forEach(function(r){delete shas[r]});
@@ -1139,7 +1139,7 @@ async function restoreSnapshot(projectId,ts){
   const snap=p.snapshots.find(function(s){return s.ts===ts});if(!snap)return;
   p.snapshots.unshift({ts:Date.now(),label:'Before restore',files:p.files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}})});
   if(p.snapshots.length>20)p.snapshots.length=20;
-  p.files=snap.files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob}});
+  p.files=snap.files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob,uri:f.uri,parentId:f.parentId}});
   p.savedAt=Date.now();await dbSetAll(all);
   if(currentProjectId===projectId){files=deserializeFiles(p.files);setCurrentProjectName(p.name);if(typeof window.__edReloadCurrent==='function')window.__edReloadCurrent(files.map(function(f){return f.path}))}
   await renderProjectCards();populatePages();render();

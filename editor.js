@@ -815,7 +815,7 @@ async function saveFile(){
   }
 
   f.text=ta.value;f.blob=null;dirty=false;
-  if(f.uri&&window.FolderAccess&&FolderAccess.available){try{await FolderAccess.saveFile(f,f.text)}catch(err){toast('Could not save to phone file','error')}}
+  if(f.uri&&window.FolderAccess&&FolderAccess.available){try{await FolderAccess.saveFile(f,f.text);toast('Saved to phone file','success')}catch(err){toast('Could not save to phone file: '+String(err&&err.message||err),'error')}}
 originalText=ta.value;
 
 try{

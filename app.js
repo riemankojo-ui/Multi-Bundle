@@ -59,6 +59,7 @@ function showConfirm(message,opts){opts=opts||{};return showModal({icon:opts.ico
 function showPrompt(title,defaultValue,opts){opts=opts||{};return showModal({icon:opts.icon||'?',title:title,message:opts.message||'',input:true,inputValue:defaultValue||'',inputPlaceholder:opts.placeholder||'',confirmText:opts.confirmText||'OK',cancelText:opts.cancelText||'Cancel'})}
 function showInfo(title,message){return showModal({icon:'i',title:title,message:message,hideCancel:true,confirmText:'Got it'})}
 window.showConfirm=showConfirm;window.showPrompt=showPrompt;window.showInfo=showInfo;
+(function(){var inp=$('modalInput'),root=$('modalRoot');if(!inp||!root)return;var lt=0,done=false;document.addEventListener('touchstart',function(){lt=Date.now();done=false},true);inp.addEventListener('focus',function(){inp.classList.add('es-active')});inp.addEventListener('blur',function(){setTimeout(function(){if(done||Date.now()-lt<500||root.hidden||inp.hidden)return;if(document.activeElement&&document.activeElement!==document.body)return;done=true;inp.focus({preventScroll:true})},150)});new MutationObserver(function(){if(root.hidden)inp.classList.remove('es-active')}).observe(root,{attributes:true,attributeFilter:['hidden']})})();
 
 const DB_NAME='multibundle',DB_STORE='project';
 let __dbp=null;

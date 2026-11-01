@@ -603,7 +603,7 @@ body.editor-full main{padding:0}
   padding:11px 13px;font-size:13px;color:#fff;outline:0;width:100%;
   font-family:inherit;
 }
-.modal-input:focus{border-color:var(--red)}
+.modal-input:focus,.modal-input.es-active{border-color:var(--red)}
 .modal-input::placeholder{color:#5c5d66}
 .modal-actions{display:flex;gap:8px;margin-top:8px}
 .modal-actions .btn{flex:1}

@@ -24,7 +24,8 @@ async function gh(method,path,body){
 function explain(e,write){
   if(e&&e.status===-2)return 'Your token is missing the repo permission. It only has: '+(e.have&&e.have.length?e.have.join(', '):'nothing')+'. Open github.com/settings/tokens, tap your token, tick repo, then tap Update token.';
   if(e&&e.status===-1)return 'Your token can read this repo but cannot write to it. Make sure the token has the repo box ticked and was created by an account that owns this repo or is a collaborator.';
-  if(write&&e&&e.status===404)return 'GitHub refused the upload. This usually means your token cannot write to this repo. Check that it has the repo box ticked and belongs to the repo owner or a collaborator.'+detail(e);
+  if(write&&e&&e.status===404&&S.rows&&S.rows.some(function(r){return r.on&&/^\.github\/workflows\//.test(r.path)}))return 'GitHub blocks workflow files (.github/workflows) unless your token has the workflow permission. Sign out of GitHub, then sign in again with a token that has repo and workflow ticked.';
+if(write&&e&&e.status===404)return 'GitHub refused the upload. This usually means your token cannot write to this repo. Check that it has the repo box ticked and belongs to the repo owner or a collaborator.'+detail(e);
   if(e&&e.status===401)return 'GitHub rejected your token. Sign in again in the GitHub tab.';
   if(e&&e.status===403)return 'GitHub refused access ('+e.message+'). Your token needs the repo scope, and the branch may be protected.';
   if(e&&e.status===404)return 'Repo or branch not found. For private repos your token needs access to it.';

@@ -709,6 +709,8 @@ if($('editorReplaceAll'))$('editorReplaceAll').onclick=replaceAll;
 function __esClear(){var r=$('editorReplaceInput');searchInput.value='';if(r)r.value='';searchInput.dispatchEvent(new Event('input'));if(r)r.dispatchEvent(new Event('input'))}
 (function(){var r=$('editorReplaceInput');if(!r)return;function auto(){setTimeout(function(){if(!searchBar.classList.contains('open')||!r.value||!searchInput.value)return;runSearch();if(matches.length===1)replaceOne()},60)}r.addEventListener('paste',auto);r.addEventListener('drop',auto)})();
 (function(){function wrap(b,all){if(!b)return;b.addEventListener('click',function(){if(!matches.length)return;setTimeout(function(){if(all||!matches.length)__esClear()},0)},true)}wrap($('editorReplaceOne'),false);wrap($('editorReplaceAll'),true)})();
+(function(){var r=$('editorReplaceInput'),t=0;if(!r)return;function go(){clearTimeout(t);t=setTimeout(function(){var q=searchInput.value;if(!searchBar.classList.contains('open')||!q||!r.value||/^:\d+$/.test(q))return;runSearch();if(matches.length===1){replaceOne();__esClear()}},800)}searchInput.addEventListener('input',go);r.addEventListener('input',go)})();
+(function(){var r=$('editorReplaceInput'),t=0;if(!r)return;function go(){clearTimeout(t);t=setTimeout(function(){var q=searchInput.value;if(!searchBar.classList.contains('open')||!q||!r.value||/^:\d+$/.test(q))return;runSearch();if(matches.length===1){replaceOne();__esClear()}},800)}searchInput.addEventListener('input',go);r.addEventListener('input',go)})();
 function __quiet(pos){
   try{if(window.__edSetCaret)window.__edSetCaret(pos)}catch(_){}
   function go(){
@@ -1088,6 +1090,7 @@ function restoreEdSel() {
     if (a > ta.value.length) a = ta.value.length;
     if (b > ta.value.length) b = ta.value.length;
     if (window.__edSkipRestore && Date.now() < window.__edSkipRestore) return;
+var __mr = document.getElementById('modalRoot'); if (__mr && !__mr.hidden) return;
 if (window.__edLastFocus && window.__edLastFocus !== ta && searchBar.contains(window.__edLastFocus)) return;
     ta.focus({ preventScroll: true });
     ta.setSelectionRange(a, b);

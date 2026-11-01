@@ -706,6 +706,7 @@ window.__edSkipRestore=Date.now()+1500;ta.value=__v0.slice(0,__s0)+__v0.slice(__
 if($('editorCutBtn'))$('editorCutBtn').onclick=cutMatch;
 if($('editorReplaceOne'))$('editorReplaceOne').onclick=replaceOne;
 if($('editorReplaceAll'))$('editorReplaceAll').onclick=replaceAll;
+function __esClear(){var r=$('editorReplaceInput');searchInput.value='';if(r)r.value='';searchInput.dispatchEvent(new Event('input'));if(r)r.dispatchEvent(new Event('input'))}
 function __quiet(pos){
   try{if(window.__edSetCaret)window.__edSetCaret(pos)}catch(_){}
   function go(){
@@ -726,7 +727,7 @@ function replaceOne(){
   matchIndex=k;
   ta.scrollTop=st;ta.scrollLeft=sl;syncScroll();
   updateSearchCount();
-  __quiet(end);
+  __quiet(end);if(!matches.length)__esClear();
 }
 function replaceAll(){
   if(!matches.length){toast('No match to replace','error');return}
@@ -736,7 +737,7 @@ function replaceAll(){
   ta.value=v;edited();
   matches=[];matchLens=[];matchIndex=-1;updateSearchCount();
   ta.scrollTop=st;ta.scrollLeft=sl;syncScroll();
-  __quiet(0);
+  __quiet(0);__esClear();
   toast('Replaced '+n,'success');
 }
 function scrollToPosition(pos){
@@ -821,7 +822,7 @@ updateBtns();
   try{localStorage.setItem('mb_file',JSON.stringify({pid:(typeof currentProjectId!=='undefined'?currentProjectId:''),path:path}))}catch(e){}
   renderPreview();
 }
-function markDirty(){dirty=true;status.textContent=currentPath+' •'}
+function markDirty(){dirty=(ta.value!==originalText);status.textContent=currentPath+(dirty?' •':'');if(!dirty){try{if(typeof currentProjectId!=='undefined'&&currentProjectId&&currentPath)localStorage.removeItem('mb_draft_'+currentProjectId+'_'+currentPath)}catch(e){}}}
 
 async function saveFile(){
   if(!currentPath)return;
@@ -860,6 +861,7 @@ status.textContent=currentPath+' •';
   if(typeof render==='function')render();
 }
 fileSelect.addEventListener('change',async function(e){
+  dirty=(ta.value!==originalText);
   if(dirty){
     const ok=await confirmFn('You have unsaved changes. Discard them?',{title:'Unsaved changes',confirmText:'Discard',cancelText:'Keep editing'});
     if(!ok){fileSelect.value=currentPath;return}

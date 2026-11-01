@@ -26,7 +26,7 @@ let ghToken='';
 try { ghToken = localStorage.getItem('mb_gh_active_token') || ''; } catch(e) {}
 const PROJECT_LIMIT=20;
 
-const textExt=new Set(['html','htm','css','js','mjs','json','txt','md','xml','svg','php','py','sql','yaml','yml','toml','csv','webmanifest','ts','jsx','tsx','sh','bash','ini','env','cfg','conf','log','java','c','cpp','h','cs','go','rs','kt','swift','rb','lua','vue','scss','less','gitignore']);
+const textExt=new Set(['html','htm','css','js','mjs','json','txt','md','xml','svg','php','py','sql','yaml','yml','toml','csv','webmanifest','ts','jsx','tsx','sh','bash','ini','env','cfg','conf','log','java','c','cpp','h','cs','go','rs','kt','swift','rb','lua','vue','scss','less','gitignore','nojekyll','htaccess','npmrc','editorconfig','prettierrc','eslintrc']);
 const ext=p=>(p.split('.').pop()||'').toLowerCase();
 const base=p=>p.split('/').pop();
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -291,7 +291,7 @@ if(currentProjectId===id){
   await renderProjectCards();render();showToast('Project deleted');
 }
 
-function ghOkPath(p){return !p.split('/').some(function(s){return s.startsWith('.')&&s!=='.well-known'})}
+function ghOkPath(p){return !p.split('/').some(function(s){return s==='.git'})}
 async function ghMakeDraft(projectId){
   var all=await dbGetAll();var p=all.find(function(x){return x.id===projectId});if(!p)return;
   showToast('Fetching updates from GitHub...');
@@ -386,7 +386,7 @@ function showProjectsList(){
   loadGithubReposForProjects();
 }
 
-function cleanIncoming(result){return result.filter(function(f){return f.path&&!f.path.split('/').some(function(p){return p.startsWith('.')&&p!=='.well-known'})}).sort(function(a,b){return a.path.localeCompare(b.path)})}
+function cleanIncoming(result){return result.filter(function(f){return f.path&&!f.path.split('/').some(function(p){return p==='.git'||p==='node_modules'})}).sort(function(a,b){return a.path.localeCompare(b.path)})}
 
 async function processIncoming(result,defaultName,presetName){
   result=cleanIncoming(result);if(!result.length){showToast('No files found','error');return}
@@ -1394,7 +1394,7 @@ if ($('ghOauthBtn')) {
   $('ghOauthBtn').onclick = async function() {
     const provider = new firebase.auth.GithubAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    provider.addScope('repo');
+    provider.addScope('repo');provider.addScope('workflow');
     try {
       const cu = firebase.auth().currentUser;
 const linked = !!(cu && cu.providerData && cu.providerData.some(function (p) { return p.providerId === 'github.com'; }));

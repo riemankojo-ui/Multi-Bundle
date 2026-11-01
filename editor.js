@@ -623,7 +623,7 @@ ta.addEventListener('keydown',function(e){
 
 function openSearch(){searchBar.classList.add('open');searchInput.focus();searchInput.select()}
 function clearMatchSel(){try{var e0=ta.selectionEnd;ta.setSelectionRange(e0,e0);saveEdSel()}catch(x){}}
-function closeSearch(){searchBar.classList.remove('open');matches=[];matchIndex=-1;updateSearchCount();paintMatches();clearMatchSel()}
+function closeSearch(){window.__edLastFocus=null;__esMark(null);searchBar.classList.remove('open');matches=[];matchIndex=-1;updateSearchCount();paintMatches();clearMatchSel()}
 function runSearch(){
   const q=searchInput.value;matches=[];matchLens=[];matchIndex=-1;
   const gl=q.match(/^:(\d+)$/);if(gl){goToLine(parseInt(gl[1],10));searchCount.textContent='line '+gl[1];return}
@@ -685,8 +685,11 @@ async function cutMatch(){
     s=0;for(let i=0;i<n-1;i++)s+=lines[i].length+1;
     e=s+lines[n-1].length+(n<lines.length?1:0);
   }else{
-    if(!matches.length||matchIndex<0){toast('Search first, then tap Cut','error');return}
+    if(!matches.length||matchIndex<0){if(searchInput.value){toast('No match to cut','error');return}
+var __p=ta.selectionStart,__v0=ta.value,__s0=__p>0?__v0.lastIndexOf('\n',__p-1)+1:0,__e0=__v0.indexOf('\n',__p);__e0=__e0<0?__v0.length:__e0+1;if(__e0===__v0.length&&__s0>0&&__v0.charAt(__s0-1)==='\n')__s0--;
+window.__edSkipRestore=Date.now()+1500;ta.value=__v0.slice(0,__s0)+__v0.slice(__e0);edited();toast('Deleted line','success');return}
     s=matches[matchIndex];e=s+(matchLens[matchIndex]||0);
+{var __v=ta.value,__ls=s>0?__v.lastIndexOf('\n',s-1)+1:0,__le=__v.indexOf('\n',e>s?e-1:e);if(__le<0)__le=__v.length;s=__ls;e=__le<__v.length?__le+1:__le;if(e===__v.length&&s>0)s=s-1;}
   }
   const piece=ta.value.slice(s,e);
   try{
@@ -754,6 +757,11 @@ function selectMatch(){
   updateSearchCount();
 }
 searchInput.addEventListener('input',runSearch);
+var __esInputs=[searchInput,$('editorReplaceInput')];
+function __esMark(el){__esInputs.forEach(function(i){if(i)i.classList.toggle('es-active',i===el)})}
+__esInputs.forEach(function(i){if(i)i.addEventListener('focus',function(){__esMark(i)})});
+ta.addEventListener('focus',function(){__esMark(null)});
+(function(){var lastTouch=0,done=false;document.addEventListener('touchstart',function(){lastTouch=Date.now();done=false},true);__esInputs.forEach(function(el){if(!el)return;el.addEventListener('blur',function(){setTimeout(function(){if(done||Date.now()-lastTouch<500)return;if(!searchBar.classList.contains('open')||el.className.indexOf('es-active')<0)return;if(document.activeElement&&document.activeElement!==document.body)return;done=true;el.focus({preventScroll:true})},150)})})})();
 searchInput.addEventListener('keydown',function(e){
   if(e.key==='Enter'){e.preventDefault();e.shiftKey?prevMatch():nextMatch()}
   if(e.key==='Escape')closeSearch();
@@ -1076,6 +1084,7 @@ function restoreEdSel() {
     if (a > ta.value.length) a = ta.value.length;
     if (b > ta.value.length) b = ta.value.length;
     if (window.__edSkipRestore && Date.now() < window.__edSkipRestore) return;
+if (window.__edLastFocus && window.__edLastFocus !== ta && searchBar.contains(window.__edLastFocus)) return;
     ta.focus({ preventScroll: true });
     ta.setSelectionRange(a, b);
     if (__edSel.scroll != null && !window.__edKeepScroll) ta.scrollTop = __edSel.scroll;
@@ -1096,6 +1105,7 @@ document.addEventListener('visibilitychange', function () {
 });
 window.addEventListener('pageshow', function () { setTimeout(function () { restoreEdSel(); try { refreshHighlight(); syncScroll(); paintMatches(); } catch (e) {} }, 80); });
 var __edRestoring = false, __edTouching = false;
+document.addEventListener('focusin', function (e) { window.__edLastFocus = e.target; });
 if (ta) {
   ta.addEventListener('touchstart', function () { __edTouching = true; }, { passive: true });
   ta.addEventListener('scroll', function () { window.__edLastScroll = Date.now(); }, { passive: true });

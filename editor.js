@@ -707,9 +707,9 @@ if($('editorCutBtn'))$('editorCutBtn').onclick=cutMatch;
 if($('editorReplaceOne'))$('editorReplaceOne').onclick=replaceOne;
 if($('editorReplaceAll'))$('editorReplaceAll').onclick=replaceAll;
 function __esClear(){var r=$('editorReplaceInput');searchInput.value='';if(r)r.value='';searchInput.dispatchEvent(new Event('input'));if(r)r.dispatchEvent(new Event('input'))}
-(function(){var r=$('editorReplaceInput');if(!r)return;function auto(){setTimeout(function(){if(!searchBar.classList.contains('open')||!r.value||!searchInput.value)return;runSearch();if(matches.length===1)replaceOne()},60)}r.addEventListener('paste',auto);r.addEventListener('drop',auto)})();
-(function(){function wrap(b,all){if(!b)return;b.addEventListener('click',function(){if(!matches.length)return;setTimeout(function(){if(all||!matches.length)__esClear()},0)},true)}wrap($('editorReplaceOne'),false);wrap($('editorReplaceAll'),true)})();
-(function(){var r=$('editorReplaceInput'),t=0;if(!r)return;function go(){clearTimeout(t);t=setTimeout(function(){var q=searchInput.value;if(!searchBar.classList.contains('open')||!q||!r.value||/^:\d+$/.test(q))return;runSearch();if(matches.length===1){replaceOne();__esClear()}},800)}searchInput.addEventListener('input',go);r.addEventListener('input',go)})();
+void 0;
+(function(){function wrap(b){if(!b)return;var n=0;b.addEventListener('click',function(){n=matches.length},true);b.addEventListener('click',function(){if(n)__esClear();n=0})}wrap($('editorReplaceOne'));wrap($('editorReplaceAll'))})();
+(function(){var r=$('editorReplaceInput'),t=0;if(!r)return;function go(e){var fast=e&&(/^insertFrom(Paste|Drop)/.test(e.inputType||'')||(e.data&&e.data.length>1));clearTimeout(t);t=setTimeout(function(){var q=searchInput.value;if(!searchBar.classList.contains('open')||!q||!r.value||/^:\d+$/.test(q))return;runSearch();if(matches.length===1){replaceOne();__esClear()}},fast?30:800)}searchInput.addEventListener('input',go);r.addEventListener('input',go)})();
 (function(){var r=$('editorReplaceInput'),t=0;if(!r)return;function go(){clearTimeout(t);t=setTimeout(function(){var q=searchInput.value;if(!searchBar.classList.contains('open')||!q||!r.value||/^:\d+$/.test(q))return;runSearch();if(matches.length===1){replaceOne();__esClear()}},800)}searchInput.addEventListener('input',go);r.addEventListener('input',go)})();
 function __quiet(pos){
   try{if(window.__edSetCaret)window.__edSetCaret(pos)}catch(_){}

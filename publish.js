@@ -75,7 +75,8 @@ catch(e1){commit=await gh('GET','/repos/'+repo+'/git/commits/'+headSha);treeSha=
   (tree.tree||[]).forEach(function(n){if(n.type==='blob')remote[n.path]={sha:n.sha,mode:n.mode}});
   var base=(p&&p.githubRepo===repo&&(p.githubBranch||'main')===branch&&p.githubShas)?p.githubShas:null;
 var hm={};
-await Promise.all(fl.map(async function(f){var bb=await fileBytes(f);if(bb)hm[f.path]=await sha1blob(bb)}));
+var __hc=window.__pbHc||(window.__pbHc=new Map());
+await Promise.all(fl.map(async function(f){var c=__hc.get(f.path),key=f.blob||f.text;if(c&&c.k===key){hm[f.path]=c.h;return}var bb=await fileBytes(f);if(bb){var h=await sha1blob(bb);hm[f.path]=h;__hc.set(f.path,{k:key,h:h})}}));
   var rows=[];
   for(var i=0;i<fl.length;i++){
     var f=fl[i];if(hm[f.path]==null)continue;
@@ -110,7 +111,7 @@ async function pushRows(scan,rows,msg,onProgress){
       done++;if(onProgress)onProgress('Uploading '+done+'/'+sel.length+'\u2026');
     }
   }
-  await Promise.all([worker(),worker(),worker(),worker(),worker()]);
+  await Promise.all([worker(),worker(),worker(),worker(),worker(),worker(),worker(),worker()]);
   if(onProgress)onProgress('Creating commit\u2026');
   var tree=await gh('POST','/repos/'+scan.repo+'/git/trees',{base_tree:scan.treeSha,tree:entries});
   var commit=await gh('POST','/repos/'+scan.repo+'/git/commits',{message:msg,tree:tree.sha,parents:[scan.headSha]});
@@ -463,7 +464,7 @@ async function runScan(){
   try{
     var recs=await dbGetAll();var p=recs.find(function(x){return x.id===pid()})||null;
     var r=await computeScan(repo,branch,p,curFiles());
-    S.scan=r.scan;S.rows=r.rows;renderRows();try{__prefetchCounts()}catch(e){}
+    S.scan=r.scan;S.rows=r.rows;renderRows();void 0;
     if(!r.rows.length){setNote('Everything here is already on GitHub.','ok')}
     else{
       var warn=r.rows.filter(function(x){return x.conflict}).length;

@@ -23,6 +23,10 @@ body{background:radial-gradient(120% 50% at 0% 0%,rgba(240,20,36,.16),transparen
 .notice{border:1px solid #5a1a20;background:#2a0f13;color:#ffb3b9;border-radius:14px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px}
 .rw{display:flex;align-items:center;gap:10px;padding:14px 0;border-top:1px solid var(--line)}
 .rw:first-child{border-top:0}
+.dh{font-size:11px;font-weight:800;letter-spacing:1.5px;color:var(--mut);text-transform:uppercase;padding:14px 0 2px}
+.dh+.rw{border-top:0}
+.rw[data-log]{cursor:pointer}
+.rw[data-log]:active .t small{color:#f01424}
 .d{width:8px;height:8px;border-radius:50%;background:var(--mut);flex:none}
 .d.ok{background:var(--green)}.d.x{background:var(--red)}.d.go{background:#ffd166}
 .t{flex:1;min-width:0;font-size:14px;font-weight:700}
@@ -76,7 +80,30 @@ $('pName').textContent=p.name;
 $('pRepo').textContent=p.githubRepo||'No GitHub repo';
 $('backBtn').onclick=function(){location.href='apkbuild.html?pid='+enc(p.id)+'&name='+enc(p.name)+'&repo='+enc(p.githubRepo)+'&branch='+enc(p.githubBranch)};
 
+function dayKey(t){var d=new Date(t);return isNaN(d)?'':d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate()}
+function dayLabel(t){
+  var d=new Date(t);if(isNaN(d))return 'EARLIER';
+  var base=d.toLocaleDateString([], {weekday:'short',day:'numeric',month:'short'});
+  if(dayKey(t)===dayKey(new Date()))return 'TODAY \u00b7 '+base;
+  if(dayKey(t)===dayKey(new Date(Date.now()-864e5)))return 'YESTERDAY \u00b7 '+base;
+  return base;
+}
+function tm(t){try{return new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}catch(e){return ''}}
 function draw(rows){
+  var box=$('list');
+  if(!rows.length){box.innerHTML='<div class="empty">No builds yet.</div>';return}
+  var first=-1,lastDay=null;rows.forEach(function(r,i){if(first<0&&r.url)first=i});
+  box.innerHTML=rows.map(function(r,i){
+    var title='APK build'+(r.n?' '+r.n:'')+(r.ver?' \u00b7 v'+r.ver:'');
+    var word=r.st==='go'?'Building':(r.st==='ok'?'Ready':'Failed');
+    var sub=[word,tm(r.t),sz(r.size)].filter(Boolean).join(' \u00b7 ');
+    var act=r.url?'<a class="dl" href="'+esc(r.url)+'" target="_blank" rel="noopener">Download</a>':(r.log?'<a class="lg" href="'+esc(r.log)+'" target="_blank" rel="noopener">Log</a>':'');
+    var dk=dayKey(r.t),hd='';
+    if(dk!==lastDay){lastDay=dk;hd='<div class="dh">'+esc(dayLabel(r.t))+'</div>'}
+    return hd+'<div class="rw"'+(r.log?' data-log="'+esc(r.log)+'"':'')+'><span class="d '+r.st+'"></span><div class="t">'+esc(title)+(i===first?'<em>LATEST</em>':'')+'<small>'+esc(sub)+'</small></div>'+act+'</div>';
+  }).join('');
+}
+function drawOld(rows){
   var box=$('list');
   if(!rows.length){box.innerHTML='<div class="empty">No builds yet.</div>';return}
   var first=-1;rows.forEach(function(r,i){if(first<0&&r.url)first=i});
@@ -114,6 +141,13 @@ async function load(){
   draw(rows);
 }
 $('rf').onclick=load;
+$('list').onclick=function(e){
+  if(e.target.closest&&e.target.closest('a'))return;
+  var row=e.target.closest?e.target.closest('[data-log]'):null;
+  if(!row)return;
+  var a=document.createElement('a');a.href=row.getAttribute('data-log');a.target='_blank';a.rel='noopener';
+  document.body.appendChild(a);a.click();a.remove();
+};
 load();
 })();
 </script>

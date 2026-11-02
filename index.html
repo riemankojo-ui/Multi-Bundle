@@ -832,6 +832,7 @@ async function openApkPage(){
   var p=list.find(function(x){return x.id===currentProjectId});
   if(!p){showToast('Open a project first.','error');return}
   if(!p.githubRepo){showToast('Publish this project to GitHub first (Publish tab).','error');return}
+  try{sessionStorage.setItem('mb_apk_tk',t);localStorage.setItem('mb_apk_tk',t);localStorage.setItem('mb_apk_tk',t)}catch(e){}
   location.href='apkbuild.html?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
 }
 </script>

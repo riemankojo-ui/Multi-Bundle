@@ -218,7 +218,7 @@ var YML=[
 
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function tk(){try{return sessionStorage.getItem('mb_apk_tk')||localStorage.getItem('mb_gh_active_token')||''}catch(e){return ''}}
+function tk(){try{return sessionStorage.getItem('mb_apk_tk')||localStorage.getItem('mb_apk_tk')||localStorage.getItem('mb_gh_active_token')||''}catch(e){return ''}}
 var LOG=function(){};
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function b64u(s){return btoa(unescape(encodeURIComponent(s)))}

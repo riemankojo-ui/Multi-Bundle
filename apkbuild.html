@@ -1,5 +1,43 @@
-/* Multi Bundle - Build APK (Bundle tab).
-   Commits a workflow to the project's GitHub repo, runs it, and links the finished debug APK. */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0f">
+<title>Build APK - Multi Bundle</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#0b0c0f;color:#fff;font-family:system-ui,sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 24px)}
+.back{background:none;border:0;color:#9a9ca6;font:800 14px system-ui,sans-serif;padding:0 0 14px;cursor:pointer}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424}
+h1{font-size:22px;font-weight:800;margin:2px 0;overflow-wrap:anywhere}
+.sub{font-size:12px;color:#9a9ca6;margin-bottom:16px;overflow-wrap:anywhere}
+.lbl{font-size:11px;font-weight:800;letter-spacing:1px;color:#9a9ca6}
+input{width:100%;background:#101115;color:#fff;border:1px solid #303139;border-radius:10px;padding:12px;font-size:14px;font-family:inherit;outline:0;margin:4px 0 12px}
+#msg{font-size:13px;line-height:1.5;margin:4px 0 14px;color:#c9cad1;overflow-wrap:anywhere}
+.row{display:flex;gap:8px}
+button.b{padding:13px;border-radius:12px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:#20222a;color:#fff}
+button.red{background:#f01424;border:0}
+a.dl{display:inline-block;margin-top:10px;padding:12px 16px;border-radius:12px;background:#f01424;color:#fff;font-weight:800;text-decoration:none}
+a.log{color:#f01424;font-weight:800}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <button class="back" id="apkBack">&#8249; Back</button>
+  <div class="eyebrow">BUILD APK</div>
+  <h1 id="pName">Project</h1>
+  <div class="sub" id="pInfo"></div>
+  <div id="apkForm">
+    <div class="lbl">APP NAME</div><input id="apkName" autocomplete="off">
+    <div class="lbl">PACKAGE ID</div><input id="apkId" autocomplete="off" autocapitalize="off">
+    <div class="lbl">VERSION</div><input id="apkVer" autocomplete="off">
+  </div>
+  <div id="msg"></div>
+  <div class="row"><button class="b" id="apkClose" style="flex:1">Close</button><button class="b red" id="apkGo" style="flex:2">Build APK</button></div>
+</div>
+<script>
 (function(){
 'use strict';
 var WF='build-apk.yml',WF_PATH='.github/workflows/'+WF;
@@ -80,10 +118,10 @@ var YML=[
 '          gh release create "apk-${{ github.run_number }}" "$RUNNER_TEMP/app.apk" --title "APK build ${{ github.run_number }}" --notes "$APP_NAME $VERSION" --target "$GITHUB_SHA"',
 ''].join('\n');
 
+
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function toast(m,t){if(window.showToast)window.showToast(m,t)}
-function tk(){return window.getToken?window.getToken():''}
+function tk(){try{return localStorage.getItem('mb_gh_active_token')||''}catch(e){return ''}}
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function b64u(s){return btoa(unescape(encodeURIComponent(s)))}
 function fromB64u(s){return decodeURIComponent(escape(atob(s.replace(/\s/g,''))))}
@@ -92,11 +130,6 @@ async function gh(method,path,body){
   var d=null;try{d=await r.json()}catch(e){}
   if(!r.ok){var er=new Error((d&&d.message)||('HTTP '+r.status));er.status=r.status;throw er}
   return d;
-}
-async function curProject(){
-  var id=(typeof currentProjectId!=='undefined')?currentProjectId:null;
-  var list=await dbGetAll();
-  return list.find(function(p){return p.id===id})||null;
 }
 function defId(repo){
   var pr=(repo||'').split('/');
@@ -172,71 +205,45 @@ async function build(p,v,say){
   return {url:asset.browser_download_url,run:run.html_url};
 }
 
-async function openSheet(){
-  if(!tk()){toast('Connect GitHub first (GitHub tab).','error');return}
-  var p=await curProject();
-  if(!p){toast('Open a project first.','error');return}
-  if(!p.githubRepo){toast('Publish this project to GitHub first (Publish tab).','error');return}
-  var saved={};try{saved=JSON.parse(localStorage.getItem('mb_apk_'+p.id)||'{}')}catch(e){}
-  var vals={name:saved.name||p.name||'App',id:saved.id||defId(p.githubRepo),ver:saved.ver||'1.0.0'};
-  S.stop=false;
-  var b=document.createElement('div');
-  b.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
-  var c=document.createElement('div');
-  c.style.cssText='width:100%;max-width:560px;max-height:86vh;overflow:auto;background:#15161a;border:1px solid #2a2b32;border-radius:18px 18px 0 0;padding:16px;box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff';
-  var bs='padding:12px;border-radius:12px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:#20222a;color:#fff';
-  var is='width:100%;box-sizing:border-box;background:#101115;color:#fff;border:1px solid #303139;border-radius:10px;padding:11px;font-size:14px;font-family:inherit;outline:0;margin:4px 0 10px';
-  var ls='font-size:11px;font-weight:800;letter-spacing:1px;color:#9a9ca6';
-  c.innerHTML='<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">BUILD APK</div>'+
-    '<div style="font-size:18px;font-weight:800;margin:2px 0 2px;overflow-wrap:anywhere">'+esc(p.name||'Untitled')+'</div>'+
-    '<div style="font-size:12px;color:#9a9ca6;margin-bottom:12px">Repo: '+esc(p.githubRepo)+' \u00b7 branch: '+esc(p.githubBranch||'main')+'</div>'+
-    '<div id="apkForm"><div style="'+ls+'">APP NAME</div><input id="apkName" style="'+is+'" value="'+esc(vals.name)+'" autocomplete="off">'+
-    '<div style="'+ls+'">PACKAGE ID</div><input id="apkId" style="'+is+'" value="'+esc(vals.id)+'" autocomplete="off" autocapitalize="off">'+
-    '<div style="'+ls+'">VERSION</div><input id="apkVer" style="'+is+'" value="'+esc(vals.ver)+'" autocomplete="off"></div>'+
-    '<div id="apkMsg" style="font-size:13px;line-height:1.5;margin:4px 0 12px;color:#c9cad1;overflow-wrap:anywhere"></div>'+
-    '<div style="display:flex;gap:8px"><button id="apkClose" style="'+bs+';flex:1">Close</button><button id="apkGo" style="'+bs+';flex:2;background:#f01424;border:0">Build APK</button></div>';
-  b.appendChild(c);document.body.appendChild(b);
-  var msg=c.querySelector('#apkMsg'),go=c.querySelector('#apkGo'),busy=false;
-  function say(t){msg.textContent=t}
-  function close(){S.stop=true;b.remove()}
-  c.querySelector('#apkClose').onclick=close;
-  b.onclick=function(e){if(e.target===b&&!busy)close()};
-  go.onclick=async function(){
-    if(busy)return;
-    var v={name:c.querySelector('#apkName').value.trim(),id:c.querySelector('#apkId').value.trim(),ver:c.querySelector('#apkVer').value.trim()};
-    if(!v.name){say('Enter an app name.');return}
-    if(!/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/.test(v.id)){say('Package ID must look like com.yourname.app (lowercase letters, numbers, dots).');return}
-    if(!/^\d+(\.\d+){0,2}$/.test(v.ver)){say('Version must look like 1.0.0.');return}
-    try{localStorage.setItem('mb_apk_'+p.id,JSON.stringify(v))}catch(e){}
-    busy=true;go.disabled=true;go.style.opacity='.5';c.querySelector('#apkForm').style.display='none';
-    try{
-      var res=await build(p,v,say);
-      if(res.fail){
-        msg.innerHTML='Build failed ('+esc(res.why)+'). <a href="'+esc(res.run)+'" target="_blank" rel="noopener" style="color:#f01424;font-weight:800">Open the log</a> and send me the red error lines.';
-      }else{
-        msg.innerHTML='APK is ready.<br><a href="'+esc(res.url)+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;padding:12px 16px;border-radius:12px;background:#f01424;color:#fff;font-weight:800;text-decoration:none">Download APK</a>'+
-          '<div style="font-size:12px;color:#9a9ca6;margin-top:10px">Open the file on your phone and allow "install unknown apps" if Android asks. Private repo: stay signed in to GitHub in your browser.</div>';
-        toast('APK built','success');
-      }
-    }catch(e){
-      if(e&&e.message==='stopped')return;
-      msg.textContent=(e&&e.message)||'Something went wrong.';
-      c.querySelector('#apkForm').style.display='';
+var q=new URLSearchParams(location.search);
+var p={id:q.get('pid')||'',name:q.get('name')||'App',githubRepo:q.get('repo')||'',githubBranch:q.get('branch')||'main'};
+var saved={};try{saved=JSON.parse(localStorage.getItem('mb_apk_'+p.id)||'{}')}catch(e){}
+$('pName').textContent=p.name;
+$('pInfo').textContent='Repo: '+(p.githubRepo||'-')+' \u00b7 branch: '+p.githubBranch;
+$('apkName').value=saved.name||p.name||'App';
+$('apkId').value=saved.id||defId(p.githubRepo);
+$('apkVer').value=saved.ver||'1.0.0';
+var msg=$('msg'),go=$('apkGo'),busy=false;
+function say(t){msg.textContent=t}
+function leave(){S.stop=true;location.href='/'}
+$('apkClose').onclick=leave;
+$('apkBack').onclick=function(){if(busy&&!confirm('Stop watching this build? It keeps running on GitHub.'))return;leave()};
+if(!p.githubRepo){say('Open this page from the Bundle tab (project must be published to GitHub).');go.disabled=true;go.style.opacity='.5'}
+else if(!tk()){say('Connect GitHub first (GitHub tab).');go.disabled=true;go.style.opacity='.5'}
+go.onclick=async function(){
+  if(busy)return;
+  var v={name:$('apkName').value.trim(),id:$('apkId').value.trim(),ver:$('apkVer').value.trim()};
+  if(!v.name){say('Enter an app name.');return}
+  if(!/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/.test(v.id)){say('Package ID must look like com.yourname.app (lowercase letters, numbers, dots).');return}
+  if(!/^\d+(\.\d+){0,2}$/.test(v.ver)){say('Version must look like 1.0.0.');return}
+  try{localStorage.setItem('mb_apk_'+p.id,JSON.stringify(v))}catch(e){}
+  S.stop=false;busy=true;go.disabled=true;go.style.opacity='.5';$('apkForm').style.display='none';
+  try{
+    var res=await build(p,v,say);
+    if(res.fail){
+      msg.innerHTML='Build failed ('+esc(res.why)+'). <a class="log" href="'+esc(res.run)+'" target="_blank" rel="noopener">Open the log</a> and send me the red error lines.';
+    }else{
+      msg.innerHTML='APK is ready.<br><a class="dl" href="'+esc(res.url)+'" target="_blank" rel="noopener">Download APK</a>'+
+        '<div style="font-size:12px;color:#9a9ca6;margin-top:10px">Open the file on your phone and allow "install unknown apps" if Android asks. Private repo: stay signed in to GitHub in your browser.</div>';
     }
-    busy=false;go.disabled=false;go.style.opacity='1';go.textContent='Build again';
-  };
-}
-
-function ensureCard(){
-  var page=$('bundlePage');if(!page||$('apkCard'))return;
-  var c=document.createElement('section');c.className='card';c.id='apkCard';
-  c.innerHTML='<label class="eyebrow">ANDROID</label><h2>Build APK</h2><p class="note" style="margin:4px 0 12px">Turns the current project into an installable Android app using GitHub. The project must be published to GitHub first.</p><button id="apkBtn" class="btn primary">Build APK</button>';
-  page.appendChild(c);
-  $('apkBtn').onclick=openSheet;
-}
-var orig=window.showTab;
-if(typeof orig==='function'){
-  window.showTab=function(name){var r=orig.apply(this,arguments);if(name==='bundle')ensureCard();return r};
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureCard);else ensureCard();
+  }catch(e){
+    if(e&&e.message==='stopped')return;
+    msg.textContent=(e&&e.message)||'Something went wrong.';
+    $('apkForm').style.display='';
+  }
+  busy=false;go.disabled=false;go.style.opacity='1';go.textContent='Build again';
+};
 })();
+</script>
+</body>
+</html>

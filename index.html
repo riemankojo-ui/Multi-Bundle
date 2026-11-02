@@ -318,6 +318,7 @@
 <section id="bundlePage" class="tab-page" hidden>
  <section class="card hero"><label class="eyebrow">BUNDLE CENTER</label><h1>TXT <span>Bundle</span></h1><p>Combine the text-based files from your current project into one readable TXT backup file.</p></section>
  <section class="card"><div class="heading"><div><label class="eyebrow">READY TO EXPORT</label><h2 id="bundleProjectName">No project loaded</h2></div><span id="bundleFileCount" class="pill">0 files</span></div><p id="bundleStatus">Import a project first from the Projects tab.</p><button id="bundleBtn" class="btn primary" disabled>Export TXT bundle</button><p class="note">Text files are included. Images, fonts, and other binary assets are represented by a note and are not embedded in the TXT file.</p></section>
+ <section class="card" id="apkCard"><label class="eyebrow">ANDROID</label><h2>Build APK</h2><p class="note" style="margin:4px 0 12px">Turns the current project into an installable Android app using GitHub. The project must be published to GitHub first.</p><button id="apkBtn" class="btn primary" onclick="openApkPage()">Build APK</button></section>
 </section>
 
 <section id="previewPage" class="tab-page" hidden>
@@ -823,7 +824,17 @@
 <script src="backups.js"></script>
 <script src="filemgr.js"></script>
 <script src="profile.js"></script>
-<script src="apkbuild.js"></script>
+<script>
+async function openApkPage(){
+  var t=window.getToken?window.getToken():'';
+  if(!t){showToast('Connect GitHub first (GitHub tab).','error');return}
+  var list=await dbGetAll();
+  var p=list.find(function(x){return x.id===currentProjectId});
+  if(!p){showToast('Open a project first.','error');return}
+  if(!p.githubRepo){showToast('Publish this project to GitHub first (Publish tab).','error');return}
+  location.href='apkbuild.html?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
+}
+</script>
 <!-- Service worker disabled for testing -->
 <script>
   if('serviceWorker' in navigator){ 

@@ -64,7 +64,7 @@ input:focus{border-color:var(--red)}
   <div class="sec">WORKFLOWS</div>
   <div class="card" id="wfCard" style="padding:4px 14px"></div>
   <div id="histBox" hidden>
-    <div class="sec">RECENT BUILDS</div>
+    <div class="sec">PACKAGE</div>
     <div class="card" id="hist" style="padding:4px 14px"></div>
   </div>
 </section>
@@ -101,6 +101,12 @@ function toast(t){var el=$('toast');el.textContent=t;el.hidden=false;clearTimeou
 function loadHist(){try{return JSON.parse(localStorage.getItem(KH)||'[]')}catch(e){return []}}
 function fmt(t){try{return new Date(t).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}catch(e){return ''}}
 function renderHist(){
+  var l=loadHist();$('histBox').hidden=!l.length;
+  if(!l.length)return;
+  var h=l[0];
+  $('hist').innerHTML='<div class="hist" data-f="pkg"><span class="d'+(h.ok?'':' x')+'"></span><div class="t">Latest package<small>v'+esc(h.ver)+' \u00b7 '+(h.ok?'Ready':'Failed')+' \u00b7 '+esc(fmt(h.t))+'</small></div><span class="mini">Open</span></div>';
+}
+function renderHistOld(){
   var l=loadHist();$('histBox').hidden=!l.length;
   $('hist').innerHTML=l.map(function(h){
     return '<div class="hist"><span class="d'+(h.ok?'':' x')+'"></span><div class="t">v'+esc(h.ver)+' \u00b7 '+(h.ok?'Ready':'Failed')+'<small>'+esc(fmt(h.t))+'</small></div>'+
@@ -141,6 +147,10 @@ $('bMinor').onclick=function(){bump('minor')};
 $('bMajor').onclick=function(){bump('major')};
 renderHist();
 window.addEventListener('pageshow',renderHist);
+$('hist').onclick=function(e){
+  if(!(e.target.closest&&e.target.closest('[data-f]')))return;
+  location.href='Package.html?pid='+enc(p.id)+'&name='+enc(p.name)+'&repo='+enc(p.githubRepo)+'&branch='+enc(p.githubBranch);
+};
 
 /* workflows: tap a row anywhere to open the build log page */
 function wfRow(n,f){return '<div class="hist" data-f="'+esc(f)+'"><span class="d"></span><div class="t">'+esc(n)+'<small>'+esc(f)+'</small></div><span class="mini">Build</span></div>'}

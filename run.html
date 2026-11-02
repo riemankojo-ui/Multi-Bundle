@@ -41,6 +41,10 @@ a.btn{display:grid;place-items:center;text-decoration:none}
 @keyframes bl{50%{opacity:0}}
 .ract{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .ract .btn{border-radius:0;height:50px;font-size:14px;box-shadow:none}
+.ract .btn.ghost:disabled{opacity:.35}
+.lk{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 18px}
+.lk a,.lk button{border:0;background:none;color:#8f919b;font:700 12px system-ui,sans-serif;padding:8px 2px;cursor:pointer;text-decoration:none}
+.lk a:active,.lk button:active{color:#f01424}
 .ract .row{display:flex;gap:8px}.ract .row .btn{flex:1}
 </style>
 </head>
@@ -290,7 +294,39 @@ function copy(t){
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast('Copied')},function(){prompt('Copy',t)})}
   else prompt('Copy',t);
 }
+async function cancelRun(){
+  if(!busy){toForm();return}
+  if(!confirm('Cancel this run on GitHub?'))return;
+  S.cancelled=true;S.stop=true;live('Cancelling...');
+  try{
+    var d=await gh('GET','/repos/'+p.githubRepo+'/actions/workflows/'+WF+'/runs?event=workflow_dispatch&per_page=3');
+    var r=(d.workflow_runs||[]).find(function(x){return x.status!=='completed'});
+    if(r){await gh('POST','/repos/'+p.githubRepo+'/actions/runs/'+r.id+'/cancel');LOG('Cancel sent to GitHub','ok')}
+    else LOG('No active run found on GitHub','dim');
+  }catch(e){LOG('Could not cancel: '+((e&&e.message)||'error'),'err')}
+}
 function acts(primary,secs){
+  /* two clean buttons: Cancel run + Rerun. Other items become quiet links. */
+  var DROP={'Stop watching':1,'Try again':1,'Back to app':1,'Build another':1};
+  var run=secs.some(function(o){return o.t==='Stop watching'});
+  if(primary&&(primary.t==='Try again'||primary.t==='Back to form'))primary=null;
+  var links=secs.filter(function(o){return !DROP[o.t]});
+  var box=$('ract');box.innerHTML='';
+  function mk(o,cls){
+    var el=document.createElement(o.href?'a':'button');
+    el.className=cls;el.textContent=o.t;
+    if(o.href){el.href=o.href;el.target='_blank';el.rel='noopener'}
+    if(o.fn)el.onclick=o.fn;
+    return el;
+  }
+  if(primary)box.appendChild(mk(primary,'btn'));
+  if(links.length){var lk=document.createElement('div');lk.className='lk';links.forEach(function(o){lk.appendChild(mk(o,''))});box.appendChild(lk)}
+  var row=document.createElement('div');row.className='row';
+  row.appendChild(mk({t:'Cancel run',fn:cancelRun},'btn ghost'));
+  var rr=mk({t:'Rerun',fn:function(){start()}},'btn ghost');rr.disabled=run;
+  row.appendChild(rr);box.appendChild(row);
+}
+function actsOld(primary,secs){
   var box=$('ract');box.innerHTML='';
   function mk(o,cls){
     var el=document.createElement(o.href?'a':'button');

@@ -318,7 +318,7 @@
 <section id="bundlePage" class="tab-page" hidden>
  <section class="card hero"><label class="eyebrow">BUNDLE CENTER</label><h1>TXT <span>Bundle</span></h1><p>Combine the text-based files from your current project into one readable TXT backup file.</p></section>
  <section class="card"><div class="heading"><div><label class="eyebrow">READY TO EXPORT</label><h2 id="bundleProjectName">No project loaded</h2></div><span id="bundleFileCount" class="pill">0 files</span></div><p id="bundleStatus">Import a project first from the Projects tab.</p><button id="bundleBtn" class="btn primary" disabled>Export TXT bundle</button><p class="note">Text files are included. Images, fonts, and other binary assets are represented by a note and are not embedded in the TXT file.</p></section>
- <section class="card" id="apkCard" style="display:none"><label class="eyebrow">ANDROID</label><h2>Build APK</h2><p class="note" style="margin:4px 0 12px">Turns the current project into an installable Android app using GitHub. The project must be published to GitHub first.</p><button id="apkBtn" class="btn primary" onclick="openApkPage()">Build APK</button></section>
+ <section class="card" id="apkCard" style="display:none;cursor:pointer;padding:14px 18px" onclick="openApkPage()"><style>#apkCard{-webkit-tap-highlight-color:transparent}#apkCard:active .wfn{color:#f01424!important}</style><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div style="min-width:0"><div style="font-size:16px;font-weight:800;color:#f01424">Build APK &#8250;</div><div id="apkWf" style="font-size:12px;color:#8f919b;margin-top:3px;overflow-wrap:anywhere">GitHub workflow</div></div><span style="font-size:11px;font-weight:800;letter-spacing:2px;color:#8f919b">ANDROID</span></div></section>
 </section>
 
 <section id="previewPage" class="tab-page" hidden>
@@ -851,18 +851,108 @@ async function updateApkCard(){
     if(await ghHasWorkflow(p)&&id===currentProjectId)c.style.display='';
   }catch(e){}
 }
+function wfLint(t){
+  var L=String(t||'').replace(/\r/g,'').split('\n'),n=L.length,i,m,err=null,blk=-1,inB=[],top={};
+  function bad(k,msg){if(!err)err={line:k+1,msg:msg,text:(L[k]||'').trim()}}
+  function ind(s){return s.match(/^ */)[0].length}
+  for(i=0;i<n;i++){
+    var s=L[i],tr=s.trim();
+    if(blk>=0){
+      if(tr===''||ind(s)>blk){inB[i]=1;if(s.indexOf('${{')>-1&&s.indexOf('}}',s.indexOf('${{'))<0)bad(i,'Unclosed ${{ ... }}');continue}
+      blk=-1;
+    }
+    if(tr===''||tr.charAt(0)==='#'){inB[i]=1;continue}
+    if(/^\s*\t/.test(s))bad(i,'Tab used for indentation (use spaces)');
+    if(s.indexOf('${{')>-1&&s.indexOf('}}',s.indexOf('${{'))<0)bad(i,'Unclosed ${{ ... }}');
+    m=s.match(/(?:^\s*-\s+|:\s+)(["'])(.*)$/);
+    if(m&&m[2].indexOf(m[1])<0)bad(i,'Quote ('+m[1]+') is not closed');
+    if(/:\s*[|>][+-]?\d*\s*(#.*)?$/.test(s)||/^\s*-\s+[|>][+-]?\s*$/.test(s))blk=ind(s);
+    if(ind(s)===0&&(m=s.match(/^(['"]?[\w.\-]+['"]?)\s*:/)))top[m[1].replace(/['"]/g,'')]=i;
+  }
+  if(top.jobs!==undefined){
+    var jl=top.jobs,ji=-1,jobs=[],cur=null,ki=-1,st=null,si=-1,inSteps=false;
+    for(i=jl+1;i<n;i++){
+      if(inB[i])continue;
+      var s2=L[i],d=ind(s2);
+      if(d===0)break;
+      if(ji<0)ji=d;
+      if(d===ji){
+        m=s2.match(/^\s*([\w.\-]+)\s*:/);
+        if(m){cur={name:m[1],line:i,keys:{}};jobs.push(cur);ki=-1;st=null;si=-1;inSteps=false;continue}
+      }
+      if(!cur)continue;
+      if(ki<0&&d>ji)ki=d;
+      if(d===ki){
+        m=s2.match(/^\s*([\w.\-]+)\s*:/);
+        if(m){cur.keys[m[1]]=1;inSteps=(m[1]==='steps');if(inSteps){st=null;si=-1}}
+        continue;
+      }
+      if(inSteps&&d>ki||inSteps&&d===ki&&/^\s*-/.test(s2)){
+        if(/^\s*-(\s|$)/.test(s2)&&(si<0||d===si)){
+          if(st&&!st.ok)bad(st.line,'Step needs "uses:" or "run:"');
+          si=d;st={line:i,ok:false};
+        }
+        if(st&&/(^|\s)(uses|run)\s*:/.test(s2))st.ok=true;
+      }
+    }
+    if(st&&!st.ok)bad(st.line,'Step needs "uses:" or "run:"');
+    if(!jobs.length)bad(jl,'No jobs found under "jobs:"');
+    jobs.forEach(function(jb){
+      if(!jb.keys['runs-on']&&!jb.keys.uses)bad(jb.line,'Job "'+jb.name+'" is missing "runs-on:"');
+      else if(!jb.keys.steps&&!jb.keys.uses)bad(jb.line,'Job "'+jb.name+'" is missing "steps:"');
+    });
+  }
+  if(top.on===undefined&&top['true']===undefined)bad(0,'Missing top-level "on:" (when the workflow runs)');
+  if(top.jobs===undefined)bad(0,'Missing top-level "jobs:"');
+  return err;
+}
+function wfShow(){
+  var el=document.getElementById('apkWf'),c=document.getElementById('apkCard');
+  if(!el)return;
+  var wf=files.filter(function(f){return /(^|\/)\.github\/workflows\/[^\/]+\.ya?ml$/i.test(f.path||'')});
+  if(!wf.length)return;
+  var anyBad=false;
+  el.innerHTML=wf.map(function(f){
+    var has=typeof f.text==='string',r=has?wfLint(f.text):null;
+    if(r)anyBad=true;
+    var col=r?'#ff4d5a':(has?'#2fd27a':'#6c6e78');
+    var h='<div style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:'+col+';flex:none"></span><span class="wfn" style="'+(r?'color:#ff8a93':'')+'">'+esc(f.path.split('/').pop())+'</span></div>';
+    if(r)h+='<div style="color:#ff8a93;margin:3px 0 0 13px">Line '+r.line+': '+esc(r.msg)+'</div><div style="margin:2px 0 0 13px;padding:4px 8px;border-radius:8px;background:#2a0f13;color:#ffb3b9;font-family:ui-monospace,Menlo,monospace;overflow-wrap:anywhere">'+esc(r.text)+'</div>';
+    return h;
+  }).join('<div style="height:6px"></div>');
+  if(c)c.style.borderColor='';
+}
 function updateApkCardLocal(){
   var c=document.getElementById('apkCard');if(!c)return;
   var ok=false;
   try{ok=(typeof files!=='undefined')&&files.some(function(f){return /(^|\/)\.github\/workflows\/[^\/]+\.ya?ml$/i.test(f.path||'')})}catch(e){}
   c.style.display=ok?'':'none';
+  try{wfShow()}catch(e){}
+  try{window.__apkHref=null;apkPrep()}catch(e){}
 }
 (function(){
   var o=window.showTab;
   if(typeof o==='function')window.showTab=function(n){var r=o.apply(this,arguments);try{updateApkCard()}catch(e){}return r};
   window.addEventListener('load',function(){setTimeout(updateApkCard,600)});
 })();
+async function apkPrep(){
+  if(window.__apkBusy)return;
+  if(window.__apkHref&&window.__apkPid===currentProjectId)return;
+  window.__apkBusy=true;
+  try{
+    window.__apkHref=null;
+    var t=window.getToken?window.getToken():'';
+    if(!t)return;
+    var list=await dbGetAll();
+    var p=list.find(function(x){return x.id===currentProjectId});
+    if(!p||!p.githubRepo)return;
+    try{sessionStorage.setItem('mb_apk_tk',t);localStorage.setItem('mb_apk_tk',t)}catch(e){}
+    window.__apkPid=p.id;
+    window.__apkHref='apkbuild.html?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
+  }finally{window.__apkBusy=false}
+}
 async function openApkPage(){
+  if(window.__apkHref&&window.__apkPid===currentProjectId){location.href=window.__apkHref;return}
   var t=window.getToken?window.getToken():'';
   if(!t){showToast('Connect GitHub first (GitHub tab).','error');return}
   var list=await dbGetAll();

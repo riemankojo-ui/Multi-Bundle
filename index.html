@@ -825,7 +825,33 @@
 <script src="filemgr.js"></script>
 <script src="profile.js"></script>
 <script>
-function updateApkCard(){
+var __apkChk={};
+async function ghHasWorkflow(p){
+  var t=window.getToken?window.getToken():'';
+  if(!t||!p||!p.githubRepo)return false;
+  var br=p.githubBranch||'main',key=p.githubRepo+'@'+br;
+  var c=__apkChk[key];
+  if(c&&Date.now()-c.t<60000)return c.v;
+  var v=false;
+  try{
+    var r=await fetch('https://api.github.com/repos/'+p.githubRepo+'/contents/.github/workflows?ref='+encodeURIComponent(br),{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+t}});
+    if(r.ok){var d=await r.json();v=Array.isArray(d)&&d.some(function(x){return /\.ya?ml$/i.test(x.name||'')})}
+  }catch(e){}
+  __apkChk[key]={t:Date.now(),v:v};
+  return v;
+}
+async function updateApkCard(){
+  var c=document.getElementById('apkCard');if(!c)return;
+  updateApkCardLocal();
+  if(c.style.display!=='none')return;
+  try{
+    var id=currentProjectId;
+    var list=await dbGetAll();
+    var p=list.find(function(x){return x.id===id});
+    if(await ghHasWorkflow(p)&&id===currentProjectId)c.style.display='';
+  }catch(e){}
+}
+function updateApkCardLocal(){
   var c=document.getElementById('apkCard');if(!c)return;
   var ok=false;
   try{ok=(typeof files!=='undefined')&&files.some(function(f){return /(^|\/)\.github\/workflows\/[^\/]+\.ya?ml$/i.test(f.path||'')})}catch(e){}

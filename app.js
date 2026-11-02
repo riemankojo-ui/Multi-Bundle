@@ -698,7 +698,7 @@ function htmlRewrite(html,path){
   const doc=new DOMParser().parseFromString(html,'text/html');
   if(!doc.head){const h=doc.createElement('head');doc.documentElement.insertBefore(h,doc.documentElement.firstChild)}
   const meta=doc.createElement('meta');meta.setAttribute('name','color-scheme');meta.setAttribute('content','dark');doc.head.insertBefore(meta,doc.head.firstChild);
-  const base=doc.createElement('style');base.textContent='html{background:#0d0e12}body{background:#0d0e12;color:#f7f7f8;margin:0}';doc.head.insertBefore(base,doc.head.firstChild);
+  const base=doc.createElement('style');base.textContent='html{background:#0d0e12;overscroll-behavior:none}body{background:#0d0e12;color:#f7f7f8;margin:0;overscroll-behavior:none}';doc.head.insertBefore(base,doc.head.firstChild);
   doc.querySelectorAll('link[href]').forEach(function(el){
     const rel=(el.getAttribute('rel')||'').toLowerCase();if(rel.indexOf('stylesheet')===-1)return;
     const href=el.getAttribute('href');const f=relative(path,href);

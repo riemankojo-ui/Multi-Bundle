@@ -264,6 +264,63 @@ function runCard(r){
   }
   return c;
 }
+function fixWf(t,ext,tag){
+  var notes=[],s=t.replace(/\r\n?/g,'\n'),i,L,U=ext.toUpperCase();
+  if(/^[ ]*\t/m.test(s)){s=s.replace(/^([ ]*)(\t+)/gm,function(m,a,b){return a+new Array(b.length+1).join('  ')});notes.push('Replaced tab indents with spaces')}
+  if(!/^[^#\n]*workflow_dispatch/m.test(s)){
+    var m;
+    if((m=/^(["']?on["']?):[ \t]*$/m.exec(s))){
+      var at=m.index+m[0].length+1,nx=s.slice(at).match(/^([ \t]+)\S/);
+      s=s.slice(0,at)+(nx?nx[1]:'  ')+'workflow_dispatch:\n'+s.slice(at);
+    }else if((m=/^(["']?on["']?):[ \t]*\[([^\]\n]*)\][ \t]*$/m.exec(s))){
+      s=s.replace(m[0],m[1]+': ['+(m[2].trim()?m[2].trim()+', ':'')+'workflow_dispatch]');
+    }else if((m=/^(["']?on["']?):[ \t]*([A-Za-z_]+)[ \t]*$/m.exec(s))){
+      s=s.replace(m[0],m[1]+':\n  '+m[2]+':\n  workflow_dispatch:');
+    }else return {text:t,notes:notes,blocked:'Could not find the "on:" section in the workflow'};
+    notes.push('Added workflow_dispatch so it can be started from the app');
+  }
+  if(!/gh\s+release\s+create|action-gh-release|create-release|release-action|gh\s+api[^\n]*releases/.test(s)){
+    if(!/upload-artifact/.test(s))return {text:t,notes:notes,blocked:'This workflow neither publishes a release nor uploads the '+U+', so the app cannot find it'};
+    L=s.split('\n');
+    var j=-1;for(i=0;i<L.length;i++)if(/^jobs:[ \t]*$/.test(L[i])){j=i;break}
+    if(j<0)return {text:t,notes:notes,blocked:'Could not find the "jobs:" section'};
+    var ji='  ',e=L.length,ids=[];
+    for(i=j+1;i<L.length;i++){if(/\S/.test(L[i])&&!/^\s*#/.test(L[i])){ji=L[i].match(/^[ ]*/)[0];break}}
+    for(i=j+1;i<L.length;i++){
+      if(/^[^\s#]/.test(L[i])){e=i;break}
+      var jm=L[i].match(/^([ ]*)([A-Za-z0-9_-]+):[ \t]*$/);
+      if(jm&&jm[1]===ji)ids.push(jm[2]);
+    }
+    if(!ids.length)return {text:t,notes:notes,blocked:'Could not read the job names'};
+    while(e>0&&!/\S/.test(L[e-1]))e--;
+    var job=[
+      ji+'mb_publish:',
+      ji+'  needs: ['+ids.join(', ')+']',
+      ji+'  runs-on: ubuntu-latest',
+      ji+'  permissions:',
+      ji+'    contents: write',
+      ji+'  steps:',
+      ji+'    - uses: actions/download-artifact@v4',
+      ji+'      with:',
+      ji+'        path: mb_out',
+      ji+'    - name: Publish release',
+      ji+'      env:',
+      ji+'        GH_TOKEN: ${{ github.token }}',
+      ji+'        GH_REPO: ${{ github.repository }}',
+      ji+'      run: |',
+      ji+'        F=$(find mb_out -name "*.'+ext+'" | head -1)',
+      ji+'        if [ -z "$F" ]; then echo "No '+U+' found in the artifacts"; exit 1; fi',
+      ji+'        cp "$F" app.'+ext,
+      ji+'        gh release create "'+tag+'-${{ github.run_number }}" app.'+ext+' --title "'+U+' build ${{ github.run_number }}" --notes "Built with Multi Bundle" --target "$GITHUB_SHA"'
+    ];
+    L.splice.apply(L,[e,0].concat(job));
+    s=L.join('\n');
+    notes.push('Added a step that publishes the '+U+' as release '+tag+'-N');
+  }
+  if(s.slice(-1)!=='\n')s+='\n';
+  return {text:s,notes:notes,blocked:null};
+}
+
 async function run(kind){
   if(busy)return;
   if(!okRepo||!okTk){toast(!okRepo?'Publish the project to GitHub first':'GitHub is not connected');return}
@@ -279,10 +336,28 @@ async function run(kind){
     log('Checking repo...');
     var info=await gh('GET','/repos/'+repo);
     if(info.permissions&&info.permissions.push===false)throw new Error('Your GitHub account cannot write to '+repo);
+    try{
+      var wl=await gh('GET','/repos/'+repo+'/actions/workflows?per_page=50');
+      var ex=(wl.workflows||[]).filter(function(w){var x=w.path+' '+w.name;return w.state==='active'&&/^\.github\/workflows\//.test(w.path)&&/aab|bundle/i.test(x)&&!/ios/i.test(x)});
+      var pick=ex.filter(function(w){return w.path.split('/').pop()==='build-aab.yml'})[0]||ex[0];
+      if(pick){WF=pick.path.split('/').pop();PATH=pick.path;log('Using your workflow '+WF)}
+    }catch(e){}
     var cur=null;
     try{cur=await gh('GET','/repos/'+repo+'/contents/'+PATH+'?ref='+encodeURIComponent(br))}catch(e){if(e.status!==404)throw e}
-    var same=false;try{same=!!(cur&&cur.content&&fromB64u(cur.content)===YML)}catch(e){}
-    if(!same){
+    var hasIn=!cur;try{if(cur&&cur.content&&/app_name/.test(fromB64u(cur.content)))hasIn=true}catch(e){}
+    if(cur&&cur.content){
+      var fx=null,orig='';
+      try{orig=fromB64u(cur.content);fx=fixWf(orig,'aab','aab')}catch(e){}
+      if(fx&&fx.blocked)throw new Error(fx.blocked+' ('+WF+')');
+      if(fx&&fx.text!==orig.replace(/\r\n?/g,'\n')){
+        log('Fixing '+WF+' before the build...');
+        fx.notes.forEach(function(n){log(n)});
+        try{await gh('PUT','/repos/'+repo+'/contents/'+PATH,{message:'Fix build workflow (Multi Bundle)',content:b64u(fx.text),branch:br,sha:cur.sha})}
+        catch(e){if(e.status===404||e.status===403)throw new Error('GitHub refused the workflow file. Sign in again in the GitHub tab so the token has the workflow permission.');throw e}
+        await sleep(4000);
+      }
+    }
+    if(!cur){
       log('Adding '+WF+' to your repo...');
       try{await gh('PUT','/repos/'+repo+'/contents/'+PATH,{message:'Add '+WF,content:b64u(YML),branch:br,sha:cur?cur.sha:undefined})}
       catch(e){if(e.status===404||e.status===403)throw new Error('GitHub refused the workflow file. Sign in again in the GitHub tab so the token has the workflow permission.');throw e}
@@ -294,7 +369,7 @@ async function run(kind){
     var inputs={app_name:v.name,app_id:v.id,version:v.ver};
     var ok=false,lastErr=null,i;
     for(i=0;i<8&&!ok;i++){
-      try{await gh('POST','/repos/'+repo+'/actions/workflows/'+WF+'/dispatches',{ref:br,inputs:inputs});ok=true}
+      try{await gh('POST','/repos/'+repo+'/actions/workflows/'+WF+'/dispatches',{ref:br,inputs:hasIn?inputs:undefined});ok=true}
       catch(e){lastErr=e;if(e.status===404||e.status===422)await sleep(3000);else throw e}
     }
     if(!ok)throw lastErr||new Error('Could not start the build');

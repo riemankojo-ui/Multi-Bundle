@@ -14,10 +14,6 @@ on:
         description: Version
         required: true
         default: 1.0.0
-      kind:
-        description: aab or apk
-        required: true
-        default: aab
 permissions:
   contents: write
 jobs:
@@ -27,7 +23,6 @@ jobs:
       APP_NAME: ${{ inputs.app_name }}
       APP_ID: ${{ inputs.app_id }}
       VERSION: ${{ inputs.version }}
-      KIND: ${{ inputs.kind }}
       GH_TOKEN: ${{ github.token }}
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -76,17 +71,17 @@ jobs:
           REL=$(gh api "repos/$REPO/releases?per_page=100" --jq ".[] | select(.draft and .name==\"$NAME\") | .id" | head -1)
           if [ -n "$REL" ]; then
             echo "Using saved upload key"
-            for F in upload.jks key-password.txt; do
+            for F in signing.keystore key-password.txt; do
               AID=$(gh api "repos/$REPO/releases/$REL" --jq ".assets[] | select(.name==\"$F\") | .id")
               gh api -H "Accept: application/octet-stream" "repos/$REPO/releases/assets/$AID" > "$F"
             done
           else
             echo "Creating a new upload key"
             openssl rand -hex 16 > key-password.txt
-            keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000 -storepass "$(cat key-password.txt)" -keypass "$(cat key-password.txt)" -dname "CN=$APP_NAME, O=$APP_NAME, C=US"
-            gh release create "upload-key-$APP_ID" upload.jks key-password.txt --draft --title "$NAME" --notes "Private signing key for $APP_ID. Keep this draft. Do not publish it." --target "$GITHUB_SHA"
+            keytool -genkeypair -v -keystore signing.keystore -alias upload -keyalg RSA -keysize 2048 -validity 10000 -storepass "$(cat key-password.txt)" -keypass "$(cat key-password.txt)" -dname "CN=$APP_NAME, O=$APP_NAME, C=US"
+            gh release create "upload-key-$APP_ID" signing.keystore key-password.txt --draft --title "$NAME" --notes "Private signing key for $APP_ID. Keep this draft. Do not publish it." --target "$GITHUB_SHA"
           fi
-          echo "KS_FILE=$RUNNER_TEMP/ks/upload.jks" >> "$GITHUB_ENV"
+          echo "KS_FILE=$RUNNER_TEMP/ks/signing.keystore" >> "$GITHUB_ENV"
           echo "KS_PASS=$(cat key-password.txt)" >> "$GITHUB_ENV"
       - name: Add signing to Gradle
         run: |
@@ -101,13 +96,50 @@ jobs:
           open(p,'w').write(s)
           PY
           grep -n "signingConfig" app/build.gradle
-      - name: Build
+      - name: Build AAB
         run: |
           cd "$RUNNER_TEMP/cap/android"
           chmod +x gradlew
-          if [ "$KIND" = "apk" ]; then ./gradlew assembleRelease; else ./gradlew bundleRelease; fi
+          ./gradlew bundleRelease
+      - name: Make store files
+        run: |
+          OUT="$RUNNER_TEMP/out"
+          mkdir -p "$OUT"
+          cp "$RUNNER_TEMP/cap/android/app/build/outputs/bundle/release/app-release.aab" "$OUT/app.aab"
+          FP=$(keytool -list -v -keystore "$KS_FILE" -alias upload -storepass "$KS_PASS" | grep 'SHA256:' | head -1 | sed 's/.*SHA256: *//')
+          cat > "$OUT/assetlinks.json" <<EOF
+          [{
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+              "namespace": "android_app",
+              "package_name": "$APP_ID",
+              "sha256_cert_fingerprints": ["$FP"]
+            }
+          }]
+          EOF
+          cat > "$OUT/readme.html" <<EOF
+          <!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>$APP_NAME release files</title>
+          <style>body{font-family:system-ui,sans-serif;max-width:640px;margin:24px auto;padding:0 16px;line-height:1.6;color:#111}code{background:#eee;padding:2px 6px;border-radius:6px;word-break:break-all}</style></head><body>
+          <h1>$APP_NAME $VERSION</h1>
+          <p>Package ID: <code>$APP_ID</code></p>
+          <h2>Files</h2>
+          <ul>
+          <li><b>app.aab</b>: the signed bundle you upload to Google Play.</li>
+          <li><b>signing.keystore</b>: your upload key. Keep it safe and never share it. Alias: <code>upload</code>. The password is in <b>key-password.txt</b>. Both are saved in the private draft release named Upload key ($APP_ID) in this repo. Do not delete or publish that draft.</li>
+          <li><b>assetlinks.json</b>: for app links. Host it at <code>https://your-domain/.well-known/assetlinks.json</code>.</li>
+          </ul>
+          <h2>Upload to Google Play</h2>
+          <ol>
+          <li>Open Play Console, create your app, then go to Production (or Internal testing) and create a release.</li>
+          <li>Turn on Play App Signing when asked, then upload <b>app.aab</b>.</li>
+          <li>Fill in the store listing: icon 512x512, feature graphic 1024x500, at least 2 screenshots, descriptions, privacy policy URL, content rating and data safety form.</li>
+          </ol>
+          <h2>Fingerprint</h2>
+          <p>Upload key SHA-256: <code>$FP</code></p>
+          <p>Once Play App Signing is on, Google signs the app you install from the store with its own key. If you use app links, put the SHA-256 shown in Play Console under App integrity into assetlinks.json as well.</p>
+          </body></html>
+          EOF
       - name: Publish release
         run: |
-          cd "$RUNNER_TEMP/cap/android/app/build/outputs"
-          if [ "$KIND" = "apk" ]; then cp apk/release/app-release.apk "$RUNNER_TEMP/app.apk"; FILE="$RUNNER_TEMP/app.apk"; else cp bundle/release/app-release.aab "$RUNNER_TEMP/app.aab"; FILE="$RUNNER_TEMP/app.aab"; fi
-          gh release create "$KIND-${{ github.run_number }}" "$FILE" --title "$KIND build ${{ github.run_number }}" --notes "$APP_NAME $VERSION" --target "$GITHUB_SHA"
+          OUT="$RUNNER_TEMP/out"
+          gh release create "aab-${{ github.run_number }}" "$OUT/app.aab" "$OUT/assetlinks.json" "$OUT/readme.html" --title "AAB build ${{ github.run_number }}" --notes "$APP_NAME $VERSION" --target "$GITHUB_SHA"

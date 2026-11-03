@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id);
 document.addEventListener('click',function(e){
   const el=e.target.closest('[data-tab]');
   if(!el)return;
-  const name=el.dataset.tab;
+  const name=el.dataset.tab;window.scrollTo(0,0);
   if(!name)return;
   ['home','projects','bundle','preview','editor','backups','github','updates'].forEach(function(p){
     const page=document.getElementById(p+'Page');
@@ -804,7 +804,7 @@ function bundlePick(id,all){
     setTimeout(function(){URL.revokeObjectURL(a.href)},2000);close();showToast('TXT created with '+pick.length+' file'+(pick.length===1?'':'s'),'success');
   };
 }
-function showTab(name){
+function showTab(name){window.scrollTo(0,0);try{document.documentElement.scrollTop=0;document.body.scrollTop=0}catch(e){}
   if(name!=='editor'&&document.body.classList.contains('editor-full')&&$('editorFullBtn'))$('editorFullBtn').click();
   ['home','projects','bundle','preview','editor','backups','github','updates'].forEach(function(p){
     const el=$(p+'Page');if(el)el.hidden=(p!==name);

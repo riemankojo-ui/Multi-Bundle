@@ -15,7 +15,7 @@ body{background:radial-gradient(120% 50% at 0% 0%,rgba(240,20,36,.16),transparen
 .top button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:#fff;font-size:22px;line-height:1;cursor:pointer}
 .top b{font-size:16px;letter-spacing:.3px}
 .top span{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:2px;color:var(--red)}
-.wrap{max-width:560px;margin:0 auto;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 24px)}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 40px)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:14px}
 .pn{font-size:19px;font-weight:800;overflow-wrap:anywhere}
 .pr{font-size:12px;color:var(--mut);overflow-wrap:anywhere;margin-top:2px}
@@ -177,7 +177,7 @@ $('ckBox').onchange=function(e){var k=e.target.getAttribute('data-k');if(!k)retu
 function paint(){
   var el=$('logBox');el.hidden=!logs.length;
   el.innerHTML=logs.map(function(l){return '<div class="'+(l.k||'')+'">'+esc(l.t)+'</div>'}).join('');
-  el.scrollTop=el.scrollHeight;if(logs.length)el.scrollIntoView({block:'end',behavior:'smooth'});
+  el.scrollTop=el.scrollHeight;if(logs.length)el.style.scrollMarginBottom='24px';el.scrollIntoView({block:'end',behavior:'smooth'});
 }
 function log(t,k){logs.push({t:t,k:k});paint()}
 function lock(b){busy=b;['bAab'].forEach(function(id){$(id).disabled=b})}
@@ -258,14 +258,13 @@ async function run(kind){
       var as=(rel&&rel.assets)||[];
       if(!as.length)throw new Error('Build files not found in the release');
       log('Done. '+as.length+' file'+(as.length===1?'':'s')+' ready.','o');
-      var h='<div class="files">';
+      var h='<div>';
       as.forEach(function(a){h+='<a class="act" href="'+esc(a.browser_download_url)+'" target="_blank" rel="noopener" style="text-decoration:none"><span class="tx"><b>'+esc(a.name)+'</b><small>Download</small></span></a>'});
       if(!ios){
         h+='<button class="act" id="kKs"><span class="tx"><b>signing.keystore</b><small>Private download</small></span></button>';
         h+='<button class="act" id="kPw"><span class="tx"><b>key-password.txt</b><small>Private download</small></span></button>';
       }
       h+='</div><a class="act" href="'+esc(run.html_url)+'" target="_blank" rel="noopener" style="text-decoration:none"><span class="tx"><b>Build log</b><small>Open on GitHub</small></span></a>';
-      $('resBox').innerHTML=h;zipMode(repo,v,as,run.html_url,ios);
       if(!ios){
         $('kKs').onclick=function(){getKey(repo,v.id,'signing.keystore')};
         $('kPw').onclick=function(){getKey(repo,v.id,'key-password.txt')};

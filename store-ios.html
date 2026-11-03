@@ -167,6 +167,7 @@ function paint(){
 function log(t,k){logs.push({t:t,k:k});paint()}
 function lock(b){busy=b;['bIos'].forEach(function(id){$(id).disabled=b})}
 
+async function explainFail(repo,run){try{var jd=await gh('GET','/repos/'+repo+'/actions/runs/'+run.id+'/jobs');var jobs=jd.jobs||[];var job=jobs.find(function(j){return j.conclusion==='failure'})||jobs[0];if(!job)return;(job.steps||[]).filter(function(s){return s.conclusion==='failure'}).forEach(function(s){log('FAILED STEP '+s.number+': '+s.name,'e')});var text='';try{var r=await fetch('https://api.github.com/repos/'+repo+'/actions/jobs/'+job.id+'/logs',{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+tk()}});if(r.ok)text=await r.text()}catch(e){}if(text){var lines=text.split('\n').map(function(l){return l.replace(/^\d{4}-\d\d-\d\dT[\d:.]+Z\s?/,'').replace(/\r$/,'')}).filter(Boolean);lines.filter(function(l){return /##\[error\]/.test(l)}).slice(0,6).forEach(function(l){log(l.replace('##[error]','ERROR: '),'e')});log('--- last lines of the log ---');lines.slice(-15).forEach(function(l){log(l.replace(/^##\[(error|group|endgroup)\]/,''),/error|fatal|failed/i.test(l)?'e':'')})}else{var an=await gh('GET','/repos/'+repo+'/check-runs/'+job.id+'/annotations');(an||[]).forEach(function(a){log((a.annotation_level||'note').toUpperCase()+': '+a.message,a.annotation_level==='failure'?'e':'')})}}catch(e){log('Could not read the failure details: '+((e&&e.message)||'error'),'e')}}
 async function run(kind){
   if(busy)return;
   if(!okRepo||!okTk){toast(!okRepo?'Publish the project to GitHub first':'GitHub is not connected');return}
@@ -218,7 +219,7 @@ async function run(kind){
       await sleep(10000);
     }
     if(run.conclusion!=='success'){
-      log('BUILD FAILED: '+run.conclusion,'e');
+      log('BUILD FAILED: '+run.conclusion,'e');await explainFail(repo,run);
       $('resBox').innerHTML='<a class="dl alt" href="'+esc(run.html_url)+'" target="_blank" rel="noopener">Open build log on GitHub</a>';
     }else{
       var tag=(ios?'ios':'aab')+'-'+run.run_number,rel=null;

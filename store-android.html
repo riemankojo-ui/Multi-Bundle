@@ -177,7 +177,7 @@ $('ckBox').onchange=function(e){var k=e.target.getAttribute('data-k');if(!k)retu
 function paint(){
   var el=$('logBox');el.hidden=!logs.length;
   el.innerHTML=logs.map(function(l){return '<div class="'+(l.k||'')+'">'+esc(l.t)+'</div>'}).join('');
-  el.scrollTop=el.scrollHeight;
+  el.scrollTop=el.scrollHeight;if(logs.length)el.scrollIntoView({block:'end',behavior:'smooth'});
 }
 function log(t,k){logs.push({t:t,k:k});paint()}
 function lock(b){busy=b;['bAab'].forEach(function(id){$(id).disabled=b})}

@@ -971,6 +971,12 @@ async function openStorePage(){
 }
 (function(){var b=document.getElementById('drawerStore');if(b)b.onclick=function(){var d=document.getElementById('drawer'),k=document.getElementById('drawerBackdrop');if(d)d.classList.remove('open');if(k)k.classList.remove('open');storeAsk()}})();
 async function openWorkflowPage(){
+  window.__goingWf=false;
+  var ov=document.createElement('div');ov.id='wfOpen';ov.style.cssText='position:fixed;inset:0;z-index:99999;background:#0b0c0f;display:flex;align-items:center;justify-content:center;color:#8f919b;font-weight:700;font-family:system-ui,-apple-system,sans-serif';ov.textContent='Opening...';document.body.appendChild(ov);
+  window.addEventListener('pageshow',function(){var x=document.getElementById('wfOpen');if(x)x.remove()});
+  try{await openWorkflowPage2()}finally{if(!window.__goingWf){var y=document.getElementById('wfOpen');if(y)y.remove()}}
+}
+async function openWorkflowPage2(){
   var t=window.getToken?window.getToken():'';
   if(!t){showToast('Connect GitHub first (GitHub tab).','error');return}
   var list=await dbGetAll();
@@ -978,6 +984,7 @@ async function openWorkflowPage(){
   if(!p){showToast('Open a project first.','error');return}
   if(!p.githubRepo){showToast('Publish this project to GitHub first (Publish tab).','error');return}
   try{sessionStorage.setItem('mb_apk_tk',t);localStorage.setItem('mb_apk_tk',t)}catch(e){}
+  window.__goingWf=true;
   location.href='workflow.html?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
 }
 (function(){var b=document.getElementById('drawerWorkflow');if(b)b.onclick=function(){var d=document.getElementById('drawer'),k=document.getElementById('drawerBackdrop');if(d)d.classList.remove('open');if(k)k.classList.remove('open');openWorkflowPage()}})();

@@ -1,0 +1,113 @@
+name: Build AAB
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: App name
+        required: true
+        default: App
+      app_id:
+        description: Package ID
+        required: true
+        default: com.example.app
+      version:
+        description: Version
+        required: true
+        default: 1.0.0
+      kind:
+        description: aab or apk
+        required: true
+        default: aab
+permissions:
+  contents: write
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    env:
+      APP_NAME: ${{ inputs.app_name }}
+      APP_ID: ${{ inputs.app_id }}
+      VERSION: ${{ inputs.version }}
+      KIND: ${{ inputs.kind }}
+      GH_TOKEN: ${{ github.token }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Prepare web files
+        run: |
+          mkdir -p "$RUNNER_TEMP/www"
+          if [ -f package.json ] && grep -q '"build"' package.json; then
+            npm install
+            npm run build
+            if [ -d dist ]; then cp -r dist/. "$RUNNER_TEMP/www/"; else cp -r build/. "$RUNNER_TEMP/www/"; fi
+          else
+            tar --exclude=.git --exclude=.github -cf - . | tar -xf - -C "$RUNNER_TEMP/www"
+          fi
+      - name: Create Android project
+        run: |
+          mkdir "$RUNNER_TEMP/cap"
+          cd "$RUNNER_TEMP/cap"
+          npm init -y
+          npm install @capacitor/core@8 @capacitor/cli@8 @capacitor/android@8
+          mv "$RUNNER_TEMP/www" www
+          npx cap init "$APP_NAME" "$APP_ID" --web-dir www
+          npx cap add android
+          if [ -f "$GITHUB_WORKSPACE/FolderAccessPlugin.java" ]; then
+            PKG_DIR="android/app/src/main/java/$(echo "$APP_ID" | tr . /)"
+            mkdir -p "$PKG_DIR"
+            sed "s/^package .*/package $APP_ID;/" "$GITHUB_WORKSPACE/FolderAccessPlugin.java" > "$PKG_DIR/FolderAccessPlugin.java"
+            printf '%s\n' "package $APP_ID;" "" "import android.os.Bundle;" "import com.getcapacitor.BridgeActivity;" "" "public class MainActivity extends BridgeActivity {" "    @Override" "    public void onCreate(Bundle savedInstanceState) {" "        registerPlugin(FolderAccessPlugin.class);" "        super.onCreate(savedInstanceState);" "    }" "}" > "$PKG_DIR/MainActivity.java"
+          fi
+          npx cap sync android
+          sed -i "s/versionName \".*\"/versionName \"$VERSION\"/; s/versionCode [0-9]*/versionCode ${{ github.run_number }}/" android/app/build.gradle
+      - name: Get or create upload key
+        run: |
+          mkdir -p "$RUNNER_TEMP/ks"
+          cd "$RUNNER_TEMP/ks"
+          REPO="${{ github.repository }}"
+          NAME="Upload key ($APP_ID)"
+          REL=$(gh api "repos/$REPO/releases?per_page=100" --jq ".[] | select(.draft and .name==\"$NAME\") | .id" | head -1)
+          if [ -n "$REL" ]; then
+            echo "Using saved upload key"
+            for F in upload.jks key-password.txt; do
+              AID=$(gh api "repos/$REPO/releases/$REL" --jq ".assets[] | select(.name==\"$F\") | .id")
+              gh api -H "Accept: application/octet-stream" "repos/$REPO/releases/assets/$AID" > "$F"
+            done
+          else
+            echo "Creating a new upload key"
+            openssl rand -hex 16 > key-password.txt
+            keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000 -storepass "$(cat key-password.txt)" -keypass "$(cat key-password.txt)" -dname "CN=$APP_NAME, O=$APP_NAME, C=US"
+            gh release create "upload-key-$APP_ID" upload.jks key-password.txt --draft --title "$NAME" --notes "Private signing key for $APP_ID. Keep this draft. Do not publish it." --target "$GITHUB_SHA"
+          fi
+          echo "KS_FILE=$RUNNER_TEMP/ks/upload.jks" >> "$GITHUB_ENV"
+          echo "KS_PASS=$(cat key-password.txt)" >> "$GITHUB_ENV"
+      - name: Add signing to Gradle
+        run: |
+          cd "$RUNNER_TEMP/cap/android"
+          python3 - <<'PY'
+          import re
+          p='app/build.gradle'
+          s=open(p).read()
+          sc="    signingConfigs {\n        release {\n            storeFile file(System.getenv('KS_FILE'))\n            storePassword System.getenv('KS_PASS')\n            keyAlias 'upload'\n            keyPassword System.getenv('KS_PASS')\n        }\n    }\n"
+          s=s.replace("    buildTypes {", sc+"    buildTypes {",1)
+          s=re.sub(r'(buildTypes\s*\{\s*release\s*\{)', r'\1\n            signingConfig signingConfigs.release', s, count=1)
+          open(p,'w').write(s)
+          PY
+          grep -n "signingConfig" app/build.gradle
+      - name: Build
+        run: |
+          cd "$RUNNER_TEMP/cap/android"
+          chmod +x gradlew
+          if [ "$KIND" = "apk" ]; then ./gradlew assembleRelease; else ./gradlew bundleRelease; fi
+      - name: Publish release
+        run: |
+          cd "$RUNNER_TEMP/cap/android/app/build/outputs"
+          if [ "$KIND" = "apk" ]; then cp apk/release/app-release.apk "$RUNNER_TEMP/app.apk"; FILE="$RUNNER_TEMP/app.apk"; else cp bundle/release/app-release.aab "$RUNNER_TEMP/app.aab"; FILE="$RUNNER_TEMP/app.aab"; fi
+          gh release create "$KIND-${{ github.run_number }}" "$FILE" --title "$KIND build ${{ github.run_number }}" --notes "$APP_NAME $VERSION" --target "$GITHUB_SHA"

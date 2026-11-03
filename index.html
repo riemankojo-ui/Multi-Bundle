@@ -963,7 +963,7 @@ async function openStorePage(){
   if(!p){showToast('Open a project first.','error');return}
   if(!p.githubRepo){showToast('Publish this project to GitHub first (Publish tab).','error');return}
   try{sessionStorage.setItem('mb_apk_tk',t);localStorage.setItem('mb_apk_tk',t)}catch(e){}
-  location.href='store.html?plat='+(window.__storePlat||'android')+'&pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
+  location.href=(window.__storePlat==='apple'?'store-ios.html':'store-android.html')+'?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
 }
 (function(){var b=document.getElementById('drawerStore');if(b)b.onclick=function(){var d=document.getElementById('drawer'),k=document.getElementById('drawerBackdrop');if(d)d.classList.remove('open');if(k)k.classList.remove('open');storeAsk()}})();
 function storeAsk(){

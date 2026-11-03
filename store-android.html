@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0f">
+<title>Publish Android - Multi Bundle</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+:root{--bg:#0b0c0f;--card:#14151a;--line:#25262d;--mut:#8f919b;--red:#f01424;--green:#2fd27a;--txt:#fff}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,sans-serif}
+body{background:radial-gradient(120% 50% at 0% 0%,rgba(240,20,36,.16),transparent 60%),var(--bg);background-attachment:fixed}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;background:rgba(11,12,15,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:#fff;font-size:22px;line-height:1;cursor:pointer}
+.top b{font-size:16px;letter-spacing:.3px}
+.top span{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:2px;color:var(--red)}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 24px)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:14px}
+.pn{font-size:19px;font-weight:800;overflow-wrap:anywhere}
+.pr{font-size:12px;color:var(--mut);overflow-wrap:anywhere;margin-top:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:99px;border:1px solid var(--line);background:#101115;font-size:12px;font-weight:700;color:#c9cad1}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.chip.bad i{background:var(--red)}
+.chip.bad{color:#ff8a93;border-color:#5a1a20}
+.sec{font-size:11px;font-weight:800;letter-spacing:2px;color:var(--mut);margin:4px 2px 10px}
+.seg{display:flex;gap:8px;margin-bottom:14px}
+.seg button{flex:1;height:48px;border-radius:14px;border:1px solid #2c2d35;background:#1b1c22;color:#fff;font-weight:800;font-size:14px;font-family:inherit;cursor:pointer}
+.seg button.on{background:var(--red);border-color:var(--red)}
+.f{margin-bottom:12px}
+.f label{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:800;letter-spacing:1px;color:var(--mut);margin-bottom:6px}
+input[type=text]{width:100%;height:50px;background:#0f1014;color:#fff;border:1px solid #2c2d35;border-radius:12px;padding:0 14px;font-size:16px;font-family:inherit;outline:0}
+input[type=text]:focus{border-color:var(--red)}
+.q{display:flex;gap:6px}
+.q button{border:1px solid #2c2d35;background:#1b1c22;color:#fff;border-radius:99px;padding:5px 11px;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer}
+.q button:active{background:var(--red);border-color:var(--red)}
+.btn{width:100%;height:54px;border:0;border-radius:15px;background:linear-gradient(135deg,#f01424,#c40d1b);color:#fff;font-size:16px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:0 8px 24px rgba(240,20,36,.3);margin-bottom:10px}
+.btn.ghost{background:#1b1c22;border:1px solid #2c2d35;box-shadow:none;height:48px;font-size:14px}
+.btn:disabled{opacity:.45;box-shadow:none}
+.act{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:#fff;font-family:inherit;text-align:left;cursor:pointer;margin-bottom:10px}
+.act:active{transform:scale(.99)}
+.act:disabled{opacity:.45}
+.act .ic{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:#1b1c22;border:1px solid #2c2d35}
+.act .tx{flex:1;min-width:0}
+.act b{display:block;font-size:14px}
+.act small{display:block;font-size:11px;color:var(--mut);margin-top:1px}
+.act .ch{font-size:20px;color:var(--mut)}
+.act.main{background:linear-gradient(135deg,#f01424,#c40d1b);border-color:#f01424}
+.act.main .ic{background:rgba(255,255,255,.18);border-color:transparent}
+.act.main small{color:rgba(255,255,255,.8)}
+.act.main .ch{color:#fff}
+.files{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.create{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 4px;border:0;border-top:1px solid #25262d;border-bottom:1px solid #25262d;background:none;color:#fff;font-family:inherit;text-align:left;cursor:pointer;margin:6px 0 12px}
+.create b{font-size:17px;letter-spacing:.3px}
+.create small{display:block;font-size:12px;color:#8f919b;margin-top:2px;font-weight:600}
+.create i{font-style:normal;color:#f01424;font-size:22px;font-weight:800}
+.create:active b{color:#f01424}
+.create:disabled{opacity:.45}
+.files .act{margin:0;padding:10px}
+.files .act .tx b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.notice{border:1px solid #5a1a20;background:#2a0f13;color:#ffb3b9;border-radius:14px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px}
+.note{font-size:12px;line-height:1.55;color:var(--mut);margin:0 2px 14px}
+.ck{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);font-size:14px;cursor:pointer}
+.ck:first-child{border-top:0}
+.ck input{width:20px;height:20px;accent-color:var(--green);flex:none}
+.log{background:#050607;border:1px solid #3a3b44;border-radius:12px;padding:12px;font:12.5px/1.65 ui-monospace,Menlo,Consolas,monospace;color:#d7d8de;max-height:260px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:12px}
+.log .e{color:#ff5a66}.log .o{color:var(--green)}
+a.dl{display:grid;place-items:center;text-decoration:none;height:54px;border-radius:15px;background:var(--green);color:#04140b;font-weight:800;margin-bottom:10px}
+a.dl.alt{background:#1b1c22;color:#fff;border:1px solid #2c2d35;height:48px;font-size:14px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);transform:translateX(-50%);background:#23242b;border:1px solid #34353d;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;z-index:20;max-width:90%;text-align:center}
+</style>
+</head>
+<body>
+<div class="top"><button id="backBtn" aria-label="Back">&#8249;</button><b>Publish Store</b><span id="platTag">ANDROID</span></div>
+<section class="wrap">
+  <div class="card">
+    <div class="pn" id="pName">Project</div><div class="pr" id="pRepo"></div>
+    <div class="chips" id="pre"></div>
+  </div>
+  <div class="notice" id="notice" hidden></div>
+
+  <div class="sec">APP DETAILS</div>
+  <div class="card">
+    <div class="f"><label>APP NAME</label><input type="text" id="fName" autocomplete="off"></div>
+    <div class="f"><label><span id="idLbl">PACKAGE ID</span><span class="q"><button id="autoId" type="button">Auto</button></span></label><input type="text" id="fId" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="f" style="margin-bottom:0"><label>VERSION<span class="q"><button id="bP" type="button">+ patch</button><button id="bMi" type="button">+ minor</button><button id="bMa" type="button">+ major</button></span></label><input type="text" id="fVer" autocomplete="off" inputmode="decimal"></div>
+  </div>
+
+    <p class="note">Create gives you 4 files: app.aab, signing.keystore, assetlinks.json and readme.html. The signing key is made on the first run and kept in a private draft release in your repo; later runs reuse it. Do not delete that draft. The AAB, assetlinks and readme are public if your repo is public; the keystore and its password are not.</p>
+    <div class="sec">PLAY STORE FILES</div>
+    <div class="card" id="ckBox" style="padding:2px 14px"></div>
+    <button class="create" id="bAab"><span><b>Create</b><small>AAB, signing key, assetlinks, readme</small></span><i>&#8594;</i></button>
+  <div id="resBox"></div>
+  <div class="log" id="logBox" hidden></div>
+</section>
+<div class="toast" id="toast" hidden></div>
+<script>
+(function(){
+'use strict';
+var WF_AAB="name: Build AAB\non:\n  workflow_dispatch:\n    inputs:\n      app_name:\n        description: App name\n        required: true\n        default: App\n      app_id:\n        description: Package ID\n        required: true\n        default: com.example.app\n      version:\n        description: Version\n        required: true\n        default: 1.0.0\npermissions:\n  contents: write\njobs:\n  android:\n    runs-on: ubuntu-latest\n    env:\n      APP_NAME: ${{ inputs.app_name }}\n      APP_ID: ${{ inputs.app_id }}\n      VERSION: ${{ inputs.version }}\n      GH_TOKEN: ${{ github.token }}\n      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}\n      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 22\n      - uses: actions/setup-java@v4\n        with:\n          distribution: temurin\n          java-version: 21\n      - name: Prepare web files\n        run: |\n          mkdir -p \"$RUNNER_TEMP/www\"\n          if [ -f package.json ] && grep -q '\"build\"' package.json; then\n            npm install\n            npm run build\n            if [ -d dist ]; then cp -r dist/. \"$RUNNER_TEMP/www/\"; else cp -r build/. \"$RUNNER_TEMP/www/\"; fi\n          else\n            tar --exclude=.git --exclude=.github -cf - . | tar -xf - -C \"$RUNNER_TEMP/www\"\n          fi\n      - name: Create Android project\n        run: |\n          mkdir \"$RUNNER_TEMP/cap\"\n          cd \"$RUNNER_TEMP/cap\"\n          npm init -y\n          npm install @capacitor/core@8 @capacitor/cli@8 @capacitor/android@8\n          mv \"$RUNNER_TEMP/www\" www\n          npx cap init \"$APP_NAME\" \"$APP_ID\" --web-dir www\n          npx cap add android\n          if [ -f \"$GITHUB_WORKSPACE/FolderAccessPlugin.java\" ]; then\n            PKG_DIR=\"android/app/src/main/java/$(echo \"$APP_ID\" | tr . /)\"\n            mkdir -p \"$PKG_DIR\"\n            sed \"s/^package .*/package $APP_ID;/\" \"$GITHUB_WORKSPACE/FolderAccessPlugin.java\" > \"$PKG_DIR/FolderAccessPlugin.java\"\n            printf '%s\\n' \"package $APP_ID;\" \"\" \"import android.os.Bundle;\" \"import com.getcapacitor.BridgeActivity;\" \"\" \"public class MainActivity extends BridgeActivity {\" \"    @Override\" \"    public void onCreate(Bundle savedInstanceState) {\" \"        registerPlugin(FolderAccessPlugin.class);\" \"        super.onCreate(savedInstanceState);\" \"    }\" \"}\" > \"$PKG_DIR/MainActivity.java\"\n          fi\n          npx cap sync android\n          sed -i \"s/versionName \\\".*\\\"/versionName \\\"$VERSION\\\"/; s/versionCode [0-9]*/versionCode ${{ github.run_number }}/\" android/app/build.gradle\n      - name: Get or create upload key\n        run: |\n          mkdir -p \"$RUNNER_TEMP/ks\"\n          cd \"$RUNNER_TEMP/ks\"\n          REPO=\"${{ github.repository }}\"\n          NAME=\"Upload key ($APP_ID)\"\n          REL=$(gh api \"repos/$REPO/releases?per_page=100\" --jq \".[] | select(.draft and .name==\\\"$NAME\\\") | .id\" | head -1)\n          if [ -n \"$REL\" ]; then\n            echo \"Using saved upload key\"\n            for F in signing.keystore key-password.txt; do\n              AID=$(gh api \"repos/$REPO/releases/$REL\" --jq \".assets[] | select(.name==\\\"$F\\\") | .id\")\n              gh api -H \"Accept: application/octet-stream\" \"repos/$REPO/releases/assets/$AID\" > \"$F\"\n            done\n          else\n            echo \"Creating a new upload key\"\n            openssl rand -hex 16 > key-password.txt\n            keytool -genkeypair -v -keystore signing.keystore -alias upload -keyalg RSA -keysize 2048 -validity 10000 -storepass \"$(cat key-password.txt)\" -keypass \"$(cat key-password.txt)\" -dname \"CN=$APP_NAME, O=$APP_NAME, C=US\"\n            gh release create \"upload-key-$APP_ID\" signing.keystore key-password.txt --draft --title \"$NAME\" --notes \"Private signing key for $APP_ID. Keep this draft. Do not publish it.\" --target \"$GITHUB_SHA\"\n          fi\n          echo \"KS_FILE=$RUNNER_TEMP/ks/signing.keystore\" >> \"$GITHUB_ENV\"\n          echo \"KS_PASS=$(cat key-password.txt)\" >> \"$GITHUB_ENV\"\n      - name: Add signing to Gradle\n        run: |\n          cd \"$RUNNER_TEMP/cap/android\"\n          python3 - <<'PY'\n          import re\n          p='app/build.gradle'\n          s=open(p).read()\n          sc=\"    signingConfigs {\\n        release {\\n            storeFile file(System.getenv('KS_FILE'))\\n            storePassword System.getenv('KS_PASS')\\n            keyAlias 'upload'\\n            keyPassword System.getenv('KS_PASS')\\n        }\\n    }\\n\"\n          s=s.replace(\"    buildTypes {\", sc+\"    buildTypes {\",1)\n          s=re.sub(r'(buildTypes\\s*\\{\\s*release\\s*\\{)', r'\\1\\n            signingConfig signingConfigs.release', s, count=1)\n          open(p,'w').write(s)\n          PY\n          grep -n \"signingConfig\" app/build.gradle\n      - name: Build AAB\n        run: |\n          cd \"$RUNNER_TEMP/cap/android\"\n          chmod +x gradlew\n          ./gradlew bundleRelease\n      - name: Make store files\n        run: |\n          OUT=\"$RUNNER_TEMP/out\"\n          mkdir -p \"$OUT\"\n          cp \"$RUNNER_TEMP/cap/android/app/build/outputs/bundle/release/app-release.aab\" \"$OUT/app.aab\"\n          FP=$(keytool -list -v -keystore \"$KS_FILE\" -alias upload -storepass \"$KS_PASS\" | grep 'SHA256:' | head -1 | sed 's/.*SHA256: *//')\n          cat > \"$OUT/assetlinks.json\" <<EOF\n          [{\n            \"relation\": [\"delegate_permission/common.handle_all_urls\"],\n            \"target\": {\n              \"namespace\": \"android_app\",\n              \"package_name\": \"$APP_ID\",\n              \"sha256_cert_fingerprints\": [\"$FP\"]\n            }\n          }]\n          EOF\n          cat > \"$OUT/readme.html\" <<EOF\n          <!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>$APP_NAME release files</title>\n          <style>body{font-family:system-ui,sans-serif;max-width:640px;margin:24px auto;padding:0 16px;line-height:1.6;color:#111}code{background:#eee;padding:2px 6px;border-radius:6px;word-break:break-all}</style></head><body>\n          <h1>$APP_NAME $VERSION</h1>\n          <p>Package ID: <code>$APP_ID</code></p>\n          <h2>Files</h2>\n          <ul>\n          <li><b>app.aab</b>: the signed bundle you upload to Google Play.</li>\n          <li><b>signing.keystore</b>: your upload key. Keep it safe and never share it. Alias: <code>upload</code>. The password is in <b>key-password.txt</b>. Both are saved in the private draft release named Upload key ($APP_ID) in this repo. Do not delete or publish that draft.</li>\n          <li><b>assetlinks.json</b>: for app links. Host it at <code>https://your-domain/.well-known/assetlinks.json</code>.</li>\n          </ul>\n          <h2>Upload to Google Play</h2>\n          <ol>\n          <li>Open Play Console, create your app, then go to Production (or Internal testing) and create a release.</li>\n          <li>Turn on Play App Signing when asked, then upload <b>app.aab</b>.</li>\n          <li>Fill in the store listing: icon 512x512, feature graphic 1024x500, at least 2 screenshots, descriptions, privacy policy URL, content rating and data safety form.</li>\n          </ol>\n          <h2>Fingerprint</h2>\n          <p>Upload key SHA-256: <code>$FP</code></p>\n          <p>Once Play App Signing is on, Google signs the app you install from the store with its own key. If you use app links, put the SHA-256 shown in Play Console under App integrity into assetlinks.json as well.</p>\n          </body></html>\n          EOF\n      - name: Publish release\n        run: |\n          OUT=\"$RUNNER_TEMP/out\"\n          gh release create \"aab-${{ github.run_number }}\" \"$OUT/app.aab\" \"$OUT/assetlinks.json\" \"$OUT/readme.html\" --title \"AAB build ${{ github.run_number }}\" --notes \"$APP_NAME $VERSION\" --target \"$GITHUB_SHA\"\n";
+var CHECK=[
+['icon','App icon 512 x 512 PNG'],
+['feat','Feature graphic 1024 x 500'],
+['shots','At least 2 phone screenshots'],
+['short','Short description (max 80 characters)'],
+['full','Full description (max 4000 characters)'],
+['priv','Privacy policy page URL'],
+['rate','Content rating questionnaire'],
+['data','Data safety form'],
+['aud','Target audience and content'],
+['pas','Play App Signing turned on (first upload)']
+];
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function tk(){try{return sessionStorage.getItem('mb_apk_tk')||localStorage.getItem('mb_apk_tk')||localStorage.getItem('mb_gh_active_token')||''}catch(e){return ''}}
+function toast(t){var el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){el.hidden=true},2600)}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function b64u(s){return btoa(unescape(encodeURIComponent(s)))}
+function fromB64u(s){return decodeURIComponent(escape(atob(s.replace(/\s/g,''))))}
+async function gh(method,path,body){
+  var r=await fetch('https://api.github.com'+path,{method:method,headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+tk(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  var d=null;try{d=await r.json()}catch(e){}
+  if(!r.ok){var er=new Error((d&&d.message)||('HTTP '+r.status));er.status=r.status;throw er}
+  return d;
+}
+function defId(repo){
+  var pr=(repo||'').split('/');
+  var o=(pr[0]||'me').toLowerCase().replace(/[^a-z0-9]/g,'');
+  var n=(pr[1]||'app').toLowerCase().replace(/[^a-z0-9]/g,'');
+  if(!/^[a-z]/.test(o))o='x'+o;
+  if(!/^[a-z]/.test(n))n='a'+n;
+  return 'com.'+o+'.'+n;
+}
+var q=new URLSearchParams(location.search);
+var p={id:q.get('pid')||'',name:q.get('name')||'App',githubRepo:q.get('repo')||'',githubBranch:q.get('branch')||'main'};
+var K='mb_store_'+p.id,saved={};
+try{saved=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
+function persist(){try{localStorage.setItem(K,JSON.stringify(saved))}catch(e){}}
+var busy=false,logs=[];
+
+$('pName').textContent=p.name;
+$('pRepo').textContent=p.githubRepo||'No GitHub repo';
+var okTk=!!tk(),okRepo=!!p.githubRepo;
+function chip(ok,t){return '<span class="chip'+(ok?'':' bad')+'"><i></i>'+esc(t)+'</span>'}
+$('pre').innerHTML=chip(okTk,okTk?'GitHub connected':'GitHub not connected')+chip(okRepo,okRepo?'Repo linked':'No repo')+(okRepo?chip(true,'Branch '+p.githubBranch):'');
+if(!okRepo||!okTk){
+  var n=$('notice');n.hidden=false;
+  n.textContent=!okRepo?'Open this page from the app menu with a project open. The project must be published to GitHub first (Publish tab).':'GitHub is not connected. Go back, sign in on the GitHub tab, then open Publish Store again.';
+}
+var fN=$('fName'),fI=$('fId'),fV=$('fVer');
+fN.value=saved.name||p.name||'App';
+fI.value=saved.id||defId(p.githubRepo);
+fV.value=saved.ver||'1.0.0';
+function vals(){
+  var v={name:fN.value.trim(),id:fI.value.trim().toLowerCase(),ver:fV.value.trim()};
+  saved.name=v.name;saved.id=v.id;saved.ver=v.ver;persist();
+  return v;
+}
+[fN,fI,fV].forEach(function(f){f.addEventListener('change',vals)});
+$('autoId').onclick=function(){fI.value=defId(p.githubRepo);vals();toast('Package ID reset')};
+function bump(k){
+  var m=(fV.value||'1.0.0').split('.').map(function(x){return parseInt(x,10)||0});
+  while(m.length<3)m.push(0);
+  if(k==='major'){m[0]++;m[1]=0;m[2]=0}else if(k==='minor'){m[1]++;m[2]=0}else m[2]++;
+  fV.value=m.slice(0,3).join('.');vals();
+}
+$('bP').onclick=function(){bump('patch')};
+$('bMi').onclick=function(){bump('minor')};
+$('bMa').onclick=function(){bump('major')};
+
+
+var ck=saved.ck||{};
+$('ckBox').innerHTML=CHECK.map(function(c){return '<label class="ck"><input type="checkbox" data-k="'+c[0]+'"'+(ck[c[0]]?' checked':'')+'><span>'+esc(c[1])+'</span></label>'}).join('');
+$('ckBox').onchange=function(e){var k=e.target.getAttribute('data-k');if(!k)return;ck[k]=e.target.checked;saved.ck=ck;persist()};
+
+function paint(){
+  var el=$('logBox');el.hidden=!logs.length;
+  el.innerHTML=logs.map(function(l){return '<div class="'+(l.k||'')+'">'+esc(l.t)+'</div>'}).join('');
+  el.scrollTop=el.scrollHeight;
+}
+function log(t,k){logs.push({t:t,k:k});paint()}
+function lock(b){busy=b;['bAab'].forEach(function(id){$(id).disabled=b})}
+
+async function getKey(repo,id,name){
+  try{
+    var rels=await gh('GET','/repos/'+repo+'/releases?per_page=100');
+    var rel=rels.find(function(r){return r.draft&&r.name==='Upload key ('+id+')'});
+    var a=rel&&(rel.assets||[]).find(function(x){return x.name===name});
+    if(!a)throw new Error('Key file not found');
+    var r=await fetch('https://api.github.com/repos/'+repo+'/releases/assets/'+a.id,{headers:{'Accept':'application/octet-stream','Authorization':'Bearer '+tk()}});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var b=await r.blob(),u=URL.createObjectURL(b),l=document.createElement('a');
+    l.href=u;l.download=name;document.body.appendChild(l);l.click();document.body.removeChild(l);
+    setTimeout(function(){URL.revokeObjectURL(u)},3000);
+  }catch(e){
+    toast('Could not download here. Opening GitHub releases.');
+    window.open('https://github.com/'+repo+'/releases','_blank');
+  }
+}
+async function run(kind){
+  if(busy)return;
+  if(!okRepo||!okTk){toast(!okRepo?'Publish the project to GitHub first':'GitHub is not connected');return}
+  var v=vals();
+  if(!v.name){toast('Enter an app name');fN.focus();return}
+  if(!/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/.test(v.id)){toast('ID like com.name.app');fI.focus();return}
+  if(!/^\d+(\.\d+){0,2}$/.test(v.ver)){toast('Version like 1.0.0');fV.focus();return}
+  var ios=false,WF='build-aab.yml',YML=WF_AAB,PATH='.github/workflows/'+WF;
+  var repo=p.githubRepo,br=p.githubBranch||'main';
+  logs=[];$('resBox').innerHTML='';paint();lock(true);
+  try{
+    log('Checking repo...');
+    var info=await gh('GET','/repos/'+repo);
+    if(info.permissions&&info.permissions.push===false)throw new Error('Your GitHub account cannot write to '+repo);
+    var cur=null;
+    try{cur=await gh('GET','/repos/'+repo+'/contents/'+PATH+'?ref='+encodeURIComponent(br))}catch(e){if(e.status!==404)throw e}
+    var same=false;try{same=!!(cur&&cur.content&&fromB64u(cur.content)===YML)}catch(e){}
+    if(!same){
+      log('Adding '+WF+' to your repo...');
+      try{await gh('PUT','/repos/'+repo+'/contents/'+PATH,{message:'Add '+WF,content:b64u(YML),branch:br,sha:cur?cur.sha:undefined})}
+      catch(e){if(e.status===404||e.status===403)throw new Error('GitHub refused the workflow file. Sign in again in the GitHub tab so the token has the workflow permission.');throw e}
+      await sleep(4000);
+    }
+    var before=0;
+    try{var r0=await gh('GET','/repos/'+repo+'/actions/workflows/'+WF+'/runs?per_page=5');(r0.workflow_runs||[]).forEach(function(r){if(r.id>before)before=r.id})}catch(e){}
+    log('Starting build...');
+    var inputs={app_name:v.name,app_id:v.id,version:v.ver};
+    var ok=false,lastErr=null,i;
+    for(i=0;i<8&&!ok;i++){
+      try{await gh('POST','/repos/'+repo+'/actions/workflows/'+WF+'/dispatches',{ref:br,inputs:inputs});ok=true}
+      catch(e){lastErr=e;if(e.status===404||e.status===422)await sleep(3000);else throw e}
+    }
+    if(!ok)throw lastErr||new Error('Could not start the build');
+    var run=null;
+    for(i=0;i<20&&!run;i++){
+      await sleep(3000);
+      var rs=await gh('GET','/repos/'+repo+'/actions/workflows/'+WF+'/runs?event=workflow_dispatch&per_page=5');
+      run=(rs.workflow_runs||[]).find(function(r){return r.id>before})||null;
+    }
+    if(!run)throw new Error('The build did not start. Check the Actions tab on GitHub.');
+    log('Build running on GitHub (about 5-10 min). Keep this page open.');
+    var t0=Date.now(),lastMin=0;
+    while(true){
+      run=await gh('GET','/repos/'+repo+'/actions/runs/'+run.id);
+      if(run.status==='completed')break;
+      var m=Math.floor((Date.now()-t0)/60000);
+      if(m>lastMin){lastMin=m;log('Still building... '+m+' min')}
+      if(Date.now()-t0>45*60000)throw new Error('The build is taking too long. Check the Actions tab on GitHub.');
+      await sleep(10000);
+    }
+    if(run.conclusion!=='success'){
+      log('BUILD FAILED: '+run.conclusion,'e');
+      $('resBox').innerHTML='<a class="dl alt" href="'+esc(run.html_url)+'" target="_blank" rel="noopener">Open build log on GitHub</a>';
+    }else{
+      var tag=(ios?'ios':'aab')+'-'+run.run_number,rel=null;
+      for(i=0;i<5&&!rel;i++){try{rel=await gh('GET','/repos/'+repo+'/releases/tags/'+tag)}catch(e){await sleep(3000)}}
+      var as=(rel&&rel.assets)||[];
+      if(!as.length)throw new Error('Build files not found in the release');
+      log('Done. '+as.length+' file'+(as.length===1?'':'s')+' ready.','o');
+      var h='<div class="files">';
+      as.forEach(function(a){h+='<a class="act" href="'+esc(a.browser_download_url)+'" target="_blank" rel="noopener" style="text-decoration:none"><span class="tx"><b>'+esc(a.name)+'</b><small>Download</small></span></a>'});
+      if(!ios){
+        h+='<button class="act" id="kKs"><span class="tx"><b>signing.keystore</b><small>Private download</small></span></button>';
+        h+='<button class="act" id="kPw"><span class="tx"><b>key-password.txt</b><small>Private download</small></span></button>';
+      }
+      h+='</div><a class="act" href="'+esc(run.html_url)+'" target="_blank" rel="noopener" style="text-decoration:none"><span class="tx"><b>Build log</b><small>Open on GitHub</small></span></a>';
+      $('resBox').innerHTML=h;
+      if(!ios){
+        $('kKs').onclick=function(){getKey(repo,v.id,'signing.keystore')};
+        $('kPw').onclick=function(){getKey(repo,v.id,'key-password.txt')};
+      }
+    }
+  }catch(e){
+    log('ERROR: '+((e&&e.message)||'Something went wrong'),'e');
+  }
+  lock(false);
+}
+$('bAab').onclick=function(){run('aab')};
+$('backBtn').onclick=function(){if(busy&&!confirm('The build keeps running on GitHub. Leave this page?'))return;location.href='/'};
+})();
+</script>
+</body>
+</html>

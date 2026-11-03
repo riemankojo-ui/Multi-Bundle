@@ -963,7 +963,7 @@ async function openStorePage(){
   if(!p){showToast('Open a project first.','error');return}
   if(!p.githubRepo){showToast('Publish this project to GitHub first (Publish tab).','error');return}
   try{sessionStorage.setItem('mb_apk_tk',t);localStorage.setItem('mb_apk_tk',t)}catch(e){}
-  location.href=(window.__storePlat==='apple'?'store-ios.html':'store-android.html')+'?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
+  window.__goingStore=true;location.href=(window.__storePlat==='apple'?'store-ios.html':'store-android.html')+'?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
 }
 (function(){var b=document.getElementById('drawerStore');if(b)b.onclick=function(){var d=document.getElementById('drawer'),k=document.getElementById('drawerBackdrop');if(d)d.classList.remove('open');if(k)k.classList.remove('open');storeAsk()}})();
 function storeAsk(){
@@ -981,7 +981,7 @@ function storeAsk(){
      '<button id="saIos" style="'+card+'"><span style="'+badge+'background:#1b1c22;border:1px solid #2c2d35"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><line x1="10.5" y1="18.5" x2="13.5" y2="18.5"/></svg></span><span style="flex:1;min-width:0"><b style="display:block;font-size:18px">iOS</b><small style="display:block;color:#8f919b;font-size:13px;margin-top:3px">App Store &middot; IPA file</small></span><span style="color:#8f919b;font-size:26px">&#8250;</span></button>'+
    '</div>';
   document.body.appendChild(o);
-  function go(p){o.remove();window.__storePlat=p;openStorePage()}
+  function go(p){window.__storePlat=p;window.__goingStore=false;o.innerHTML='<div style="margin:auto;text-align:center;color:#8f919b;font-weight:700"><div class="spinner" style="margin:0 auto 16px"></div>Opening...</div>';window.addEventListener('pageshow',function(){var x=document.getElementById('storeAsk');if(x)x.remove()});openStorePage().then(function(){if(!window.__goingStore)o.remove()})}
   o.querySelector('#saAnd').onclick=function(){go('android')};
   o.querySelector('#saIos').onclick=function(){go('apple')};
   o.querySelector('#saX').onclick=function(){o.remove()};
@@ -993,7 +993,7 @@ function storeAskOld(){
   var bs='height:54px;border-radius:14px;border:1px solid #2c2d35;background:#1b1c22;color:#fff;font-weight:800;font-size:16px;font-family:inherit;cursor:pointer';
   o.innerHTML='<div style="width:100%;max-width:420px;background:#17181c;border:1px solid #25262c;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;color:#fff"><div style="font-weight:800;font-size:15px">Publish for which store?</div><button id="saAnd" style="'+bs+';background:#f01424;border-color:#f01424">Android (Google Play)</button><button id="saIos" style="'+bs+'">iOS (App Store)</button><button id="saX" style="'+bs+';height:46px;font-size:14px">Cancel</button></div>';
   document.body.appendChild(o);
-  function go(p){o.remove();window.__storePlat=p;openStorePage()}
+  function go(p){window.__storePlat=p;window.__goingStore=false;o.innerHTML='<div style="margin:auto;text-align:center;color:#8f919b;font-weight:700"><div class="spinner" style="margin:0 auto 16px"></div>Opening...</div>';window.addEventListener('pageshow',function(){var x=document.getElementById('storeAsk');if(x)x.remove()});openStorePage().then(function(){if(!window.__goingStore)o.remove()})}
   o.querySelector('#saAnd').onclick=function(){go('android')};
   o.querySelector('#saIos').onclick=function(){go('apple')};
   o.querySelector('#saX').onclick=function(){o.remove()};

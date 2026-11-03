@@ -47,6 +47,7 @@ a.btn{display:grid;place-items:center;text-decoration:none}
 .lk a:active,.lk button:active{color:#f01424}
 .ract .row{display:flex;gap:8px}.ract .row .btn{flex:1}
 </style>
+<script src="/topbar.js"></script>
 </head>
 <body>
 <section class="runpage">
@@ -361,7 +362,8 @@ async function start(){
     LOG('ERROR: '+(!p.githubRepo?'No GitHub repo is linked. Publish the project first.':'GitHub is not connected. Sign in on the GitHub tab.'),'err');
     setState('no','FAILED');acts({t:'Back to form',fn:toForm},[]);return;
   }
-  S.stop=false;busy=true;t0=Date.now();
+  S.stop=false;S.cancelled=false;busy=true;t0=Date.now();t3=0;curStep=-1;pctNow=0;lastMin=-1;wasQ=null;logs=[];
+  var term=$('term');Array.prototype.slice.call(term.querySelectorAll('.ln:not(.live)')).forEach(function(n){term.removeChild(n)});
   acts(null,[{t:'Stop watching',fn:function(){S.stop=true}}]);
   LOG('Build started for '+v.name+' v'+v.ver,'ok');
   LOG('Workflow '+WF,'dim');
@@ -388,7 +390,7 @@ async function start(){
     }
   }catch(e){
     stopRun();
-    if(e&&e.message==='stopped'){LOG('Stopped. The build keeps running on GitHub.','dim');setState('no','STOPPED');acts({t:'Back to form',fn:toForm},[{t:'Copy log',fn:copyLog}]);return}
+    if(e&&e.message==='stopped'){LOG(S.cancelled?'Run cancelled.':'Stopped. The build keeps running on GitHub.','dim');setState('no',S.cancelled?'CANCELLED':'STOPPED');acts(null,[{t:'Copy log',fn:copyLog}]);return}
     LOG('ERROR: '+((e&&e.message)||'Something went wrong'),'err');
     if(e&&e.status)LOG('HTTP status '+e.status,'err');
     var hint=hintFor(e);if(hint)LOG(hint,'err');

@@ -40,4 +40,15 @@ window.addEventListener('beforeunload',function(){
 window.addEventListener('pageshow',function(){clearTimeout(doneT);done()});
 window.addEventListener('load',function(){done()});
 try{if(sessionStorage.getItem('mbNav')){sessionStorage.removeItem('mbNav');start(50)}}catch(x){}
+
+(function(){
+  var de=document.documentElement,s=document.createElement('style'),rel=false;
+  s.id='mbWaitCss';
+  s.textContent='html.mbWait{background:#0b0c0f}html.mbWait body{opacity:0!important}body{transition:opacity .2s ease}';
+  de.appendChild(s);de.classList.add('mbWait');
+  function reveal(){if(rel)return;rel=true;de.classList.remove('mbWait')}
+  window.addEventListener('load',function(){setTimeout(reveal,30)});
+  window.addEventListener('pageshow',function(){rel=false;reveal()});
+  setTimeout(reveal,3000);
+})();
 })();

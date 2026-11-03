@@ -165,6 +165,63 @@ function defId(repo){
 var S={stop:false};
 function chk(){if(S.stop)throw new Error('stopped')}
 
+function fixWf(t){
+  var notes=[],s=t.replace(/\r\n?/g,'\n'),i,L;
+  if(/^[ ]*\t/m.test(s)){s=s.replace(/^([ ]*)(\t+)/gm,function(m,a,b){return a+new Array(b.length+1).join('  ')});notes.push('Replaced tab indents with spaces')}
+  if(!/^[^#\n]*workflow_dispatch/m.test(s)){
+    var m;
+    if((m=/^(["']?on["']?):[ \t]*$/m.exec(s))){
+      var at=m.index+m[0].length+1,nx=s.slice(at).match(/^([ \t]+)\S/);
+      s=s.slice(0,at)+(nx?nx[1]:'  ')+'workflow_dispatch:\n'+s.slice(at);
+    }else if((m=/^(["']?on["']?):[ \t]*\[([^\]\n]*)\][ \t]*$/m.exec(s))){
+      s=s.replace(m[0],m[1]+': ['+(m[2].trim()?m[2].trim()+', ':'')+'workflow_dispatch]');
+    }else if((m=/^(["']?on["']?):[ \t]*([A-Za-z_]+)[ \t]*$/m.exec(s))){
+      s=s.replace(m[0],m[1]+':\n  '+m[2]+':\n  workflow_dispatch:');
+    }else return {text:t,notes:notes,blocked:'Could not find the "on:" section in the workflow'};
+    notes.push('Added workflow_dispatch so it can be started from the app');
+  }
+  if(!/gh\s+release\s+create|action-gh-release|create-release|release-action|gh\s+api[^\n]*releases/.test(s)){
+    if(!/upload-artifact/.test(s))return {text:t,notes:notes,blocked:'This workflow neither publishes a release nor uploads the APK, so the app cannot find it'};
+    L=s.split('\n');
+    var j=-1;for(i=0;i<L.length;i++)if(/^jobs:[ \t]*$/.test(L[i])){j=i;break}
+    if(j<0)return {text:t,notes:notes,blocked:'Could not find the "jobs:" section'};
+    var ji='  ',e=L.length,ids=[];
+    for(i=j+1;i<L.length;i++){if(/\S/.test(L[i])&&!/^\s*#/.test(L[i])){ji=L[i].match(/^[ ]*/)[0];break}}
+    for(i=j+1;i<L.length;i++){
+      if(/^[^\s#]/.test(L[i])){e=i;break}
+      var jm=L[i].match(/^([ ]*)([A-Za-z0-9_-]+):[ \t]*$/);
+      if(jm&&jm[1]===ji)ids.push(jm[2]);
+    }
+    if(!ids.length)return {text:t,notes:notes,blocked:'Could not read the job names'};
+    while(e>0&&!/\S/.test(L[e-1]))e--;
+    var job=[
+      ji+'mb_publish:',
+      ji+'  needs: ['+ids.join(', ')+']',
+      ji+'  runs-on: ubuntu-latest',
+      ji+'  permissions:',
+      ji+'    contents: write',
+      ji+'  steps:',
+      ji+'    - uses: actions/download-artifact@v4',
+      ji+'      with:',
+      ji+'        path: mb_out',
+      ji+'    - name: Publish release',
+      ji+'      env:',
+      ji+'        GH_TOKEN: ${{ github.token }}',
+      ji+'        GH_REPO: ${{ github.repository }}',
+      ji+'      run: |',
+      ji+'        APK=$(find mb_out -name "*.apk" | head -1)',
+      ji+'        if [ -z "$APK" ]; then echo "No APK found in the artifacts"; exit 1; fi',
+      ji+'        cp "$APK" app.apk',
+      ji+'        gh release create "apk-${{ github.run_number }}" app.apk --title "APK build ${{ github.run_number }}" --notes "Built with Multi Bundle" --target "$GITHUB_SHA"'
+    ];
+    L.splice.apply(L,[e,0].concat(job));
+    s=L.join('\n');
+    notes.push('Added a step that publishes the APK as release apk-N');
+  }
+  if(s.slice(-1)!=='\n')s+='\n';
+  return {text:s,notes:notes,blocked:null};
+}
+
 async function build(p,v,say){
   var repo=p.githubRepo,br=p.githubBranch||'main';
   say('Checking repo\u2026');
@@ -176,6 +233,22 @@ async function build(p,v,say){
   var same=false;
   try{same=!!(cur&&cur.content&&fromB64u(cur.content)===YML)}catch(e){}
   var hasIn=(WF==='build-apk.yml');try{if(cur&&cur.content&&/app_name/.test(fromB64u(cur.content)))hasIn=true}catch(e){}
+  if(WF!=='build-apk.yml'&&cur&&cur.content){
+    var fx=null,orig='';
+    try{orig=fromB64u(cur.content);fx=fixWf(orig)}catch(e){}
+    if(fx&&fx.blocked)return {fail:true,run:'https://github.com/'+repo+'/blob/'+br+'/'+WF_PATH,why:fx.blocked};
+    if(fx&&fx.text!==orig.replace(/\r\n?/g,'\n')){
+      say('Adding fixes to your build workflow\u2026');
+      fx.notes.forEach(function(n){LOG(n,'dim')});
+      try{
+        await gh('PUT','/repos/'+repo+'/contents/'+WF_PATH,{message:'Fix build workflow (Multi Bundle)',content:b64u(fx.text),branch:br,sha:cur.sha});
+      }catch(e){
+        if(e.status===404||e.status===403)throw new Error('GitHub refused the workflow file. Sign in again in the GitHub tab so the token has the workflow permission.');
+        throw e;
+      }
+      await sleep(4000);chk();
+    }
+  }
   if(!same&&WF==='build-apk.yml'){
     say('Adding build workflow\u2026');
     try{

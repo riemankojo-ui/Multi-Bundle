@@ -163,7 +163,7 @@ async function loadWf(){
     var d=await gh('/repos/'+p.githubRepo+'/actions/workflows?per_page=50');
     var found=(d.workflows||[]).filter(function(w){return w.state==='active'&&/^\.github\/workflows\//.test(w.path)}).map(function(w){return {name:w.name,file:w.path.split('/').pop()}});
     if(found.length){
-      if(!found.some(function(w){return w.file==='build-apk.yml'}))found.unshift(list[0]);
+      if(!found.some(function(w){return w.file==='build-apk.yml'||/apk|android|build/i.test(w.file+' '+w.name)}))found.unshift(list[0]);
       list=found;
     }
   }catch(e){}

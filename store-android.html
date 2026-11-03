@@ -266,6 +266,7 @@ async function run(kind){
         h+='<button class="act" id="kPw"><span class="tx"><b>key-password.txt</b><small>Private download</small></span></button>';
       }
       h+='</div><a class="act" href="'+esc(run.html_url)+'" target="_blank" rel="noopener" style="text-decoration:none"><span class="tx"><b>Build log</b><small>Open on GitHub</small></span></a>';
+      $('resBox').innerHTML=h;
       if(!ios){
         if($('kKs'))if($('kKs'))$('kKs').onclick=function(){getKey(repo,v.id,'signing.keystore')};
         if($('kPw'))if($('kPw'))$('kPw').onclick=function(){getKey(repo,v.id,'key-password.txt')};

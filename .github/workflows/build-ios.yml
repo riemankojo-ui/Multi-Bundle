@@ -1,0 +1,93 @@
+name: Build iOS
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: App name
+        required: true
+        default: App
+      app_id:
+        description: Bundle ID
+        required: true
+        default: com.example.app
+      version:
+        description: Version
+        required: true
+        default: 1.0.0
+permissions:
+  contents: write
+jobs:
+  ios:
+    runs-on: macos-latest
+    env:
+      APP_NAME: ${{ inputs.app_name }}
+      APP_ID: ${{ inputs.app_id }}
+      VERSION: ${{ inputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      CERT_P12: ${{ secrets.IOS_CERT_P12_B64 }}
+      CERT_PASS: ${{ secrets.IOS_CERT_PASSWORD }}
+      PROFILE_B64: ${{ secrets.IOS_PROFILE_B64 }}
+      TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepare web files
+        run: |
+          mkdir -p "$RUNNER_TEMP/www"
+          if [ -f package.json ] && grep -q '"build"' package.json; then
+            npm install
+            npm run build
+            if [ -d dist ]; then cp -r dist/. "$RUNNER_TEMP/www/"; else cp -r build/. "$RUNNER_TEMP/www/"; fi
+          else
+            tar --exclude=.git --exclude=.github -cf - . | tar -xf - -C "$RUNNER_TEMP/www"
+          fi
+      - name: Create iOS project
+        run: |
+          mkdir "$RUNNER_TEMP/cap"
+          cd "$RUNNER_TEMP/cap"
+          npm init -y
+          npm install @capacitor/core@8 @capacitor/cli@8 @capacitor/ios@8
+          mv "$RUNNER_TEMP/www" www
+          npx cap init "$APP_NAME" "$APP_ID" --web-dir www
+          npx cap add ios
+          npx cap sync ios
+          PB=ios/App/App.xcodeproj/project.pbxproj
+          sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $VERSION;/g; s/CURRENT_PROJECT_VERSION = [^;]*;/CURRENT_PROJECT_VERSION = ${{ github.run_number }};/g" "$PB"
+      - name: Build signed IPA or unsigned archive
+        run: |
+          cd "$RUNNER_TEMP/cap/ios/App"
+          if [ -n "$CERT_P12" ] && [ -n "$PROFILE_B64" ] && [ -n "$TEAM_ID" ]; then
+            echo "Signing with your Apple certificate"
+            KC="$RUNNER_TEMP/build.keychain"
+            echo "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+            security create-keychain -p tmp "$KC"
+            security set-keychain-settings -lut 21600 "$KC"
+            security unlock-keychain -p tmp "$KC"
+            security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASS" -A -t cert -f pkcs12 -k "$KC"
+            security set-key-partition-list -S apple-tool:,apple: -k tmp "$KC"
+            security list-keychains -d user -s "$KC" login.keychain
+            mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+            echo "$PROFILE_B64" | base64 --decode > "$RUNNER_TEMP/p.mobileprovision"
+            PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< "$(security cms -D -i "$RUNNER_TEMP/p.mobileprovision")")
+            PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print Name" /dev/stdin <<< "$(security cms -D -i "$RUNNER_TEMP/p.mobileprovision")")
+            cp "$RUNNER_TEMP/p.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+            printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' '<plist version="1.0"><dict>' '<key>method</key><string>app-store-connect</string>' "<key>teamID</key><string>$TEAM_ID</string>" '<key>signingStyle</key><string>manual</string>' "<key>provisioningProfiles</key><dict><key>$APP_ID</key><string>$PROFILE_NAME</string></dict>" '</dict></plist>' > "$RUNNER_TEMP/export.plist"
+            if [ -d App.xcworkspace ]; then TARGET="-workspace App.xcworkspace"; else TARGET="-project App.xcodeproj"; fi
+            xcodebuild $TARGET -scheme App -configuration Release -archivePath "$RUNNER_TEMP/App.xcarchive" archive DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" PRODUCT_BUNDLE_IDENTIFIER="$APP_ID"
+            xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" -exportPath "$RUNNER_TEMP/out" -exportOptionsPlist "$RUNNER_TEMP/export.plist"
+            cp "$RUNNER_TEMP/out/"*.ipa "$RUNNER_TEMP/app.ipa"
+            echo "OUT_FILE=$RUNNER_TEMP/app.ipa" >> "$GITHUB_ENV"
+          else
+            echo "No Apple signing secrets found. Building an unsigned archive."
+            if [ -d App.xcworkspace ]; then TARGET="-workspace App.xcworkspace"; else TARGET="-project App.xcodeproj"; fi
+            xcodebuild $TARGET -scheme App -configuration Release -sdk iphoneos -archivePath "$RUNNER_TEMP/App.xcarchive" archive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO PRODUCT_BUNDLE_IDENTIFIER="$APP_ID"
+            cd "$RUNNER_TEMP" && zip -qr app-unsigned.xcarchive.zip App.xcarchive
+            echo "OUT_FILE=$RUNNER_TEMP/app-unsigned.xcarchive.zip" >> "$GITHUB_ENV"
+          fi
+      - name: Publish release
+        run: |
+          gh release create "ios-${{ github.run_number }}" "$OUT_FILE" --title "iOS build ${{ github.run_number }}" --notes "$APP_NAME $VERSION" --target "$GITHUB_SHA"

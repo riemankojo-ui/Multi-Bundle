@@ -95,7 +95,7 @@ a.dl.alt{background:#1b1c22;color:#fff;border:1px solid #2c2d35;height:48px;font
   <div id="resBox"></div>
   <div class="log" id="logBox" hidden></div>
 </section>
-<div class="toast" id="toast" hidden></div>
+<div class="toast" id="toast" hidden></div><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 (function(){
 'use strict';
@@ -168,6 +168,7 @@ function log(t,k){logs.push({t:t,k:k});paint()}
 function lock(b){busy=b;['bIos'].forEach(function(id){$(id).disabled=b})}
 
 async function explainFail(repo,run){try{var jd=await gh('GET','/repos/'+repo+'/actions/runs/'+run.id+'/jobs');var jobs=jd.jobs||[];var job=jobs.find(function(j){return j.conclusion==='failure'})||jobs[0];if(!job)return;(job.steps||[]).filter(function(s){return s.conclusion==='failure'}).forEach(function(s){log('FAILED STEP '+s.number+': '+s.name,'e')});var text='';try{var r=await fetch('https://api.github.com/repos/'+repo+'/actions/jobs/'+job.id+'/logs',{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+tk()}});if(r.ok)text=await r.text()}catch(e){}if(text){var lines=text.split('\n').map(function(l){return l.replace(/^\d{4}-\d\d-\d\dT[\d:.]+Z\s?/,'').replace(/\r$/,'')}).filter(Boolean);lines.filter(function(l){return /##\[error\]/.test(l)}).slice(0,6).forEach(function(l){log(l.replace('##[error]','ERROR: '),'e')});log('--- last lines of the log ---');lines.slice(-15).forEach(function(l){log(l.replace(/^##\[(error|group|endgroup)\]/,''),/error|fatal|failed/i.test(l)?'e':'')})}else{var an=await gh('GET','/repos/'+repo+'/check-runs/'+job.id+'/annotations');(an||[]).forEach(function(a){log((a.annotation_level||'note').toUpperCase()+': '+a.message,a.annotation_level==='failure'?'e':'')})}}catch(e){log('Could not read the failure details: '+((e&&e.message)||'error'),'e')}}
+async function zipMode(repo,v,as,logUrl,ios){var box=$('resBox');box.insertAdjacentHTML('afterbegin','<button class="act main" id="zipBtn"><span class="tx"><b>Download ZIP</b><small>All files in one ZIP</small></span><span class="ch">&#8250;</span></button>');var f=box.querySelector('.files');if(f)f.style.display='none';$('zipBtn').onclick=async function(){var b=this;if(b.disabled)return;if(!window.JSZip){toast('ZIP tool did not load. Refresh and try again.');return}b.disabled=true;try{var z=new JSZip();var blob=async function(id){var r=await fetch('https://api.github.com/repos/'+repo+'/releases/assets/'+id,{headers:{'Accept':'application/octet-stream','Authorization':'Bearer '+tk()}});if(!r.ok)throw new Error('HTTP '+r.status);return r.blob()};for(var i=0;i<as.length;i++){toast('Adding '+as[i].name+'...');z.file(as[i].name,await blob(as[i].id))}if(!ios){var rels=await gh('GET','/repos/'+repo+'/releases?per_page=100');var rel=rels.find(function(r){return r.draft&&r.name==='Upload key ('+v.id+')'});if(rel){for(var k=0;k<rel.assets.length;k++){var a=rel.assets[k];if(a.name==='signing.keystore'||a.name==='key-password.txt'){toast('Adding '+a.name+'...');z.file(a.name,await blob(a.id))}}}else toast('Key files not found, ZIP has no keystore','error')}var out=await z.generateAsync({type:'blob',compression:'DEFLATE'});var u=URL.createObjectURL(out),l=document.createElement('a');l.href=u;l.download=(v.name||'app').replace(/[^\w.\-]+/g,'-')+'-'+v.ver+'.zip';document.body.appendChild(l);l.click();document.body.removeChild(l);setTimeout(function(){URL.revokeObjectURL(u)},8000);toast('ZIP ready')}catch(e){toast('ZIP failed: '+((e&&e.message)||'error'))}b.disabled=false}}
 async function run(kind){
   if(busy)return;
   if(!okRepo||!okTk){toast(!okRepo?'Publish the project to GitHub first':'GitHub is not connected');return}
@@ -230,7 +231,7 @@ async function run(kind){
       var h='<div class="files">';
       as.forEach(function(a){h+='<a class="act" href="'+esc(a.browser_download_url)+'" target="_blank" rel="noopener" style="text-decoration:none"><span class="tx"><b>'+esc(a.name)+'</b><small>Download</small></span></a>'});
       h+='</div><a class="act" href="'+esc(run.html_url)+'" target="_blank" rel="noopener" style="text-decoration:none"><span class="tx"><b>Build log</b><small>Open on GitHub</small></span></a>';
-      $('resBox').innerHTML=h;
+      $('resBox').innerHTML=h;zipMode(repo,v,as,run.html_url,ios);
     }
   }catch(e){
     log('ERROR: '+((e&&e.message)||'Something went wrong'),'e');

@@ -77,6 +77,10 @@
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
       Publish Store
     </button>
+    <button id="drawerWorkflow">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H14a3 3 0 0 1 3 3v6.5"/></svg>
+      Workflow
+    </button>
     <button id="drawerClear">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 10 9 10"/></svg>
       Clear current project
@@ -966,6 +970,17 @@ async function openStorePage(){
   window.__goingStore=true;location.href=(window.__storePlat==='apple'?'store-ios.html':'store-android.html')+'?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
 }
 (function(){var b=document.getElementById('drawerStore');if(b)b.onclick=function(){var d=document.getElementById('drawer'),k=document.getElementById('drawerBackdrop');if(d)d.classList.remove('open');if(k)k.classList.remove('open');storeAsk()}})();
+async function openWorkflowPage(){
+  var t=window.getToken?window.getToken():'';
+  if(!t){showToast('Connect GitHub first (GitHub tab).','error');return}
+  var list=await dbGetAll();
+  var p=list.find(function(x){return x.id===currentProjectId});
+  if(!p){showToast('Open a project first.','error');return}
+  if(!p.githubRepo){showToast('Publish this project to GitHub first (Publish tab).','error');return}
+  try{sessionStorage.setItem('mb_apk_tk',t);localStorage.setItem('mb_apk_tk',t)}catch(e){}
+  location.href='workflow.html?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
+}
+(function(){var b=document.getElementById('drawerWorkflow');if(b)b.onclick=function(){var d=document.getElementById('drawer'),k=document.getElementById('drawerBackdrop');if(d)d.classList.remove('open');if(k)k.classList.remove('open');openWorkflowPage()}})();
 function storeAsk(){
   var old=document.getElementById('storeAsk');if(old)old.remove();
   var o=document.createElement('div');o.id='storeAsk';

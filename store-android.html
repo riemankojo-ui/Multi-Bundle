@@ -215,34 +215,18 @@ async function showFiles(repo,v,as,logUrl,ios){
   function fmt(n){return n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?Math.round(n/1024)+' KB':(n||0)+' B'}
   box.innerHTML='<div class="fl">'+items.map(function(f,i){return '<label class="fr"><input type="checkbox" data-i="'+i+'" checked><b>'+esc(f.name)+'</b><small>'+fmt(f.size)+'</small></label>'}).join('')+'</div><div class="fb"><span id="fCnt"></span><button id="fDl">Download ZIP</button></div><div class="fb" style="margin-top:6px"><a href="'+esc(logUrl)+'" target="_blank" rel="noopener">Build log on GitHub</a></div>';
   function sel(){return items.filter(function(f,i){var c=box.querySelector('input[data-i="'+i+'"]');return c&&c.checked})}
-  function upd(){var n=sel().length;$('fCnt').textContent=n+' of '+items.length+' selected';$('fDl').disabled=!n;$('fDl').textContent='Download'}
+  var got={};
+  function upd(){var s=sel(),n=s.length,k=s.filter(function(f){return got[f.name]}).length;$('fCnt').textContent=n+' of '+items.length+' selected';$('fDl').disabled=!n;$('fDl').textContent=(n>1&&k<n)?'Download '+(k+1)+' of '+n:'Download'}
   box.querySelector('.fl').onchange=upd;upd();
   try{saved.res={repo:repo,v:v,logUrl:logUrl,logs:logs.slice(),items:items};persist()}catch(e){}
-  $('fDl').onclick=async function(){
-    var b=this,list=sel();if(b.disabled||!list.length)return;
-    if(true){
-      b.disabled=true;b.textContent='Downloading...';
-      for(var j=0;j<list.length;j++){
-        var l2=document.createElement('a');l2.href=list[j].url;l2.download=list[j].name;l2.rel='noopener';document.body.appendChild(l2);l2.click();document.body.removeChild(l2);
-        await new Promise(function(r){setTimeout(r,900)});
-      }
-      b.textContent='Download ZIP';upd();return;
-    }
-    b.disabled=true;b.textContent='Preparing...';
-    try{
-      var z=new JSZip();
-      for(var i=0;i<list.length;i++){
-        var r=await fetch('https://api.github.com/repos/'+repo+'/releases/assets/'+list[i].id,{headers:{'Accept':'application/octet-stream','Authorization':'Bearer '+tk()}});
-        if(!r.ok)throw new Error(list[i].name+': HTTP '+r.status);
-        z.file(list[i].name,await r.blob());
-      }
-      var out=await z.generateAsync({type:'blob',compression:'DEFLATE'});
-      var u=URL.createObjectURL(out),l=document.createElement('a');
-      l.href=u;l.download=(v.name||'app').replace(/[^\w.\-]+/g,'-')+'-'+v.ver+'.zip';
-      document.body.appendChild(l);l.click();document.body.removeChild(l);
-      setTimeout(function(){URL.revokeObjectURL(u)},8000);toast('ZIP ready');
-    }catch(e){var m='ZIP failed: '+((e&&e.message)||'error');toast(m);var eb=$('fErr');if(!eb){eb=document.createElement('div');eb.id='fErr';eb.style.cssText='margin-top:8px;font-size:12px;color:#ff8a93;overflow-wrap:anywhere';b.parentNode.parentNode.appendChild(eb)}eb.textContent=m}
-    b.textContent='Download ZIP';upd();
+  $('fDl').onclick=function(){
+    var s=sel(),f=s.find(function(x){return !got[x.name]});
+    if(!f){got={};upd();return}
+    var a=document.createElement('a');a.href=f.url;a.download=f.name;a.rel='noopener';document.body.appendChild(a);a.click();document.body.removeChild(a);
+    got[f.name]=1;
+    var left=s.filter(function(x){return !got[x.name]}).length;
+    if(left){toast('Tap again for the next file ('+left+' left)')}else{toast('All files downloaded');got={}}
+    upd();
   };
 }
 async function run(kind){

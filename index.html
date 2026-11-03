@@ -73,6 +73,10 @@
       <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
       Import from GitHub
     </button>
+    <button id="drawerStore">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      Publish Store
+    </button>
     <button id="drawerClear">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 10 9 10"/></svg>
       Clear current project
@@ -951,6 +955,17 @@ async function apkPrep(){
     window.__apkHref='apkbuild.html?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
   }finally{window.__apkBusy=false}
 }
+async function openStorePage(){
+  var t=window.getToken?window.getToken():'';
+  if(!t){showToast('Connect GitHub first (GitHub tab).','error');return}
+  var list=await dbGetAll();
+  var p=list.find(function(x){return x.id===currentProjectId});
+  if(!p){showToast('Open a project first.','error');return}
+  if(!p.githubRepo){showToast('Publish this project to GitHub first (Publish tab).','error');return}
+  try{sessionStorage.setItem('mb_apk_tk',t);localStorage.setItem('mb_apk_tk',t)}catch(e){}
+  location.href='store.html?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
+}
+(function(){var b=document.getElementById('drawerStore');if(b)b.onclick=function(){var d=document.getElementById('drawer'),k=document.getElementById('drawerBackdrop');if(d)d.classList.remove('open');if(k)k.classList.remove('open');openStorePage()}})();
 async function openApkPage(){
   if(window.__apkHref&&window.__apkPid===currentProjectId){location.href=window.__apkHref;return}
   var t=window.getToken?window.getToken():'';

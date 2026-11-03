@@ -963,9 +963,22 @@ async function openStorePage(){
   if(!p){showToast('Open a project first.','error');return}
   if(!p.githubRepo){showToast('Publish this project to GitHub first (Publish tab).','error');return}
   try{sessionStorage.setItem('mb_apk_tk',t);localStorage.setItem('mb_apk_tk',t)}catch(e){}
-  location.href='store.html?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
+  location.href='store.html?plat='+(window.__storePlat||'android')+'&pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
 }
-(function(){var b=document.getElementById('drawerStore');if(b)b.onclick=function(){var d=document.getElementById('drawer'),k=document.getElementById('drawerBackdrop');if(d)d.classList.remove('open');if(k)k.classList.remove('open');openStorePage()}})();
+(function(){var b=document.getElementById('drawerStore');if(b)b.onclick=function(){var d=document.getElementById('drawer'),k=document.getElementById('drawerBackdrop');if(d)d.classList.remove('open');if(k)k.classList.remove('open');storeAsk()}})();
+function storeAsk(){
+  var old=document.getElementById('storeAsk');if(old)old.remove();
+  var o=document.createElement('div');o.id='storeAsk';
+  o.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;padding:14px';
+  var bs='height:54px;border-radius:14px;border:1px solid #2c2d35;background:#1b1c22;color:#fff;font-weight:800;font-size:16px;font-family:inherit;cursor:pointer';
+  o.innerHTML='<div style="width:100%;max-width:420px;background:#17181c;border:1px solid #25262c;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;color:#fff"><div style="font-weight:800;font-size:15px">Publish for which store?</div><button id="saAnd" style="'+bs+';background:#f01424;border-color:#f01424">Android (Google Play)</button><button id="saIos" style="'+bs+'">iOS (App Store)</button><button id="saX" style="'+bs+';height:46px;font-size:14px">Cancel</button></div>';
+  document.body.appendChild(o);
+  function go(p){o.remove();window.__storePlat=p;openStorePage()}
+  o.querySelector('#saAnd').onclick=function(){go('android')};
+  o.querySelector('#saIos').onclick=function(){go('apple')};
+  o.querySelector('#saX').onclick=function(){o.remove()};
+  o.onclick=function(e){if(e.target===o)o.remove()};
+}
 async function openApkPage(){
   if(window.__apkHref&&window.__apkPid===currentProjectId){location.href=window.__apkHref;return}
   var t=window.getToken?window.getToken():'';

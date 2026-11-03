@@ -58,7 +58,7 @@ a.dl.alt{background:#1b1c22;color:#fff;border:1px solid #2c2d35;height:48px;font
     <div class="chips" id="pre"></div>
   </div>
   <div class="notice" id="notice" hidden></div>
-  <div class="seg"><button id="segA" class="on">Android</button><button id="segI">Apple</button></div>
+  <div class="seg" hidden><button id="segA" class="on">Android</button><button id="segI">Apple</button></div>
 
   <div class="sec">APP DETAILS</div>
   <div class="card">
@@ -170,6 +170,7 @@ function setPlat(x){
   $('idLbl').textContent=x==='android'?'PACKAGE ID':'BUNDLE ID';
 }
 $('segA').onclick=function(){setPlat('android')};
+setPlat(q.get('plat')==='apple'?'apple':'android');
 $('segI').onclick=function(){setPlat('apple')};
 
 var ck=saved.ck||{};

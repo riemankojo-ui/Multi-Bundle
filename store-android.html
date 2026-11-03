@@ -266,8 +266,8 @@ async function run(kind){
       }
       h+='</div><a class="act" href="'+esc(run.html_url)+'" target="_blank" rel="noopener" style="text-decoration:none"><span class="tx"><b>Build log</b><small>Open on GitHub</small></span></a>';
       if(!ios){
-        $('kKs').onclick=function(){getKey(repo,v.id,'signing.keystore')};
-        $('kPw').onclick=function(){getKey(repo,v.id,'key-password.txt')};
+        if($('kKs'))$('kKs').onclick=function(){getKey(repo,v.id,'signing.keystore')};
+        if($('kPw'))$('kPw').onclick=function(){getKey(repo,v.id,'key-password.txt')};
       }
     }
   }catch(e){

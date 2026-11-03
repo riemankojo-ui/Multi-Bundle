@@ -205,7 +205,7 @@ async function saveCurrentProject(){
 const __origSave=saveCurrentProject;window.saveCurrentProject=async function(){await __origSave();if(document.getElementById('bundleProjectsCard')&&typeof renderBundleProjects==='function')renderBundleProjects()};
 
 function openDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.add('open');if(b)b.classList.add('open')}
-function closeDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open')}
+function closeDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');setTimeout(function(){if(!d)return;d.scrollTop=0;d.querySelectorAll('*').forEach(function(x){if(x.scrollTop)x.scrollTop=0})},300)}
 if($('menuBtn'))$('menuBtn').onclick=openDrawer;
 if($('drawerClose'))$('drawerClose').onclick=closeDrawer;
 if($('drawerBackdrop'))$('drawerBackdrop').onclick=closeDrawer;

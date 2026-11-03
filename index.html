@@ -839,7 +839,7 @@ async function ghHasWorkflow(p){
   var v=false;
   try{
     var r=await fetch('https://api.github.com/repos/'+p.githubRepo+'/contents/.github/workflows?ref='+encodeURIComponent(br),{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+t}});
-    if(r.ok){var d=await r.json();v=Array.isArray(d)&&d.some(function(x){return /\.ya?ml$/i.test(x.name||'')})}
+    if(r.ok){var d=await r.json();v=Array.isArray(d)&&d.some(function(x){return /apk[^\/]*\.ya?ml$/i.test(x.name||'')})}
   }catch(e){}
   __apkChk[key]={t:Date.now(),v:v};
   return v;
@@ -913,7 +913,7 @@ function wfLint(t){
 function wfShow(){
   var el=document.getElementById('apkWf'),c=document.getElementById('apkCard');
   if(!el)return;
-  var wf=files.filter(function(f){return /(^|\/)\.github\/workflows\/[^\/]+\.ya?ml$/i.test(f.path||'')});
+  var wf=files.filter(function(f){return /(^|\/)\.github\/workflows\/[^\/]*apk[^\/]*\.ya?ml$/i.test(f.path||'')});
   if(!wf.length)return;
   var anyBad=false;
   el.innerHTML=wf.map(function(f){
@@ -929,7 +929,7 @@ function wfShow(){
 function updateApkCardLocal(){
   var c=document.getElementById('apkCard');if(!c)return;
   var ok=false;
-  try{ok=(typeof files!=='undefined')&&files.some(function(f){return /(^|\/)\.github\/workflows\/[^\/]+\.ya?ml$/i.test(f.path||'')})}catch(e){}
+  try{ok=(typeof files!=='undefined')&&files.some(function(f){return /(^|\/)\.github\/workflows\/[^\/]*apk[^\/]*\.ya?ml$/i.test(f.path||'')})}catch(e){}
   c.style.display=ok?'':'none';
   try{wfShow()}catch(e){}
   try{window.__apkHref=null;apkPrep()}catch(e){}

@@ -61,7 +61,7 @@ a.btn{display:grid;place-items:center;text-decoration:none}
 <script>
 (function(){
 'use strict';
-var WF='build-apk.yml',WF_PATH='.github/workflows/'+WF,WFP='';
+var WF='build-apk.yml',WF_PATH='.github/workflows/'+WF;
 var YML=[
 'name: Build APK',
 'on:',
@@ -230,29 +230,6 @@ async function build(p,v,say){
   chk();
   var cur=null;
   try{cur=await gh('GET','/repos/'+repo+'/contents/'+WF_PATH+'?ref='+encodeURIComponent(br))}catch(e){if(e.status!==404)throw e}
-  if(WFP){
-    var srcText='';
-    try{var src=await gh('GET','/repos/'+repo+'/contents/'+WFP.split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(br));if(src&&src.content)srcText=fromB64u(src.content)}catch(e){if(e.status!==404)throw e}
-    if(!srcText){try{var lw=JSON.parse(localStorage.getItem('mb_apk_wf_'+p.id)||'null');if(lw&&lw.path===WFP&&lw.text)srcText=lw.text}catch(e){}}
-    if(!srcText)return {fail:true,run:'https://github.com/'+repo,why:'Could not read your workflow file '+WFP+'. Publish the project first.'};
-    var fxs=fixWf(srcText);
-    if(fxs.blocked)return {fail:true,run:'https://github.com/'+repo+'/blob/'+br+'/'+WFP,why:fxs.blocked};
-    var curTxt='';
-    try{curTxt=cur&&cur.content?fromB64u(cur.content).replace(/\r\n?/g,'\n'):''}catch(e){}
-    if(!cur||curTxt!==fxs.text){
-      say('Adding fixes to your build workflow\u2026');
-      LOG('Using your file '+WFP+'. GitHub only runs workflows from .github/workflows, so it is copied there as '+WF,'dim');
-      fxs.notes.forEach(function(n){LOG(n,'dim')});
-      try{
-        await gh('PUT','/repos/'+repo+'/contents/'+WF_PATH,{message:'Use '+WFP+' as the build workflow (Multi Bundle)',content:b64u(fxs.text),branch:br,sha:cur?cur.sha:undefined});
-      }catch(e){
-        if(e.status===404||e.status===403)throw new Error('GitHub refused the workflow file. Sign in again in the GitHub tab so the token has the workflow permission.');
-        throw e;
-      }
-      await sleep(4000);chk();
-    }
-    cur={sha:cur?cur.sha:'',content:b64u(fxs.text)};
-  }
   var same=false;
   try{same=!!(cur&&cur.content&&fromB64u(cur.content)===YML)}catch(e){}
   var hasIn=(WF==='build-apk.yml'&&!cur);try{if(cur&&cur.content&&/app_name/.test(fromB64u(cur.content)))hasIn=true}catch(e){}
@@ -327,13 +304,13 @@ async function build(p,v,say){
 /* ---------- run page ---------- */
 var q=new URLSearchParams(location.search);
 var p={id:q.get('pid')||'',name:q.get('name')||'App',githubRepo:q.get('repo')||'',githubBranch:q.get('branch')||'main'};
-WF=q.get('wf')||'build-apk.yml';WF_PATH='.github/workflows/'+WF;WFP=q.get('wfp')||'';
+WF=q.get('wf')||'build-apk.yml';WF_PATH='.github/workflows/'+WF;
 var v={name:(q.get('aname')||p.name).trim(),id:(q.get('aid')||'').trim().toLowerCase(),ver:(q.get('ver')||'1.0.0').trim()};
 var KH='mb_apk_hist_'+p.id;
 var busy=false,lock=null,tick=null;
 
 function enc(s){return encodeURIComponent(s||'')}
-function formUrl(){return 'apkbuild.html?pid='+enc(p.id)+'&name='+enc(p.name)+'&repo='+enc(p.githubRepo)+'&branch='+enc(p.githubBranch)+(WFP?'&wfp='+enc(WFP):'')}
+function formUrl(){return 'apkbuild.html?pid='+enc(p.id)+'&name='+enc(p.name)+'&repo='+enc(p.githubRepo)+'&branch='+enc(p.githubBranch)}
 function toast(t){var el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){el.hidden=true},2600)}
 function leave(){S.stop=true;location.href='/'}
 function toForm(){S.stop=true;location.href=formUrl()}

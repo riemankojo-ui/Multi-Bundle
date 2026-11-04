@@ -96,7 +96,6 @@ function defId(repo){
 var q=new URLSearchParams(location.search);
 var p={id:q.get('pid')||'',name:q.get('name')||'App',githubRepo:q.get('repo')||'',githubBranch:q.get('branch')||'main'};
 var K='mb_apk_'+p.id,KH='mb_apk_hist_'+p.id;
-var WFP=q.get('wfp')||'';
 var saved={};try{saved=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
 
 function toast(t){var el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){el.hidden=true},2600)}
@@ -158,14 +157,13 @@ $('hist').onclick=function(e){
 function wfRow(n,f){return '<div class="hist" data-f="'+esc(f)+'"><span class="d"></span><div class="t">'+esc(n)+'<small>'+esc(f)+'</small></div><span class="mini">Build</span></div>'}
 async function loadWf(){
   var box=$('wfCard'),list=[{name:'Build APK',file:'build-apk.yml'}];
-  if(WFP){var bn=WFP.split('/').pop();list=[{name:bn.replace(/\.ya?ml$/i,''),file:bn}]}
   box.innerHTML=wfRow(list[0].name,list[0].file);
   if(!okRepo||!okTk)return;
   try{
     var d=await gh('/repos/'+p.githubRepo+'/actions/workflows?per_page=50');
     var found=(d.workflows||[]).filter(function(w){return w.state==='active'&&/^\.github\/workflows\//.test(w.path)}).map(function(w){return {name:w.name,file:w.path.split('/').pop()}});
     if(found.length){
-      if(WFP){if(!found.some(function(w){return w.file===list[0].file}))found.unshift(list[0])}else if(!found.some(function(w){var x=w.file+' '+w.name;return w.file==='build-apk.yml'||(/apk|android|build/i.test(x)&&!/aab|bundle|ios/i.test(x))}))found.unshift(list[0]);
+      if(!found.some(function(w){var x=w.file+' '+w.name;return w.file==='build-apk.yml'||(/apk|android|build/i.test(x)&&!/aab|bundle|ios/i.test(x))}))found.unshift(list[0]);
       list=found;
     }
   }catch(e){}
@@ -181,7 +179,7 @@ $('wfCard').onclick=function(e){
   if(!/^\d+(\.\d+){0,2}$/.test(v.ver)){toast('Version like 1.0.0');fV.focus();return}
   fI.value=v.id;
   try{localStorage.setItem(K,JSON.stringify(v))}catch(e2){}
-  location.href='run.html?pid='+enc(p.id)+'&name='+enc(p.name)+'&repo='+enc(p.githubRepo)+'&branch='+enc(p.githubBranch)+'&wf='+enc(row.getAttribute('data-f'))+(WFP&&row.getAttribute('data-f')===WFP.split('/').pop()?'&wfp='+enc(WFP):'')+'&aname='+enc(v.name)+'&aid='+enc(v.id)+'&ver='+enc(v.ver)+'&t='+Date.now();
+  location.href='run.html?pid='+enc(p.id)+'&name='+enc(p.name)+'&repo='+enc(p.githubRepo)+'&branch='+enc(p.githubBranch)+'&wf='+enc(row.getAttribute('data-f'))+'&aname='+enc(v.name)+'&aid='+enc(v.id)+'&ver='+enc(v.ver)+'&t='+Date.now();
 };
 loadWf();
 $('backBtn').onclick=function(){location.href='/'};

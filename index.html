@@ -845,7 +845,6 @@ async function ghHasWorkflow(p){
   try{
     var r=await fetch('https://api.github.com/repos/'+p.githubRepo+'/contents/.github/workflows?ref='+encodeURIComponent(br),{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+t}});
     if(r.ok){var d=await r.json();v=Array.isArray(d)&&d.some(function(x){return /apk[^\/]*\.ya?ml$/i.test(x.name||'')})}
-    if(!v){var r2=await fetch('https://api.github.com/repos/'+p.githubRepo+'/contents?ref='+encodeURIComponent(br),{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+t}});if(r2.ok){var d2=await r2.json();v=Array.isArray(d2)&&d2.some(function(x){return x.type==='file'&&/apk[^\/]*\.ya?ml$/i.test(x.name||'')})}}
   }catch(e){}
   __apkChk[key]={t:Date.now(),v:v};
   return v;
@@ -919,14 +918,14 @@ function wfLint(t){
 function wfShow(){
   var el=document.getElementById('apkWf'),c=document.getElementById('apkCard');
   if(!el)return;
-  var wf=files.filter(function(f){return /(^|\/)[^\/]*apk[^\/]*\.ya?ml$/i.test(f.path||'')});
+  var wf=files.filter(function(f){return /(^|\/)\.github\/workflows\/[^\/]*apk[^\/]*\.ya?ml$/i.test(f.path||'')});
   if(!wf.length)return;
   var anyBad=false;
   el.innerHTML=wf.map(function(f){
     var has=typeof f.text==='string',r=has?wfLint(f.text):null;
     if(r)anyBad=true;
     var col=r?'#ff4d5a':(has?'#2fd27a':'#6c6e78');
-    var h='<div style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:'+col+';flex:none"></span><span class="wfn" style="'+(r?'color:#ff8a93':'')+'">'+try{ok=(typeof files!=='undefined')&&files.some(function(f){return /(^|\/)\.github\/workflows\/[^\/]*apk[^\/]*\.ya?ml$/i.test(f.path||'')})}catch(e){}
+    var h='<div style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:'+col+';flex:none"></span><span class="wfn" style="'+(r?'color:#ff8a93':'')+'">'+esc(f.path.split('/').pop())+'</span></div>';
     if(r)h+='<div style="color:#ff8a93;margin:3px 0 0 13px">Line '+r.line+': '+esc(r.msg)+'</div><div style="margin:2px 0 0 13px;padding:4px 8px;border-radius:8px;background:#2a0f13;color:#ffb3b9;font-family:ui-monospace,Menlo,monospace;overflow-wrap:anywhere">'+esc(r.text)+'</div>';
     return h;
   }).join('<div style="height:6px"></div>');
@@ -958,15 +957,7 @@ async function apkPrep(){
     if(!p||!p.githubRepo)return;
     try{sessionStorage.setItem('mb_apk_tk',t);localStorage.setItem('mb_apk_tk',t)}catch(e){}
     window.__apkPid=p.id;
-    var wfp='';
-    try{
-      var lw=files.filter(function(f){return /(^|\/)[^\/]*apk[^\/]*\.ya?ml$/i.test(f.path||'')});
-      if(lw.length&&!lw.some(function(f){return /(^|\/)\.github\/workflows\/[^\/]+$/i.test(f.path||'')})){
-        wfp=lw[0].path;
-        localStorage.setItem('mb_apk_wf_'+p.id,JSON.stringify({path:wfp,text:typeof lw[0].text==='string'?lw[0].text:''}));
-      }else localStorage.removeItem('mb_apk_wf_'+p.id);
-    }catch(e){}
-    window.__apkHref='apkbuild.html?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main')+(wfp?'&wfp='+encodeURIComponent(wfp):'');
+    window.__apkHref='apkbuild.html?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
   }finally{window.__apkBusy=false}
 }
 async function openStorePage(){
@@ -995,8 +986,7 @@ async function openWorkflowPage2(){
   if(!p.githubRepo){showToast('Publish this project to GitHub first (Publish tab).','error');return}
   try{sessionStorage.setItem('mb_apk_tk',t);localStorage.setItem('mb_apk_tk',t)}catch(e){}
   window.__goingWf=true;
-  var wfp5='';try{var lw5=JSON.parse(localStorage.getItem('mb_apk_wf_'+p.id)||'null');if(lw5&&lw5.path)wfp5=lw5.path}catch(e){}
-  location.href='workflow.html?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main')+(wfp5?'&wfp='+encodeURIComponent(wfp5):'');
+  location.href='workflow.html?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name||'App')+'&repo='+encodeURIComponent(p.githubRepo)+'&branch='+encodeURIComponent(p.githubBranch||'main');
 }
 (function(){var b=document.getElementById('drawerWorkflow');if(b)b.onclick=function(){var d=document.getElementById('drawer'),k=document.getElementById('drawerBackdrop');if(d)d.classList.remove('open');if(k)k.classList.remove('open');openWorkflowPage()}})();
 function storeAsk(){

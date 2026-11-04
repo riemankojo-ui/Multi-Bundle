@@ -102,6 +102,7 @@ async function gh(method,path,body){
 }
 var q=new URLSearchParams(location.search);
 var p={id:q.get('pid')||'',name:q.get('name')||'App',repo:q.get('repo')||'',branch:q.get('branch')||'main'};
+var WFP=q.get('wfp')||'';
 var okTk=!!tk(),okRepo=!!p.repo,busy=false;
 $('pName').textContent=p.name;
 $('pRepo').textContent=p.repo||'No GitHub repo';
@@ -118,14 +119,14 @@ async function getCur(k){
 function isSame(cur,k){try{return !!(cur&&cur.content&&fromB64u(cur.content)===W[k].yml)}catch(e){return false}}
 async function check(){
   if(!okRepo||!okTk){['apk','aab'].forEach(function(k){setSt(k,'bad','Not available')});return}
-  try{var a=await getCur('apk');setSt('apk',a?'ok':'',a?'On GitHub':'Not on GitHub yet')}
+  try{var a=await getCur('apk');setSt('apk',a?'ok':'',a?'On GitHub':(WFP?'Your file: '+WFP:'Not on GitHub yet'))}
   catch(e){setSt('apk','bad','Could not check')}
   try{var b=await getCur('aab'),c=await getCur('ios');
     setSt('aab',(b||c)?'ok':'','Android '+(b?'ready':'not added')+' \u00b7 iOS '+(c?'ready':'not added'))}
   catch(e){setSt('aab','bad','Could not check')}
 }
 function go(k){
-  location.href=W[k].page+'?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name)+'&repo='+encodeURIComponent(p.repo)+'&branch='+encodeURIComponent(p.branch);
+  location.href=W[k].page+'?pid='+encodeURIComponent(p.id)+'&name='+encodeURIComponent(p.name)+'&repo='+encodeURIComponent(p.repo)+'&branch='+encodeURIComponent(p.branch)+(k==='apk'&&WFP?'&wfp='+encodeURIComponent(WFP):'');
 }
 async function pick(k){
   if(busy)return;
@@ -136,7 +137,7 @@ async function pick(k){
     var info=await gh('GET','/repos/'+p.repo);
     if(info.permissions&&info.permissions.push===false)throw new Error('Your GitHub account cannot write to '+p.repo);
     var cur=await getCur(k);
-    if(!isSame(cur,k)){
+    if(!(k==='apk'&&WFP)&&!isSame(cur,k)){
       setSt(k,'go','Adding '+W[k].file+'...');
       try{
         await gh('PUT','/repos/'+p.repo+'/contents/'+path(k),{message:'Add '+W[k].file,content:b64u(W[k].yml),branch:p.branch,sha:cur?cur.sha:undefined});

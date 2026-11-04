@@ -165,9 +165,41 @@ function defId(repo){
 var S={stop:false};
 function chk(){if(S.stop)throw new Error('stopped')}
 
+function fixBuild(s,notes){
+  var m,ind;
+  if(!/www\/index\.html/.test(s)){
+    var r1=/^([ \t]*)if \[ -f package\.json \] && grep -q '"build"' package\.json; then[ \t]*$/m;
+    if((m=r1.exec(s))){
+      ind=m[1];
+      s=s.replace(r1,function(){return ind+'if [ -f www/index.html ]; then\n'+ind+'  cp -r www/. "$RUNNER_TEMP/www/"\n'+ind+'elif [ -f package.json ] && grep -q \'"build"\' package.json; then'});
+      notes.push('Use the www folder when it has an index.html');
+    }
+  }
+  if(!/native\/patch\.py/.test(s)){
+    var r2=/^([ \t]*)if \[ -f "\$GITHUB_WORKSPACE\/FolderAccessPlugin\.java" \]; then[ \t]*$/m;
+    if((m=r2.exec(s))){
+      ind=m[1];
+      var B=[
+        'if [ -d "$GITHUB_WORKSPACE/native" ]; then',
+        '  cp -r "$GITHUB_WORKSPACE/native" native',
+        '  sed -i "s/^package .*;/package $APP_ID;/" native/*.java',
+        '  sed -i "s|com/rieman/softplayer|$(echo "$APP_ID" | tr . /)|" native/patch.py',
+        '  python3 native/patch.py',
+        '  if [ -f native/icon.py ]; then python3 native/icon.py; fi',
+        '  sed -i "s|mavenCentral()|mavenCentral()\\n        maven { url \'https://jitpack.io\' }|g" android/build.gradle',
+        '  npm install @capacitor/app@8',
+        'fi'
+      ].map(function(l){return ind+l}).join('\n');
+      s=s.replace(r2,function(x){return B+'\n'+x});
+      notes.push('Added your native plugin files to the Android project');
+    }
+  }
+  return s;
+}
 function fixWf(t){
   var notes=[],s=t.replace(/\r\n?/g,'\n'),i,L;
   if(/^[ ]*\t/m.test(s)){s=s.replace(/^([ ]*)(\t+)/gm,function(m,a,b){return a+new Array(b.length+1).join('  ')});notes.push('Replaced tab indents with spaces')}
+  s=fixBuild(s,notes);
   if(!/^[^#\n]*workflow_dispatch/m.test(s)){
     var m;
     if((m=/^(["']?on["']?):[ \t]*$/m.exec(s))){
@@ -252,7 +284,7 @@ async function build(p,v,say){
   if(!cur&&WF==='build-apk.yml'){
     say('Adding build workflow\u2026');
     try{
-      await gh('PUT','/repos/'+repo+'/contents/'+WF_PATH,{message:'Add APK build workflow',content:b64u(YML),branch:br,sha:cur?cur.sha:undefined});
+      await gh('PUT','/repos/'+repo+'/contents/'+WF_PATH,{message:'Add APK build workflow',content:b64u(fixBuild(YML,[])),branch:br,sha:cur?cur.sha:undefined});
     }catch(e){
       if(e.status===404||e.status===403)throw new Error('GitHub refused the workflow file. Sign in again in the GitHub tab so the token has the workflow permission.');
       throw e;

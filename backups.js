@@ -261,7 +261,22 @@
     var names = uniqueNames(list);
     toast('Saving ' + list.length + ' file' + (list.length === 1 ? '' : 's') + '\u2026');
     try {
-      for (var i = 0; i < list.length; i++) { download(fileBlob(list[i]), names[i]); await sleep(350); }
+            var hasDirs = list.some(function (f) { return f.path.indexOf('/') > -1; });
+      if (window.showDirectoryPicker) {
+        var root;
+        try { root = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch (e0) { state.busy = false; updateBar(p); return; }
+        var top = await root.getDirectoryHandle(safeName(p.name), { create: true });
+        for (var i = 0; i < list.length; i++) {
+          var parts = list[i].path.split('/'), dh = top;
+          for (var j = 0; j < parts.length - 1; j++) dh = await dh.getDirectoryHandle(parts[j], { create: true });
+          var fh = await dh.getFileHandle(parts[parts.length - 1], { create: true });
+          var w = await fh.createWritable(); await w.write(fileBlob(list[i])); await w.close();
+        }
+      } else if (hasDirs && await (window.showConfirm ? window.showConfirm('Phone browsers cannot create folders when saving separate files. Save one ZIP instead? It keeps all your folders.', { title: 'Keep folders', confirmText: 'Save ZIP', cancelText: 'Save flat' }) : Promise.resolve(window.confirm('Phone browsers cannot create folders for separate files. Save one ZIP instead?')))) {
+        state.busy = false; updateBar(p); runZip(p); return;
+      } else {
+        for (var i = 0; i < list.length; i++) { download(fileBlob(list[i]), names[i]); await sleep(350); }
+      }
       toast('Saved ' + list.length + ' file' + (list.length === 1 ? '' : 's'), 'success');
     } catch (e) { toast('Could not save the files', 'error'); }
     state.busy = false; updateBar(p);

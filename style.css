@@ -416,6 +416,7 @@ body.editor-full main{padding:0}
 
 /* ========== Project cards ========== */
 .project-cards{display:grid;grid-template-columns:1fr;gap:10px}
+.pc-more{width:100%;padding:12px}
 @media(min-width:600px){.project-cards{grid-template-columns:1fr 1fr}}
 .project-card{
   background:#15161a;border:1px solid var(--line);border-radius:12px;

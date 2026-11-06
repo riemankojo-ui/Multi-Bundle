@@ -123,7 +123,7 @@
   var btn = document.createElement('button');
   btn.id = 'editorSettingsBtn'; btn.className = 'editor-btn'; btn.title = 'Editor settings'; btn.setAttribute('aria-label', 'Editor settings');
   btn.innerHTML = GEAR;
-  save.parentNode.insertBefore(btn, save);
+  save.parentNode.insertBefore(btn, save.nextSibling);
 
   function row(k, t, d) {
     return '<button type="button" class="es-row" data-k="' + k + '"><span class="es-txt"><b>' + t + '</b><small>' + d + '</small></span><i class="es-sw"></i></button>';

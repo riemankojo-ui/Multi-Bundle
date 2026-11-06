@@ -303,8 +303,8 @@ main:has(#previewPage:not([hidden])){padding:6px 0 0!important}
 }
 .editor-btn span{display:none!important}
 .editor-btn:active{background:#2a2c34}
-.editor-btn.primary{background:var(--red);border-color:var(--red);color:#fff}
-.editor-btn.primary:active{background:#c81020}
+.editor-btn.primary{background:#20222a;border-color:#303139;color:#e6e6e8}
+.editor-btn.primary:active{background:#2a2c34}
 .editor-btn.active{background:#2a2c34;color:#fff}
 .editor-btn:disabled{opacity:.35;cursor:not-allowed}
 .editor-btn.small{height:32px;min-width:32px;padding:0 8px;font-size:11px}

@@ -199,7 +199,17 @@
         body: JSON.stringify({ name: safeName(p.name), mimeType: 'application/vnd.google-apps.folder' })
       });
       if (!fr.ok) throw await driveFail(fr);
-      var folder = await fr.json();
+            var folder = await fr.json();
+      var folderIds = { '': folder.id };
+      async function ensureDir(dir) {
+        if (folderIds[dir] !== undefined) return folderIds[dir];
+        var cut = dir.slice(0, -1), up = cut.lastIndexOf('/');
+        var parent = await ensureDir(up < 0 ? '' : cut.slice(0, up + 1));
+        var fr2 = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: cut.slice(up + 1), mimeType: 'application/vnd.google-apps.folder', parents: [parent] }) });
+        if (!fr2.ok) throw await driveFail(fr2);
+        folderIds[dir] = (await fr2.json()).id;
+        return folderIds[dir];
+      }
       var names = uniqueNames(list);
       for (var i = 0; i < list.length; i++) {
         toast('Uploading ' + (i + 1) + ' of ' + list.length + '\u2026');
@@ -207,7 +217,7 @@
         var b = 'mbdrive' + Date.now() + i;
         var body = new Blob([
           '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n',
-          JSON.stringify({ name: names[i], parents: [folder.id] }),
+          JSON.stringify({ name: baseName(list[i].path), parents: [await ensureDir(dirName(list[i].path))] }),
           '\r\n--' + b + '\r\nContent-Type: ' + (blob.type || 'application/octet-stream') + '\r\n\r\n',
           blob,
           '\r\n--' + b + '--'

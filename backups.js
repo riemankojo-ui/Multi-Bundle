@@ -362,7 +362,7 @@ $('bkDel').onclick = function () { runDelete(p); };
 
   function build() {
     var page = $('backupsPage'); if (!page) return false;
-    page.innerHTML = '<section class="card"><label class="eyebrow">BACKUPS</label><h1>Safe <span>Backups</span></h1><p>Tap a project to choose files, then save them as one ZIP or as separate files.</p></section><div id="bkBody"></div>';
+    page.innerHTML = '<section class="card" style="padding:10px 14px;margin-bottom:10px"><label class="eyebrow">BACKUPS</label><h1 style="font-size:20px;letter-spacing:-.4px;margin:2px 0 4px">Safe <span>Backups</span></h1><p style="font-size:12px;line-height:1.4;margin:0">Tap a project to choose files, then save them as one ZIP or as separate files.</p></section><div id="bkBody"></div>';
     return true;
   }
 

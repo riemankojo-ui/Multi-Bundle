@@ -199,7 +199,7 @@
   function close() { if (bk) { bk.remove(); bk = null; c = null; } sel = {}; view = 'main'; }
   function ic(d, col) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="' + col + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; }
   function tile(act, label, col, d, span) {
-    return '<button data-act="' + act + '" style="display:flex;align-items:center;gap:10px;padding:14px 12px;border-radius:12px;border:1px solid #2a2b32;background:#1c1d22;color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;text-align:left;' + (span ? 'grid-column:span 2;' : '') + '">' + ic(d, col) + '<span>' + label + '</span></button>';
+    return '<button data-act="' + act + '" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;border:1px solid #2a2b32;background:#1c1d22;color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-align:left;' + (span ? 'grid-column:span 2;' : '') + '">' + ic(d, col) + '<span>' + label + '</span></button>';
   }
   var ICONS = {
     file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>',
@@ -230,15 +230,14 @@
       '<div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">FILES</div><button data-act="all" style="border:0;background:transparent;color:#7ec8ff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:4px 0">Select all</button></div>' +
       '<div style="font-size:18px;font-weight:800;margin:4px 0 2px">Project files</div>' +
       '<div id="fmCount" style="font-size:12px;color:#a2a3ad;margin-bottom:10px"></div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">' +
         tile('file', 'Create text file', '#ff6b75', ICONS.file) +
         tile('folder', 'Create folder', '#7ec8ff', ICONS.folder) +
         tile('move', 'Move', '#ffd166', ICONS.move) +
         tile('del', 'Delete', '#ff6b75', ICONS.trash) +
-        tile('save', 'Save file', '#7dd68e', ICONS.save, true) +
       '</div>' +
       '<div id="fmList" style="flex:1;min-height:0;overflow-y:auto;border:1px solid #25262c;border-radius:12px;background:#101115"></div>' +
-      '<button data-act="close" style="display:block;width:100%;margin-top:10px;padding:14px;border-radius:12px;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:transparent;color:#a2a3ad">Close</button>';
+      '<button data-act="close" style="display:block;width:100%;margin-top:8px;padding:10px;border-radius:10px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:transparent;color:#a2a3ad">Close</button>';
     paintList();
   }
   function paintDest() {
@@ -304,7 +303,7 @@
     bk = document.createElement('div');
     bk.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
     c = document.createElement('div');
-    c.style.cssText = 'width:100%;max-width:560px;height:88vh;display:flex;flex-direction:column;background:#15161a;border:1px solid #2a2b32;border-radius:18px 18px 0 0;padding:16px 16px 20px;box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff';
+     c.style.cssText = 'width:100%;max-width:560px;height:97vh;display:flex;flex-direction:column;background:#15161a;border:1px solid #2a2b32;border-radius:18px 18px 0 0;padding:12px 14px 14px;box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff';
     bk.appendChild(c); document.body.appendChild(bk);
     bk.onclick = function (e) { if (e.target === bk) close(); };
     c.addEventListener('click', onTap);

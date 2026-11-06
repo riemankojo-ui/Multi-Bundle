@@ -639,9 +639,13 @@ iframe{background:#0d0e12!important}
 
 /* ========== Desktop ========== */
 @media(min-width:850px){
-  main{padding:22px}
+  main{max-width:1300px;padding:22px 28px}
   .hero{padding:30px}
   .placeholder{min-height:420px}
   iframe{height:560px}
-  .bottom{left:50%;transform:translateX(-50%);max-width:680px;border-radius:15px 15px 0 0}
+    body{padding-bottom:0;padding-left:190px}
+  .bottom{top:0;bottom:0;left:0;right:auto;width:190px;max-width:none;height:auto;transform:none;border-radius:0;border-top:0;border-right:1px solid var(--line);flex-direction:column;justify-content:flex-start;gap:4px;padding:14px 8px}
+  .bottom span{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px}
+  .bottom small{font-size:13px;letter-spacing:0}
+  #previewPage:not([hidden]){height:calc(100dvh - 90px)!important}
 }

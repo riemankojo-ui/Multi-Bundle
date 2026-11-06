@@ -404,6 +404,10 @@ html.mb-noln #editorShell .editor-gutter{display:none}
 .editor-preview-wrap{position:relative;flex:1;background:#0d0e12;display:flex;min-height:0}
 .editor-preview-wrap #editorPreviewFrame{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:0;background:#0d0e12}
 .editor-preview-wrap .preview-loader{border-radius:0}
+.editor-preview-pane.pvfull .editor-preview-bar{display:none}
+#editorPvExit{display:none;position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);right:8px;z-index:5;width:34px;height:34px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(20,21,26,.55);color:#fff;align-items:center;justify-content:center;opacity:.55;cursor:pointer;padding:0}
+#editorPvExit:active{opacity:1}
+.editor-preview-pane.pvfull #editorPvExit{display:flex}
 
 .editor-statusbar{
   display:none !important;

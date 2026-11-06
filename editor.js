@@ -971,11 +971,13 @@ window.__edPvNav=function(href){
 (function(){
   var cb=$('editorPreviewClose'),pane=$('editorPreviewPane');
   function closePv(){
+    pane.classList.remove('pvfull');
     pane.classList.remove('open');
     ta.readOnly=false;
     try{previewFrame.srcdoc=''}catch(_){}
   }
   cb.onclick=closePv;
+  (function(){var fb=$('editorPreviewFull'),ex=document.createElement('button');ex.id='editorPvExit';ex.setAttribute('aria-label','Exit full screen');ex.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>';pane.appendChild(ex);if(fb)fb.onclick=function(){pane.classList.add('pvfull')};ex.onclick=function(){pane.classList.remove('pvfull')}})();
   var tsx=0,tsy=0,tmoved=false;
 cb.addEventListener('touchstart',function(e){var t=e.touches[0];tsx=t.clientX;tsy=t.clientY;tmoved=false},{passive:true});
 cb.addEventListener('touchmove',function(e){var t=e.touches[0];if(Math.abs(t.clientX-tsx)+Math.abs(t.clientY-tsy)>10)tmoved=true},{passive:true});

@@ -645,7 +645,66 @@ function render(){
   populatePages();
 }
 
+var __liveMem={};
+function __liveShow(u){
+  var a=$('homeLive');if(!a)return;
+  if(!u){a.hidden=true;return}
+  a.href=u;a.hidden=false;
+  var t=$('homeLiveText');if(t)t.textContent=u.replace(/^https?:\/\//i,'').replace(/\/$/,'');
+}
+function __liveFromFiles(){
+  try{
+    var c=files.find(function(f){return /^CNAME$/i.test(f.path||'')&&f.text});
+    if(c){var d=c.text.trim().split(/\s+/)[0];if(/^[\w.-]+\.[a-z]{2,}$/i.test(d))return 'https://'+d}
+    var pj=files.find(function(f){return (f.path||'')==='package.json'&&f.text});
+    if(pj){var h=String(JSON.parse(pj.text).homepage||'').trim();if(/^https?:\/\/\S+$/i.test(h))return h}
+  }catch(e){}
+  return '';
+}
+async function refreshHomeLive(){
+  var id=currentProjectId;
+  if(!id){__liveShow('');return}
+  var u='';
+  try{u=localStorage.getItem('mb_live_'+id)||''}catch(e){}
+  if(!u){try{var o=JSON.parse(localStorage.getItem('mb_deploy_'+id)||'null');if(o&&o.url)u=/^https?:\/\//i.test(o.url)?o.url:'https://'+o.url}catch(e){}}
+  if(!u)u=__liveFromFiles();
+  var m=__liveMem[id];
+  if(!u&&m&&m.u)u=m.u;
+  __liveShow(u);
+  if(u||(m&&(m.busy||Date.now()-m.t<300000)))return;
+  var rec=null;
+  try{rec=(await dbGetAll()).find(function(p){return p.id===id})}catch(e){}
+  var repo=rec&&rec.githubRepo;
+  if(!repo)return;
+  m=__liveMem[id]={u:'',t:Date.now(),busy:true};
+  var found='';
+  try{
+    var r=await ghFetch('https://api.github.com/repos/'+repo);
+    if(r.ok){var d=await r.json();var h=String(d.homepage||'').trim();if(h)found=/^https?:\/\//i.test(h)?h:'https://'+h}
+    if(!found){
+      var pr=await ghFetch('https://api.github.com/repos/'+repo+'/pages');
+      if(pr.ok){var pg=await pr.json();found=pg.html_url||''}
+    }
+    if(!found){
+      var dr=await ghFetch('https://api.github.com/repos/'+repo+'/deployments?per_page=10');
+      if(dr.ok){
+        var ds=await dr.json();
+        for(var i=0;i<ds.length&&!found;i++){
+          if(!/production/i.test(ds[i].environment||''))continue;
+          var sr=await ghFetch(ds[i].statuses_url);
+          if(!sr.ok)continue;
+          var ss=await sr.json();
+          var ok=ss.find(function(s){return s.state==='success'&&s.environment_url});
+          if(ok)found=/^https?:\/\//i.test(ok.environment_url)?ok.environment_url:'https://'+ok.environment_url;
+        }
+      }
+    }
+  }catch(e){}
+  m.busy=false;m.u=found;m.t=Date.now();
+  if(found&&currentProjectId===id)__liveShow(found);
+}
 function populatePages(){
+  try{refreshHomeLive()}catch(e){}
   const sel=$('pageSelect');if(!sel)return;
   const pages=htmlPages();sel.innerHTML='';
   if(!pages.length){sel.add(new Option('No HTML pages found',''));sel.disabled=true;if($('openPageBtn'))$('openPageBtn').disabled=true;currentPagePath='';return}

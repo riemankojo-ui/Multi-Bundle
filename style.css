@@ -132,6 +132,12 @@ code{background:#101115;padding:2px 6px;border-radius:4px;font-size:12px;color:#
 .heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
 .pill{border:1px solid var(--line);background:var(--panel2);padding:6px 9px;border-radius:30px;font-size:10px;color:var(--muted);white-space:nowrap}
 .status{font-size:12px;color:var(--muted);padding:10px;background:#121317;border-radius:9px;margin-bottom:12px}
+.home-live{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;padding:10px 12px;background:#121317;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:#fff;min-width:0}
+.home-live[hidden]{display:none}
+.home-live div{min-width:0}
+.home-live small{display:block;font-size:9px;letter-spacing:1px;font-weight:800;color:var(--muted);margin-bottom:3px}
+.home-live b{display:block;font-size:13px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-live i{font-style:normal;font-size:16px;color:var(--red);flex-shrink:0}
 
 /* ========== File list ========== */
 .filelist{max-height:290px;overflow:auto}

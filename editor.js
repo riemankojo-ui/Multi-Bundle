@@ -888,7 +888,7 @@ try{
 status.textContent=currentPath+' •';
   if(typeof window.saveCurrentProject==='function'){
     try{
-      toast('Saved','success');status.textContent=currentPath+' Saved';await window.saveCurrentProject();
+      toast('Saved');status.textContent=currentPath+' Saved';await window.saveCurrentProject();
       if(typeof window.logHistory==='function'){
         window.logHistory({type:'edit',path:currentPath,note:'Edited file',text:f.text.length<300000?f.text:undefined});
       }

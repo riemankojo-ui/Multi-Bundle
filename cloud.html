@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0f">
+<title>Cloud - Multi Bundle</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#0b0c0f;--card:#14151a;--line:#25262d;--mut:#8f919b;--red:#f01424;--green:#2fd27a;--txt:#fff}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,sans-serif}
+body{background:radial-gradient(120% 50% at 0% 0%,rgba(240,20,36,.16),transparent 60%),var(--bg);background-attachment:fixed}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;background:rgba(11,12,15,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:#fff;font-size:22px;line-height:1;cursor:pointer}
+.top b{font-size:16px;letter-spacing:.3px}
+.top span{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:2px;color:var(--red)}
+.wrap{max-width:560px;margin:0 auto;padding:22px 16px calc(env(safe-area-inset-bottom,0px) + 40px)}
+.h{font-size:22px;font-weight:800;overflow-wrap:anywhere}
+.sub{font-size:12px;color:var(--mut);overflow-wrap:anywhere;margin:3px 0 20px}
+.notice{border:1px solid #5a1a20;background:#2a0f13;color:#ffb3b9;border-radius:14px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px}
+.row{display:flex;align-items:center;gap:14px;width:100%;padding:16px 18px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:#fff;font-family:inherit;text-align:left;cursor:pointer;margin-bottom:10px}
+.row:active{transform:scale(.99)}
+.row .tx{flex:1;min-width:0}
+.row b{display:block;font-size:16px;overflow-wrap:anywhere}
+.row small{display:block;font-size:12px;color:var(--mut);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .ch{font-size:24px;color:var(--red);font-weight:800}
+.box{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:14px;margin-bottom:14px}
+.box label{display:block;font-size:11px;font-weight:800;letter-spacing:1.5px;color:var(--mut);margin-bottom:8px}
+input,textarea{width:100%;background:#0f1013;border:1px solid var(--line);color:#fff;border-radius:12px;padding:12px;font-family:inherit;font-size:15px;outline:none}
+input:focus,textarea:focus{border-color:var(--red)}
+textarea{min-height:140px;resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:13px}
+.btns{display:flex;gap:10px;margin-top:10px}
+.btn{flex:1;padding:13px;border-radius:12px;border:1px solid var(--line);background:#1b1c22;color:#fff;font-weight:800;font-size:14px;font-family:inherit;cursor:pointer}
+.btn.p{background:var(--red);border-color:var(--red)}
+.btn.d{color:#ff8a93}
+.btn:disabled{opacity:.5}
+.hint{font-size:12px;line-height:1.6;color:var(--mut);margin:8px 2px 0}
+.empty{color:var(--mut);font-size:13px;text-align:center;padding:26px 0}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 40px);transform:translateX(-50%);background:#23242b;border:1px solid #34353d;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;z-index:20;max-width:90%;text-align:center}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="top"><button id="backBtn" aria-label="Back">&#8249;</button><b id="title">Cloud</b><span>DATABASE</span></div>
+<section class="wrap">
+  <div class="notice" id="notice" hidden></div>
+
+  <div id="vDbs" hidden>
+    <div class="h">Your databases</div>
+    <div class="sub" id="who"></div>
+    <div class="box">
+      <label>NEW DATABASE</label>
+      <input id="dbName" placeholder="Name, for example my-site" autocapitalize="none" autocomplete="off" maxlength="40">
+      <div class="btns"><button class="btn p" id="dbCreate">Create database</button></div>
+    </div>
+    <div id="dbList"></div>
+    <p class="hint">Each database holds text only. It is saved in the cloud under your Google account, so it appears on every device where you sign in.</p>
+  </div>
+
+  <div id="vItems" hidden>
+    <div class="h" id="curDb"></div>
+    <div class="sub" id="curCount"></div>
+    <div class="box">
+      <label id="formLabel">NEW ITEM</label>
+      <input id="itKey" placeholder="Key, for example note1" autocapitalize="none" autocomplete="off" maxlength="60">
+      <div style="height:10px"></div>
+      <textarea id="itVal" placeholder="Text"></textarea>
+      <div class="btns">
+        <button class="btn p" id="itSave">Save</button>
+        <button class="btn d" id="itDel" hidden>Delete</button>
+        <button class="btn" id="itNew" hidden>New</button>
+      </div>
+    </div>
+    <div id="itList"></div>
+    <div class="btns" style="margin-top:18px"><button class="btn d" id="dbDrop">Delete this database</button></div>
+  </div>
+</section>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+'use strict';
+var firebaseConfig={
+  apiKey:"AIzaSyBsZ-4kET9GM99MdSpaaHbqUdaFtOFApjo",
+  authDomain:"multibundle.vercel.app",
+  projectId:"multi-bundle-app",
+  storageBucket:"multi-bundle-app.firebasestorage.app",
+  messagingSenderId:"426558428895",
+  appId:"1:426558428895:web:0f4dd87cb8afd2b3843b6a"
+};
+var MAX=900000;
+var uid='',fs=null,curDb='',editing='';
+function $(id){return document.getElementById(id)}
+function toast(t){var el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){el.hidden=true},3000)}
+function clean(s){return String(s||'').toLowerCase().replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)}
+function cleanKey(s){return String(s||'').trim().replace(/[\/\s]+/g,'_').slice(0,60)}
+function size(s){try{return new Blob([s]).size}catch(e){return s.length}}
+function dbCol(){return fs.collection('users/'+uid+'/clouddb')}
+function itCol(){return fs.collection('users/'+uid+'/clouddb/'+curDb+'/items')}
+function show(v){$('vDbs').hidden=v!=='dbs';$('vItems').hidden=v!=='items';$('title').textContent=v==='items'?curDb:'Cloud'}
+function row(title,small,fn){
+  var b=document.createElement('button');b.className='row';
+  var t=document.createElement('div');t.className='tx';
+  var a=document.createElement('b');a.textContent=title;
+  var s=document.createElement('small');s.textContent=small||'';
+  t.appendChild(a);t.appendChild(s);
+  var c=document.createElement('div');c.className='ch';c.innerHTML='&#8250;';
+  b.appendChild(t);b.appendChild(c);b.onclick=fn;return b;
+}
+async function loadDbs(){
+  var box=$('dbList');box.innerHTML='';
+  try{
+    var snap=await dbCol().get();
+    var names=[];snap.forEach(function(d){names.push(d.id)});
+    names.sort();
+    if(!names.length){var e=document.createElement('div');e.className='empty';e.textContent='No databases yet.';box.appendChild(e);return}
+    names.forEach(function(n){box.appendChild(row(n,'Tap to open',function(){openDb(n)}))});
+  }catch(e){toast(errMsg(e))}
+}
+function errMsg(e){
+  var c=e&&e.code||'';
+  if(c==='permission-denied')return 'Not allowed. Check the Firestore rules.';
+  if(c==='unavailable')return 'No connection. Try again.';
+  return (e&&e.message)||'Something went wrong';
+}
+async function createDb(){
+  var n=clean($('dbName').value);
+  if(!n){toast('Type a name first');return}
+  try{
+    await dbCol().doc(n).set({name:n,at:Date.now()},{merge:true});
+    $('dbName').value='';toast('Created');loadDbs();
+  }catch(e){toast(errMsg(e))}
+}
+async function openDb(n){
+  curDb=n;editing='';$('curDb').textContent=n;
+  resetForm();show('items');loadItems();
+}
+function resetForm(){
+  editing='';$('itKey').value='';$('itVal').value='';$('itKey').disabled=false;
+  $('formLabel').textContent='NEW ITEM';$('itDel').hidden=true;$('itNew').hidden=true;
+}
+async function loadItems(){
+  var box=$('itList');box.innerHTML='';
+  try{
+    var snap=await itCol().get();
+    var rows=[];snap.forEach(function(d){rows.push({k:d.id,v:(d.data().value||'')})});
+    rows.sort(function(a,b){return a.k<b.k?-1:1});
+    $('curCount').textContent=rows.length+(rows.length===1?' item':' items');
+    if(!rows.length){var e=document.createElement('div');e.className='empty';e.textContent='No items yet. Add one above.';box.appendChild(e);return}
+    rows.forEach(function(r){box.appendChild(row(r.k,r.v.replace(/\s+/g,' ').slice(0,80),function(){editItem(r.k,r.v)}))});
+  }catch(e){toast(errMsg(e))}
+}
+function editItem(k,v){
+  editing=k;$('itKey').value=k;$('itKey').disabled=true;$('itVal').value=v;
+  $('formLabel').textContent='EDIT ITEM';$('itDel').hidden=false;$('itNew').hidden=false;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+async function saveItem(){
+  var k=editing||cleanKey($('itKey').value),v=$('itVal').value;
+  if(!k){toast('Type a key first');return}
+  if(size(v)>MAX){toast('Too big. Max about 900 KB per item.');return}
+  $('itSave').disabled=true;
+  try{
+    await itCol().doc(k).set({value:v,at:Date.now()});
+    toast('Saved');resetForm();loadItems();
+  }catch(e){toast(errMsg(e))}
+  $('itSave').disabled=false;
+}
+async function delItem(){
+  if(!editing)return;
+  if(!confirm('Delete "'+editing+'"?'))return;
+  try{await itCol().doc(editing).delete();toast('Deleted');resetForm();loadItems()}
+  catch(e){toast(errMsg(e))}
+}
+async function dropDb(){
+  if(!confirm('Delete the database "'+curDb+'" and all its items?'))return;
+  try{
+    var snap=await itCol().get();
+    var batch=fs.batch(),n=0;
+    snap.forEach(function(d){batch.delete(d.ref);n++});
+    if(n)await batch.commit();
+    await dbCol().doc(curDb).delete();
+    toast('Database deleted');curDb='';show('dbs');loadDbs();
+  }catch(e){toast(errMsg(e))}
+}
+$('backBtn').onclick=function(){
+  if(!$('vItems').hidden){curDb='';show('dbs');loadDbs();return}
+  if(history.length>1)history.back();else location.href='/';
+};
+$('dbCreate').onclick=createDb;
+$('itSave').onclick=saveItem;
+$('itDel').onclick=delItem;
+$('itNew').onclick=resetForm;
+$('dbDrop').onclick=dropDb;
+try{
+  firebase.initializeApp(firebaseConfig);
+  fs=firebase.firestore();
+  firebase.auth().onAuthStateChanged(function(u){
+    if(!u){
+      var n=$('notice');n.hidden=false;
+      n.textContent='You are not signed in. Go back, sign in with Google on the Home tab, then open Cloud again.';
+      show('none');return;
+    }
+    uid=u.uid;$('notice').hidden=true;
+    $('who').textContent=u.email||u.displayName||'Signed in';
+    show('dbs');loadDbs();
+  });
+}catch(e){
+  var n=$('notice');n.hidden=false;n.textContent='Could not start Firebase: '+((e&&e.message)||e);
+}
+})();
+</script>
+</body>
+</html>

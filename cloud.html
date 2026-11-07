@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background:#0b0c0f">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -9,8 +9,8 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--bg:#0b0c0f;--card:#14151a;--line:#25262d;--mut:#8f919b;--red:#f01424;--green:#2fd27a;--txt:#fff}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,sans-serif}
-body{background:radial-gradient(120% 50% at 0% 0%,rgba(240,20,36,.16),transparent 60%),var(--bg);background-attachment:fixed}
-.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;background:rgba(11,12,15,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+body{background:#0b0c0f}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;background:#0b0c0f;border-bottom:1px solid var(--line)}
 .top button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:#fff;font-size:22px;line-height:1;cursor:pointer}
 .top b{font-size:16px;letter-spacing:.3px}
 .top span{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:2px;color:var(--red)}
@@ -26,6 +26,8 @@ body{background:radial-gradient(120% 50% at 0% 0%,rgba(240,20,36,.16),transparen
 .row .ch{font-size:24px;color:var(--red);font-weight:800}
 .box{border:0;background:none;border-radius:0;padding:0 0 16px;margin-bottom:16px;border-bottom:1px solid var(--line)}
 #dbCreate{flex:none;background:none;border:0;padding:8px 0;color:var(--red);font-size:15px;font-weight:800}
+#itSave,#itDel,#itNew{flex:none;background:none;border:0;padding:8px 14px 8px 0;font-size:14px;font-weight:800}
+#itSave{color:var(--red)}
 .box label{display:block;font-size:11px;font-weight:800;letter-spacing:1.5px;color:var(--mut);margin-bottom:8px}
 input,textarea{width:100%;background:#0f1013;border:1px solid var(--line);color:#fff;border-radius:12px;padding:12px;font-family:inherit;font-size:15px;outline:none}
 input:focus,textarea:focus{border-color:var(--red)}
@@ -39,6 +41,7 @@ textarea{min-height:140px;resize:vertical;font-family:ui-monospace,Menlo,monospa
 .empty{color:var(--mut);font-size:13px;text-align:center;padding:26px 0}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 40px);transform:translateX(-50%);background:#23242b;border:1px solid #34353d;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;z-index:20;max-width:90%;text-align:center}
 [hidden]{display:none!important}
+#curDb,#curCount{display:none}
 </style>
 </head>
 <body>
@@ -46,7 +49,7 @@ textarea{min-height:140px;resize:vertical;font-family:ui-monospace,Menlo,monospa
 <section class="wrap">
   <div class="notice" id="notice" hidden></div>
 
-  <div id="vDbs" hidden>
+  <div id="vDbs">
     <div class="h">Your databases</div>
     <div class="sub" id="who"></div>
     <div class="box">
@@ -67,7 +70,7 @@ textarea{min-height:140px;resize:vertical;font-family:ui-monospace,Menlo,monospa
       <div style="height:10px"></div>
       <textarea id="itVal" placeholder="Text"></textarea>
       <div class="btns">
-        <button class="btn p" id="itSave">Save</button>
+        <button class="btn p" id="itSave">Run</button>
         <button class="btn d" id="itDel" hidden>Delete</button>
         <button class="btn" id="itNew" hidden>New</button>
       </div>
@@ -112,12 +115,12 @@ function row(title,small,fn){
   b.appendChild(t);b.appendChild(c);b.onclick=fn;return b;
 }
 async function loadDbs(){
-  var box=$('dbList');box.innerHTML='';
+  var box=$('dbList');
   try{
     var snap=await dbCol().get();
     var names=[];snap.forEach(function(d){names.push(d.id)});
-    names.sort();
-    if(!names.length){var e=document.createElement('div');e.className='empty';e.textContent='No databases yet.';box.appendChild(e);return}
+    names.sort();box.innerHTML='';try{localStorage.setItem('mb_cloud_dbs',JSON.stringify(names))}catch(e){}
+    if(!names.length){return}
     names.forEach(function(n){box.appendChild(row(n,'Tap to open',function(){openDb(n)}))});
   }catch(e){toast(errMsg(e))}
 }
@@ -144,13 +147,13 @@ function resetForm(){
   $('formLabel').textContent='NEW ITEM';$('itDel').hidden=true;$('itNew').hidden=true;
 }
 async function loadItems(){
-  var box=$('itList');box.innerHTML='';
+  var box=$('itList');box.innerHTML='';try{var c1=JSON.parse(localStorage.getItem('mb_cloud_it_'+curDb)||'null');if(c1)c1.forEach(function(r){box.appendChild(row(r.k,r.v.replace(/\s+/g,' ').slice(0,80),function(){editItem(r.k,r.v)}))})}catch(e){}
   try{
     var snap=await itCol().get();
     var rows=[];snap.forEach(function(d){rows.push({k:d.id,v:(d.data().value||'')})});
-    rows.sort(function(a,b){return a.k<b.k?-1:1});
+    rows.sort(function(a,b){return a.k<b.k?-1:1});box.innerHTML='';try{localStorage.setItem('mb_cloud_it_'+curDb,JSON.stringify(rows))}catch(e){}
     $('curCount').textContent=rows.length+(rows.length===1?' item':' items');
-    if(!rows.length){var e=document.createElement('div');e.className='empty';e.textContent='No items yet. Add one above.';box.appendChild(e);return}
+    if(!rows.length){return}
     rows.forEach(function(r){box.appendChild(row(r.k,r.v.replace(/\s+/g,' ').slice(0,80),function(){editItem(r.k,r.v)}))});
   }catch(e){toast(errMsg(e))}
 }
@@ -192,6 +195,7 @@ $('backBtn').onclick=function(){
   if(history.length>1)history.back();else location.href='/';
 };
 $('dbCreate').onclick=createDb;
+try{var c0=JSON.parse(localStorage.getItem('mb_cloud_dbs')||'null');if(c0&&c0.length)c0.forEach(function(n){$('dbList').appendChild(row(n,'Tap to open',function(){openDb(n)}))})}catch(e){}
 $('itSave').onclick=saveItem;
 $('itDel').onclick=delItem;
 $('itNew').onclick=resetForm;
@@ -199,6 +203,7 @@ $('dbDrop').onclick=dropDb;
 try{
   firebase.initializeApp(firebaseConfig);
   fs=firebase.firestore();
+  try{fs.enablePersistence({synchronizeTabs:true}).catch(function(){})}catch(e){}
   firebase.auth().onAuthStateChanged(function(u){
     if(!u){
       var n=$('notice');n.hidden=false;

@@ -232,7 +232,7 @@ async function doDuplicate() {
   await finish(cp, 'new', 'Duplicated ' + n + ' file' + (n === 1 ? '' : 's'), '');
   toast('Duplicated ' + n + ' file' + (n === 1 ? '' : 's'), 'success');
 }
-function mArr(on) { var s = document.getElementById('fmMoreArr'); if (s) s.style.transform = on ? 'rotate(0deg)' : 'rotate(180deg)'; }
+function mArr(on) { var s = document.getElementById('fmMoreArr'); if (s) s.style.transform = on ? 'rotate(180deg)' : 'rotate(0deg)'; }
 function openMore(btn) {
   var old = document.getElementById('fmMore'); if (old) { old.remove(); mArr(false); return; }
   var r = btn.getBoundingClientRect();
@@ -307,7 +307,7 @@ function doCreateTxt() {
     if (!c) return;
     if (view === 'dest') { paintDest(); return; }
     c.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">FILES</div><div style="display:flex;gap:8px;align-items:center"><button data-act="more" style="border:1px solid #303139;background:#1c1d22;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px">More<svg id="fmMoreArr" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s ease;transform:rotate(180deg)"><polyline points="6 9 12 15 18 9"/></svg></button><button data-act="all" style="border:0;background:transparent;color:#7ec8ff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:4px 0">Select all</button></div></div>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">FILES</div><div style="display:flex;gap:8px;align-items:center"><button data-act="more" style="border:1px solid #303139;background:#1c1d22;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px">More<svg id="fmMoreArr" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s ease;transform:rotate(0deg)"><polyline points="6 9 12 15 18 9"/></svg></button><button data-act="all" style="border:0;background:transparent;color:#7ec8ff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:4px 0">Select all</button></div></div>' +
       '<div style="font-size:18px;font-weight:800;margin:4px 0 2px">Project files</div>' +
       '<div id="fmCount" style="font-size:12px;color:#a2a3ad;margin-bottom:10px"></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">' +

@@ -703,6 +703,7 @@
     var u=await who();if(!u||!arr)return;
     loadSig(u);
     if(window.__cpUid&&window.__cpUid!=='local'){var __em=(u.email||(u.providerData&&u.providerData[0]&&u.providerData[0].email)||'').toLowerCase();var __ck=__em?('e:'+__em):u.uid;if(window.__cpUid!==__ck)return}
+    arr=arr.filter(function(x){return !(window.__delChk&&window.__delChk[x&&x.id])});
     var db=firebase.firestore();
     for(var p of arr){
       try{
@@ -790,7 +791,7 @@
         out.push({id:m.id,name:m.name,savedAt:m.savedAt,createdAt:m.createdAt,source:m.source||undefined,githubRepo:m.githubRepo||undefined,githubBranch:m.githubBranch||undefined,files:files,history:[]});
       }
       ps.docs.forEach(function(d,i){var m=d.data();if(out[i]){if(m.logo)out[i].logo=m.logo;if(m.githubShas)out[i].githubShas=m.githubShas}});
-      window.__cloudLoadOK=true;
+      ps.docs.forEach(function(d,i){if(out[i]&&d.data().deleted)out[i].deleted=true});window.__cloudLoadOK=true;
       
       return out;
     }catch(e){return[]}

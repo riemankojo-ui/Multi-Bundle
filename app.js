@@ -135,7 +135,7 @@ async function __restoreFromCloud(){
     if(localStorage.getItem(fk)&&all.length)return false;
     window.__cloudLoadOK=false;
     const dead=__tombs();
-    const cloud=(await window.cloudProj.load()).filter(function(p){return dead.indexOf(p.id)<0});
+    const cloud=(await window.cloudProj.load()).filter(function(p){return !p.deleted&&dead.indexOf(p.id)<0});
     if(!window.__cloudLoadOK){if(!window.__restoreRetry){window.__restoreRetry=true;setTimeout(function(){window.__restoreRetry=false;__restoreFromCloud()},10000)}return false}
     let changed=false;
     for(const cp of cloud){
@@ -158,7 +158,7 @@ async function __restoreFromCloud(){
   }catch(e){return false}
 }
 window.__restoreFromCloud=__restoreFromCloud;
-async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all.filter(function(x){return x.id!==id}));const t=__tombs();if(t.indexOf(id)<0){t.push(id);__setTombs(t)}__cloudSweep()}
+async function dbDeleteProject(id){const all=await dbGetAll();await dbSetAll(all.filter(function(x){return x.id!==id}));(window.__delChk=window.__delChk||{})[id]=true;if(window.__cpLatest)window.__cpLatest=window.__cpLatest.filter(function(x){return x.id!==id});const t=__tombs();if(t.indexOf(id)<0){t.push(id);__setTombs(t)}__cloudSweep()}
 
 function serializeFiles(){return files.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob,uri:f.uri,parentId:f.parentId}})}
 function deserializeFiles(arr){return arr.map(function(f){return{path:f.path,name:f.name,size:f.size,type:f.type,text:f.text,blob:f.blob,uri:f.uri,parentId:f.parentId}})}

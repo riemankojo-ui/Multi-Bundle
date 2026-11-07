@@ -977,6 +977,7 @@ window.__edPvNav=function(href){
     try{previewFrame.srcdoc=''}catch(_){}
   }
   cb.onclick=closePv;
+  (function(){var m=document.querySelector('meta[name="theme-color"]'),old='';function col(){try{var w=previewFrame.contentWindow,d=w.document,c='';[d.body,d.documentElement].forEach(function(e){if(!c&&e){var v=w.getComputedStyle(e).backgroundColor;if(v&&v!=='rgba(0, 0, 0, 0)'&&v!=='transparent')c=v}});return c||'#0d0e12'}catch(e){return '#0d0e12'}}new MutationObserver(function(){if(!m)return;if(pane.classList.contains('pvfull')){if(!old)old=m.getAttribute('content')||'#f01424';m.setAttribute('content',col())}else if(old){m.setAttribute('content',old);old=''}}).observe(pane,{attributes:true,attributeFilter:['class']})})();
   (function(){var fb=$('editorPreviewFull'),ex=document.createElement('button');ex.id='editorPvExit';ex.setAttribute('aria-label','Exit full screen');ex.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>';pane.appendChild(ex);if(fb)fb.onclick=function(){pane.classList.add('pvfull')};ex.onclick=function(){pane.classList.remove('pvfull')}})();
   var tsx=0,tsy=0,tmoved=false;
 cb.addEventListener('touchstart',function(e){var t=e.touches[0];tsx=t.clientX;tsy=t.clientY;tmoved=false},{passive:true});

@@ -3,7 +3,7 @@
 .auth-loading header, .auth-loading main, .auth-loading .bottom { display: none !important; }
 :root{
   --bg:#101114;--panel:#191a1f;--panel2:#24252b;--line:#303139;
-  --text:#f7f7f8;--muted:#a2a3ad;--red:#f01424;--green:#5ed69a;
+  --text:#f7f7f8;--muted:#a2a3ad;--red:#CD853F;--green:#5ed69a;
   --accent:#5b8def;--accent-soft:rgba(91,141,239,.12);
   --kw:#ff7ab2;--str:#9ce27b;--num:#ffa96b;--cmt:#6a6b74;--fn:#7ec8ff;--tag:#ff7ab2;--attr:#ffd479;
 }
@@ -233,7 +233,7 @@ main:has(#previewPage:not([hidden])){padding:6px 0 0!important}
 }
 .bottom span svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .bottom small{font-size:9px;letter-spacing:.2px;font-weight:600}
-.bottom .selected{color:var(--red);background:rgba(240,20,36,.08)}
+.bottom .selected{color:var(--red);background:rgba(205,133,63,.12)}
 @media(max-width:380px){.bottom span svg{width:20px;height:20px}.bottom small{font-size:8px}}
 
 /* ========== Editor shell ========== */

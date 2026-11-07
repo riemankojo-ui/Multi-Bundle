@@ -954,10 +954,16 @@ $('editorPreviewRefresh').onclick=renderPreview;
 $('editorPreviewBtn').onclick=function(){pvOpen();$('editorPreviewPane').classList.add('open');ta.readOnly=true;ta.blur();renderPreview()};
 var pvPath='',pvHist=[];
 function pvIsHtml(p){return /\.html?$/i.test(p||'')}
+function pvIsSvg(p){return /\.svg$/i.test(p||'')}
+function pvSvgDoc(code){
+  var s=String(code||'').replace(/^\uFEFF/,'').replace(/<\?xml[\s\S]*?\?>/i,'').replace(/<!DOCTYPE[\s\S]*?>/i,'').trim();
+  var body=s?s:'<p style="font:14px system-ui;color:#666">Empty SVG file</p>';
+  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;height:100%;overflow:hidden}body{display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#e6e6ea 0% 25%,#fff 0% 50%) 50%/20px 20px}body>svg{width:100%;height:100%;max-width:100%;max-height:100%}</style></head><body>'+body+'</body></html>';
+}
 function pvPages(){return (typeof htmlPages==='function')?htmlPages():[]}
 function pvOpen(){
   pvHist=[];
-  if(pvIsHtml(currentPath)){pvPath=currentPath;return}
+  if(pvIsHtml(currentPath)||pvIsSvg(currentPath)){pvPath=currentPath;return}
   var pg=pvPages();
   var ix=pg.find(function(f){return /(^|\/)index\.html?$/i.test(f.path)})||pg[0];
   pvPath=ix?ix.path:currentPath;
@@ -971,12 +977,13 @@ function pvFill(){
   if(bk)bk.disabled=!pvHist.length;
 }
 function pvDraw(){
+  if(pvIsSvg(currentPath)){pvPath=currentPath;if(window.__mbErrClose)window.__mbErrClose()}else if(pvIsSvg(pvPath))pvOpen();
   var f=files.find(function(x){return x.path===pvPath});
   var txt=(pvPath===currentPath||!f||f.text==null)?ta.value:f.text;
   pvFill();
   var cf=files.find(function(x){return x.path===currentPath}),keep,swap=false;
   if(cf&&cf.text!=null&&ta.value!==cf.text){keep=cf.text;cf.text=ta.value;swap=true}
-  try{previewFrame.srcdoc=(typeof htmlRewrite==='function')?htmlRewrite(txt,pvPath||currentPath):txt}
+  try{previewFrame.srcdoc=pvIsSvg(pvPath)?pvSvgDoc(txt):((typeof htmlRewrite==='function')?htmlRewrite(txt,pvPath||currentPath):txt)}
   finally{if(swap)cf.text=keep}
 }
 function pvGo(p,push){
@@ -1007,7 +1014,7 @@ cb.addEventListener('touchmove',function(e){var t=e.touches[0];if(Math.abs(t.cli
 cb.addEventListener('touchend',function(e){e.preventDefault();if(!tmoved)closePv()},{passive:false});
 })();
 ta.addEventListener('input',function(){
-  if(/\.html?$/i.test(currentPath)){
+  if(/\.(html?|svg)$/i.test(currentPath)){
     clearTimeout(window.__pvT);
     // Wait 1.5 seconds after you stop typing to refresh the preview
     window.__pvT=setTimeout(function(){

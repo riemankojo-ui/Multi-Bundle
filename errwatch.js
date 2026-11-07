@@ -268,6 +268,7 @@
     return { ok: false, why: 'I could not fix this automatically (' + ((syntaxErr(String(src).replace(/\r\n?/g, '\n')) || {}).message || 'unknown problem') + '). Open the file and check that spot.' };
   }
   window.__mbFixJs = fixJs;
+  window.__mbErrClose = close;
 
 
   /* ---------- More menu: Create TXT, Fix Error, Copy all ---------- */

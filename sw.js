@@ -5,7 +5,7 @@ const ASSETS=['/','/index.html','/style.css','/app.js','/errwatch.js','/editor.j
 {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(function(c){return Promise.all(ASSETS.map(function(url){return c.add(url).catch(function(){})}))}));
-});
+};
 self.addEventListener('activate',function(e){
   e.waitUntil(caches.keys().then(function(keys){return Promise.all(keys.filter(function(k){return k!==CACHE}).map(function(k){return caches.delete(k)}))}).then(function(){return self.clients.claim()}));
 });

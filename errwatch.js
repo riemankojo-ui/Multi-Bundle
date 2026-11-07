@@ -209,6 +209,15 @@
     var line = s.slice(0, r.extra).split('\n').length;
     return { text: s.slice(0, ls) + ind + add + '\n' + s.slice(ls), note: 'added ' + add.length + ' missing bracket' + (add.length === 1 ? '' : 's') + ' (' + add + ') before line ' + line };
   }
+  /* Candidate 0: a stray "." (or similar) left after a closing bracket on the error line, like "}." */
+  function fixStray(s, line) {
+    if (!line) return null;
+    var ls = lineStart(s, line); if (ls < 0) return null;
+    var le = s.indexOf('\n', ls); if (le < 0) le = s.length;
+    var m = s.slice(ls, le).match(/^(\s*[)\]}][)\]};,]*)\.\s*$/);
+    if (!m) return null;
+    return { text: s.slice(0, ls) + m[1] + s.slice(le), note: 'removed a stray "." on line ' + line };
+  }
   function score(s) { var r = scan(s); return r.open.length + (r.extra >= 0 ? 1 : 0); }
 
   /* Candidate 3: missing closing brackets at the end */
@@ -243,7 +252,7 @@
     for (round = 0; round < 12; round++) {
       c = round === 0 && errLine ? fixLeftover(s, errLine) : null;
       if (!c) {
-        cl = [fixInsert(s), fixExtra(s), fixMissing(s), fixDuplicateFn(s)]; best = null; bs = 1e9;
+        cl = [fixStray(s, errLine), fixInsert(s), fixExtra(s), fixMissing(s), fixDuplicateFn(s)]; best = null; bs = 1e9;
         for (k = 0; k < cl.length; k++) {
           if (!cl[k]) continue;
           if (!syntaxErr(cl[k].text)) { best = cl[k]; break; }
@@ -256,7 +265,7 @@
       s = c.text; cur = score(s); notes.push(c.note);
       if (!syntaxErr(s)) return { ok: true, text: s, notes: notes };
     }
-    return { ok: false, why: 'I could not find a safe automatic fix. Open the file and check the red line.' };
+    return { ok: false, why: 'I could not fix this automatically (' + ((syntaxErr(String(src).replace(/\r\n?/g, '\n')) || {}).message || 'unknown problem') + '). Open the file and check that spot.' };
   }
   window.__mbFixJs = fixJs;
 
@@ -287,16 +296,120 @@
     }).join('\n\n');
     try { navigator.clipboard.writeText(txt); toast('Copied', 'success'); } catch (x) {}
   }
+  /* Fix an inline <script> inside an .html file: find the script that holds the error line and repair only that part */
+  function fixHtml(text, line) {
+    var t = String(text).replace(/\r\n?/g, '\n'), ls = lineStart(t, line || 1);
+    if (ls < 0) return { ok: false, why: 'Could not find line ' + line + '.' };
+    var tag = t.lastIndexOf('<script', ls + 1); if (tag < 0) return { ok: false, why: 'The error line is not inside a script.' };
+    var open = t.indexOf('>', tag) + 1, end = t.indexOf('</script>', open);
+    if (end < 0 || ls > end) return { ok: false, why: 'The error line is not inside a script.' };
+    if (/\bsrc\s*=/i.test(t.slice(tag, open))) return { ok: false, why: 'The error line is not inside a script.' };
+    var rel = (t.slice(open, Math.max(ls, open)).match(/\n/g) || []).length + 1;
+    var r = fixJs(t.slice(open, end), rel);
+    if (!r.ok) return r;
+    return { ok: true, text: t.slice(0, open) + r.text + t.slice(end), notes: r.notes };
+  }
+  /* Inline classic scripts of an html text: [{open, end}] */
+  function jsBlocks(t) {
+    var out = [], re = /<script\b([^>]*)>/gi, m, open, end, ty;
+    while ((m = re.exec(t))) {
+      open = m.index + m[0].length; end = t.indexOf('</script>', open); if (end < 0) end = t.length;
+      re.lastIndex = end;
+      if (/\bsrc\s*=/i.test(m[1])) continue;
+      ty = m[1].match(/\btype\s*=\s*["']?([^"'\s>]+)/i);
+      if (ty && !/javascript|ecmascript/i.test(ty[1])) continue;
+      if (!t.slice(open, end).trim()) continue;
+      out.push({ open: open, end: end });
+    }
+    return out;
+  }
+  function blockLine(t, bl, errs) {
+    var k, ls, tl = t.lastIndexOf('\n', bl.open - 1) + 1;
+    for (k = 0; k < errs.length; k++) {
+      ls = lineStart(t, errs[k].line);
+      if (ls >= tl && ls <= bl.end) return ls < bl.open ? 1 : (t.slice(bl.open, ls).match(/\n/g) || []).length + 1;
+    }
+    return 0;
+  }
+  /* Check EVERY .js file and every inline script of every .html file. Fix what can be fixed, explain the rest. */
+  function fixAll(fl, curText, entries) {
+    var fixed = [], stuck = [], out = [], seen = {};
+    fl.forEach(function (f) {
+      if (!f || f.text == null || !/\.(js|html?)$/i.test(f.path)) return;
+      var before = curText(f), t = String(before).replace(/\r\n?/g, '\n'), name = base(f.path), changed = false, r, b, bl, blk, tag;
+      var errs = entries.filter(function (e) { return e.path === f.path && e.line; });
+      if (/\.js$/i.test(f.path)) {
+        if (/^\s*(import|export)\s/m.test(t) || !syntaxErr(t)) return;
+        seen[f.path] = 1;
+        r = fixJs(t, errs.length ? errs[0].line : 0);
+        if (r.ok) { t = r.text; changed = true; fixed.push(name + ': ' + r.notes.join(', ')); } else stuck.push(name + ': ' + r.why);
+      } else {
+        bl = jsBlocks(t);
+        for (b = bl.length - 1; b >= 0; b--) {
+          blk = t.slice(bl[b].open, bl[b].end);
+          if (/^\s*(import|export)\s/m.test(blk) || !syntaxErr(blk)) continue;
+          seen[f.path] = 1; tag = name + ' (script ' + (b + 1) + ' of ' + bl.length + ')';
+          r = fixJs(blk, blockLine(t, bl[b], errs));
+          if (r.ok) { t = t.slice(0, bl[b].open) + r.text + t.slice(bl[b].end); changed = true; fixed.push(tag + ': ' + r.notes.join(', ')); }
+          else stuck.push(tag + ': ' + r.why);
+        }
+      }
+      if (changed) out.push({ f: f, text: t, before: before });
+    });
+    entries.forEach(function (e) {
+      if (e.path && seen[e.path]) return;
+      stuck.push((e.path ? base(e.path) + (e.line ? ' line ' + e.line : '') + ': ' : '') + e.msg + ' - ' + (e.plain || 'The cause is not clear. Check the code at that spot.') + ' This is not a typing mistake, so I cannot fix it automatically.');
+    });
+    return { fixed: fixed, stuck: stuck, files: out };
+  }
+  function showReport(fixed, stuck) {
+    var old = $('mbFixRep'); if (old) old.remove();
+    var ov = document.createElement('div'); ov.id = 'mbFixRep';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:470;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;padding:12px';
+    function rows(a) { return a.map(function (x) { return '<div style="font-size:13px;line-height:1.5;padding:7px 0;border-top:1px solid #2a2b32;overflow-wrap:anywhere">' + esc(x) + '</div>'; }).join(''); }
+    function head(t, c) { return '<div style="font-size:11px;font-weight:800;letter-spacing:1px;color:' + c + ';margin:10px 0 2px">' + t + '</div>'; }
+    var h = '<div style="width:100%;max-width:520px;max-height:75vh;overflow:auto;background:#17181c;border:1px solid #2e2f36;border-radius:16px;padding:14px;color:#fff;font-family:system-ui,sans-serif;box-shadow:0 14px 40px rgba(0,0,0,.55)">' +
+      '<div style="font-size:15px;font-weight:800">Fix Error result</div>';
+    if (fixed.length) h += head('FIXED (' + fixed.length + ')', '#7dd68e') + rows(fixed);
+    if (stuck.length) h += head('COULD NOT FIX (' + stuck.length + ')', '#ffd166') + rows(stuck);
+    if (!fixed.length && !stuck.length) h += '<div style="font-size:13px;padding:8px 0">No problems found in any .js file or script.</div>';
+    if (fixed.length) h += '<div style="font-size:12px;color:#a2a3ad;margin-top:10px">Run the preview again to check.</div>';
+    h += '<button id="mbFixRepX" style="width:100%;margin-top:12px;padding:11px;border-radius:10px;border:1px solid #303139;background:#20222a;color:#fff;font-size:14px;font-weight:700;font-family:inherit">OK</button></div>';
+    ov.innerHTML = h; document.body.appendChild(ov);
+    ov.onclick = function (e) { if (e.target === ov || e.target.id === 'mbFixRepX') ov.remove(); };
+  }
   async function doFix() {
+    var fl = (typeof files !== 'undefined' && files) ? files : [];
+    var sel = $('editorFileSelect'), ta = $('editorTextarea');
+    var res = fixAll(fl, function (f) { return (sel && ta && sel.value === f.path) ? ta.value : f.text; }, list.slice());
+    var last = '', k, f, reopen = false;
+    for (k = 0; k < res.files.length; k++) {
+      f = res.files[k].f;
+      try { localStorage.setItem('mb_prefix_' + f.path, res.files[k].before); } catch (x) {}
+      f.text = res.files[k].text; f.blob = null; f.size = f.text.length;
+      try { if (typeof currentProjectId !== 'undefined') localStorage.removeItem('mb_draft_' + currentProjectId + '_' + f.path); } catch (x) {}
+      if (f.uri && window.FolderAccess && FolderAccess.available) { try { await FolderAccess.saveFile(f, f.text); } catch (x) {} }
+      if (sel && sel.value === f.path) reopen = true;
+      last = f.path;
+    }
+    close();
+    if (res.files.length) {
+      if (reopen && window.__edOpenFile) { try { window.__edOpenFile(sel.value); } catch (x) {} }
+      try { if (typeof window.saveCurrentProject === 'function') await window.saveCurrentProject(); } catch (x) {}
+      try { if (typeof window.logHistory === 'function') window.logHistory({ type: 'edit', path: last, note: 'Fix Error: ' + res.fixed.join('; ') }); } catch (x) {}
+    }
+    showReport(res.fixed, res.stuck);
+  }
+  async function doFixOld() {
     var todo = [], seenP = {};
-    list.forEach(function (e) { if (e.path && /\.js$/i.test(e.path) && !seenP[e.path]) { seenP[e.path] = 1; todo.push(e); } });
-    if (!todo.length) { toast('Fix Error works on errors inside a .js file', 'error'); return; }
+    list.forEach(function (e) { if (e.path && /\.(js|html?)$/i.test(e.path) && !seenP[e.path]) { seenP[e.path] = 1; todo.push(e); } });
+    if (!todo.length) { toast('Fix Error works on errors inside a .js or .html file', 'error'); return; }
     var fl = (typeof files !== 'undefined' && files) ? files : [];
     var sel = $('editorFileSelect'), ta = $('editorTextarea'), done = [], fails = [], last = '', fixedFiles = [];
     todo.forEach(function (e) {
       var f = fl.find(function (x) { return x.path === e.path; }); if (!f || f.text == null) return;
       var cur = (sel && ta && sel.value === e.path) ? ta.value : f.text;
-      var r = fixJs(cur, e.line);
+      var r = /\.html?$/i.test(e.path) ? fixHtml(cur, e.line) : fixJs(cur, e.line);
       if (!r.ok) { fails.push(base(e.path) + ': ' + r.why); return; }
       try { localStorage.setItem('mb_prefix_' + e.path, cur); } catch (x) {}
       f.text = r.text; f.blob = null; f.size = r.text.length; fixedFiles.push(f);

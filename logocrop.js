@@ -129,7 +129,19 @@
       '#lcRoot .lc-lab{flex:0 0 52px;align-self:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#8b8c96}',
       '#lcRoot .lc-act{display:flex;gap:8px;padding:8px 10px 10px;border-top:1px solid #25262c}',
       '#lcRoot .lc-act button{flex:1;padding:12px}',
-      '#lcRoot .lc-act .lc-save{background:#f01424;border-color:#f01424;color:#fff}'
+      '#lcRoot .lc-act .lc-save{background:#CD853F;border-color:#CD853F;color:#fff}',
+      '#lcRoot .lc-act{justify-content:center;padding:6px 10px 8px}',
+      '#lcRoot .lc-act button{flex:0 0 auto;min-width:110px;padding:7px 20px;font-size:13px}',
+      '#lcRoot .lc-box{border-width:1px}',
+      '#lcRoot .lc-c{width:16px;height:16px}',
+      '#lcRoot .lc-c.tl{left:-1px;top:-1px;border-left-width:2px;border-top-width:2px}',
+      '#lcRoot .lc-c.tr{right:-1px;top:-1px;border-right-width:2px;border-top-width:2px}',
+      '#lcRoot .lc-c.bl{left:-1px;bottom:-1px;border-left-width:2px;border-bottom-width:2px}',
+      '#lcRoot .lc-c.br{right:-1px;bottom:-1px;border-right-width:2px;border-bottom-width:2px}',
+      '#lcRoot .lc-e.t{top:-1px;height:2px}',
+      '#lcRoot .lc-e.b{bottom:-1px;height:2px}',
+      '#lcRoot .lc-e.l{left:-1px;width:2px}',
+      '#lcRoot .lc-e.r{right:-1px;width:2px}'
     ].join('\n');
     document.head.appendChild(st);
   }
@@ -150,7 +162,7 @@
       '<div class="lc-row" id="lcShape"><span class="lc-lab">SHAPE</span></div>' +
       '<div class="lc-row" id="lcSize"><span class="lc-lab">SIZE</span></div>' +
       '<div class="lc-row" id="lcTools"><span class="lc-lab">TOOLS</span></div>' +
-      '<div class="lc-act"><button id="lcRep" type="button">Replace</button><button id="lcCopy" type="button" class="lc-save">Save copy</button></div>';
+      '<div class="lc-act"><button id="lcRep" type="button" hidden>Replace</button><button id="lcCopy" type="button" class="lc-save">Save</button></div>';
     root.querySelector('.lc-title').textContent = f.path;
     document.body.appendChild(root);
 
@@ -320,7 +332,7 @@
         }
       });
     }
-    copy.onclick = function () { save(false); };
+    copy.onclick = function () { save(true); };
     rep.onclick = function () { save(true); };
     $('lcX').onclick = close;
     if (f.text != null && typeof openCode === 'function') {

@@ -12,7 +12,7 @@ html { background-color: #0d0e12 !important; }
 body{
   margin:0;background-color:#0d0e12;color:var(--text);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-  padding-bottom:92px;
+  padding-bottom:72px;
 }
 button{cursor:pointer}
 main{max-width:1200px;margin:auto;padding:16px}
@@ -219,9 +219,9 @@ main:has(#previewPage:not([hidden])){padding:6px 0 0!important}
 
 /* ========== Bottom nav ========== */
 .bottom{
-  position:fixed;bottom:0;left:0;right:0;height:78px;background:#17181c;
+  position:fixed;bottom:0;left:0;right:0;height:60px;background:#17181c;
   border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:stretch;
-  z-index:5;padding:4px 2px calc(4px + env(safe-area-inset-bottom,0px));
+  z-index:5;padding:2px 2px calc(2px + env(safe-area-inset-bottom,0px));
 }
 .bottom span{
   min-width:0;flex:1;border:0;background:none;color:#858691;
@@ -231,7 +231,7 @@ main:has(#previewPage:not([hidden])){padding:6px 0 0!important}
   -webkit-tap-highlight-color: transparent; 
   transform: none !important; 
 }
-.bottom span svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bottom span svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .bottom small{font-size:9px;letter-spacing:.2px;font-weight:600}
 .bottom .selected{color:var(--red);background:rgba(205,133,63,.12)}
 @media(max-width:380px){.bottom span svg{width:20px;height:20px}.bottom small{font-size:8px}}

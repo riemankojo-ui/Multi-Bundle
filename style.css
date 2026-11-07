@@ -216,6 +216,10 @@ main:has(#previewPage:not([hidden])){padding:6px 0 0!important}
 #previewPage .btn{padding:6px 10px!important;font-size:12px!important;white-space:nowrap}
 #previewPage #refreshBtn2{flex:none;border:1px solid var(--line);background:#101115;color:#fff;border-radius:8px;padding:4px 10px;font-size:16px;line-height:1.2}
 #previewPage #frame{min-height:0!important}
+body.editor-full #editorPage #editorShell.fullscreen{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:0!important;border:0!important;border-radius:0!important}
+html:has(#editorPage:not([hidden])),body:has(#editorPage:not([hidden])){overflow:hidden!important;padding-bottom:0!important}
+main:has(#editorPage:not([hidden])){padding:8px 12px!important}
+body:not(.kb-open) #editorPage:not([hidden]) .editor-shell:not(.fullscreen){height:calc(100dvh - 120px)!important;min-height:0!important}
 
 /* ========== Bottom nav ========== */
 .bottom{

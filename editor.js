@@ -689,6 +689,7 @@ async function cutMatch(){
 var __p=ta.selectionStart,__v0=ta.value,__s0=__p>0?__v0.lastIndexOf('\n',__p-1)+1:0,__e0=__v0.indexOf('\n',__p);__e0=__e0<0?__v0.length:__e0+1;if(__e0===__v0.length&&__s0>0&&__v0.charAt(__s0-1)==='\n')__s0--;
 window.__edSkipRestore=Date.now()+1500;ta.value=__v0.slice(0,__s0)+__v0.slice(__e0);edited();toast('Deleted line','success');return}
     s=matches[matchIndex];e=s+(matchLens[matchIndex]||0);
+{var __v=ta.value,__ls=s>0?__v.lastIndexOf('\n',s-1)+1:0,__le=__v.indexOf('\n',e);if(__le<0)__le=__v.length;if(__ls===s&&__le===e){if(e<__v.length)e=e+1;else if(s>0)s=s-1;}}
 {var __v=ta.value,__ls=s>0?__v.lastIndexOf('\n',s-1)+1:0,__le=__v.indexOf('\n',e>s?e-1:e);if(__le<0)__le=__v.length;s=__ls;e=__le<__v.length?__le+1:__le;if(e===__v.length&&s>0)s=s-1;}
   }
   const piece=ta.value.slice(s,e);
@@ -955,7 +956,10 @@ function pvDraw(){
   var f=files.find(function(x){return x.path===pvPath});
   var txt=(pvPath===currentPath||!f||f.text==null)?ta.value:f.text;
   pvFill();
-  previewFrame.srcdoc=(typeof htmlRewrite==='function')?htmlRewrite(txt,pvPath||currentPath):txt;
+  var cf=files.find(function(x){return x.path===currentPath}),keep,swap=false;
+  if(cf&&cf.text!=null&&ta.value!==cf.text){keep=cf.text;cf.text=ta.value;swap=true}
+  try{previewFrame.srcdoc=(typeof htmlRewrite==='function')?htmlRewrite(txt,pvPath||currentPath):txt}
+  finally{if(swap)cf.text=keep}
 }
 function pvGo(p,push){
   if(!p)return;

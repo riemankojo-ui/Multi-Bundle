@@ -832,6 +832,42 @@
 <script src="errwatch.js"></script>
 <script src="editor.js"></script>
 <script src="edtools.js"></script>
+<script>
+(function(){
+var sel=document.getElementById('editorFileSelect');
+if(!sel)return;
+var st=document.createElement('style');
+st.textContent='#mbFileSheetBd{display:none;position:fixed;left:0;right:0;top:0;bottom:0;z-index:10000;background:#17181c}#mbFileSheetBd.open{display:flex}#mbFileSheet{position:relative;width:100%;height:100%;overflow-y:auto;background:#17181c;border-top:1px solid #2c2d34;padding-bottom:env(safe-area-inset-bottom,0px)}#mbFileSheet button{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;font-weight:600;color:#e6e6e8;background:transparent;border:0;border-bottom:1px solid #25262c;border-radius:0;font-family:inherit}#mbFileSheet button.on{background:#2a2c34;color:#f5d76e}';
+document.head.appendChild(st);
+var bd=document.createElement('div');bd.id='mbFileSheetBd';
+var sh=document.createElement('div');sh.id='mbFileSheet';
+bd.appendChild(sh);document.body.appendChild(bd);
+function close(){bd.classList.remove('open')}
+function open(){
+  sh.innerHTML='';
+  var cur=sel.value,curEl=null;
+  for(var i=0;i<sel.options.length;i++){(function(o){
+    if(!o.value)return;
+    var b=document.createElement('button');b.type='button';b.textContent=o.text;
+    if(o.value===cur){b.className='on';curEl=b}
+    b.onclick=function(){close();if(sel.value!==o.value){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}};
+    sh.appendChild(b);
+  })(sel.options[i])}
+  var tbr=document.querySelector('.editor-toolbar'),nv=document.querySelector('.bottom');
+  var tt=tbr?tbr.getBoundingClientRect().bottom:0;
+  var nb=(nv&&nv.offsetHeight)?nv.getBoundingClientRect().top:window.innerHeight;
+  bd.style.top=tt+'px';bd.style.bottom=(window.innerHeight-nb)+'px';
+  bd.classList.add('open');
+  if(curEl)sh.scrollTop=curEl.offsetTop-sh.clientHeight/2+curEl.offsetHeight/2;
+}
+sel.addEventListener('mousedown',function(e){e.preventDefault()});
+sel.addEventListener('click',function(e){e.preventDefault();if(bd.classList.contains('open'))close();else open()});
+var tbEl=document.querySelector('.editor-toolbar');
+if(tbEl)tbEl.addEventListener('click',function(e){if(e.target!==sel)close()});
+bd.addEventListener('click',function(e){if(e.target===bd)close()});
+})();
+</script>
+<script src="bundlebtn.js"></script>
 <script src="bundlebtn.js"></script>
 <script src="settings.js"></script>
 <script src="publish.js"></script>

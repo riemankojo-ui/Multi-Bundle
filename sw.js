@@ -1,6 +1,6 @@
 /* Multi Bundle Service Worker — v8 */
 const CACHE='multibundle-v216';
-const ASSETS=['/','/index.html','/style.css','/app.js','/errwatch.js','/editor.js','/settings.js','/publish.js','/sync.js','/backups.js','/edtools.js','/manifest.json','/logo.png','/apkbuild.html','/run.html','/store-android.html','/store-ios.html','/workflow.html','/cloud.html','/topbar.js'];
+const ASSETS=['/','/index.html','/style.css','/app.js','/errwatch.js','/editor.js','/settings.js','/publish.js','/sync.js','/backups.js','/edtools.js','/bundlebtn.js','/manifest.json','/logo.png','/apkbuild.html','/run.html','/store-android.html','/store-ios.html','/workflow.html','/cloud.html','/topbar.js'];
 
 {
   self.skipWaiting();

@@ -239,7 +239,7 @@ async function renderProjectCards(){
       '<button class="pc-btn danger" data-act="delete" title="Delete">×</button>'+
       '</div></div>';
   }).join('');
-    if(all.length>__projShown){const mb=document.createElement('button');mb.className='btn secondary pc-more';mb.textContent='More ('+(all.length-__projShown)+' left)';mb.onclick=function(){__projShown+=6;renderProjectCards()};box.appendChild(mb)}
+    if(all.length>__projShown){const mb=document.createElement('button');mb.className='btn secondary pc-more';mb.textContent='More';mb.onclick=function(){__projShown+=6;renderProjectCards()};box.appendChild(mb)}
   box.querySelectorAll('.project-card').forEach(function(card){
     const id=card.dataset.id;
     card.querySelectorAll('.pc-btn').forEach(function(btn){
@@ -550,7 +550,7 @@ async function showGithubLoggedIn(user){
   if($('ghLogin'))$('ghLogin').textContent='@'+user.login;await loadRepoList();
 }
 
-let ghRepos=[];
+let ghRepos=[];var __repoShown=6;
 async function loadRepoList(){
   const list=$('ghRepoList');if(!list)return;
   list.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px;text-align:center">Loading repos…</div>';
@@ -566,15 +566,16 @@ async function loadRepoList(){
 }
 function renderRepoList(){
   const list=$('ghRepoList');if(!list)return;
-  const q=($('ghRepoSearch').value||'').toLowerCase();const filtered=q?ghRepos.filter(function(r){return r.full_name.toLowerCase().indexOf(q)!==-1}):ghRepos;
+  const q=($('ghRepoSearch').value||'').toLowerCase();const filtered=q?ghRepos.filter(function(r){return r.full_name.toLowerCase().indexOf(q)!==-1}):ghRepos;const shownList=q?filtered:filtered.slice(0,__repoShown);
   if(!filtered.length){list.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px;text-align:center">No repos found.</div>';return}
-  list.innerHTML=filtered.map(function(r){
+  list.innerHTML=shownList.map(function(r){
     return '<div class="gh-repo" data-full="'+esc(r.full_name)+'" data-branch="'+esc(r.default_branch||'main')+'">'+
       '<div class="gh-repo-info"><div class="gh-repo-name">'+esc(r.name)+'</div><div class="gh-repo-meta">'+esc(r.owner.login)+' · '+(r.language||'—')+' · '+r.stargazers_count+' stars</div></div>'+
       (r.private?'<span class="gh-badge private">Private</span>':'<span class="gh-badge">Public</span>')+
     '</div>';
   }).join('');
   list.querySelectorAll('.gh-repo').forEach(function(el){el.onclick=function(){importRepo(el.dataset.full,el.dataset.branch)}});
+  if(!q&&filtered.length>__repoShown){const mb=document.createElement('button');mb.className='btn secondary pc-more';mb.style.marginTop='10px';mb.textContent='More';mb.onclick=function(){__repoShown+=6;renderRepoList()};list.appendChild(mb)}
 }
 
 async function importRepo(fullName,branch,isPublic){
@@ -895,13 +896,14 @@ function setUpdatesTab(mode){
 }
 window.setUpdatesTab=setUpdatesTab;
 
+var __ghUpShown=6;
 async function renderUpdatesList(){
   const all=await dbGetAll();
   if(window.__updatesMode==='github'){
     const g=all.filter(function(p){return p.source==='github'});if($('updatesGithubCount'))$('updatesGithubCount').textContent=g.length;
     const box=$('updatesGithubList');if(!box)return;
     if(!g.length){box.innerHTML='<div class="pc-empty">No GitHub projects yet.<br>Import one from the GitHub tab.</div>';return}
-    box.innerHTML=g.map(function(p){
+    box.innerHTML=g.slice(0,__ghUpShown).map(function(p){
       const edits=countDrafts(p);
       const badge=edits?'<span class="up-badge">'+edits+' draft'+(edits===1?'':'s')+'</span>':'<span class="up-badge clean">Clean</span>';
       return '<div class="updates-proj" data-id="'+esc(p.id)+'">'+
@@ -909,6 +911,7 @@ async function renderUpdatesList(){
         '<div class="up-info"><div class="up-name">'+esc(p.name)+'</div><div class="up-meta">'+esc(p.githubRepo||'')+' · '+esc(p.githubBranch||'main')+'</div></div>'+badge+'</div>';
     }).join('');
     box.querySelectorAll('.updates-proj').forEach(function(el){el.onclick=function(){openUpdatesDetail(el.dataset.id,'github')}});
+    if(g.length>__ghUpShown){const mb=document.createElement('button');mb.className='btn secondary pc-more';mb.textContent='More';mb.onclick=function(){__ghUpShown+=6;renderUpdatesList()};box.appendChild(mb)}
   }else{
     if($('updatesLocalCount'))$('updatesLocalCount').textContent=all.length;
     const box=$('updatesLocalList');if(!box)return;

@@ -840,10 +840,17 @@ if(!sel)return;
 var st=document.createElement('style');
 st.textContent='#mbFileSheetBd{display:none;position:fixed;left:0;right:0;top:0;bottom:0;z-index:10000;background:#17181c}#mbFileSheetBd.open{display:flex}#mbFileSheet{position:relative;width:100%;height:100%;overflow-y:auto;background:#17181c;border-top:1px solid #2c2d34;padding-bottom:env(safe-area-inset-bottom,0px)}#mbFileSheet button{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;font-weight:600;color:#e6e6e8;background:transparent;border:0;border-bottom:1px solid #25262c;border-radius:0;font-family:inherit}#mbFileSheet button.on{background:#2a2c34;color:#f5d76e}';
 document.head.appendChild(st);
+var row=sel.parentNode;
+var cs=document.createElement('style');cs.textContent='#editorFileSelect{-webkit-appearance:none;appearance:none;padding-right:34px!important}#mbSelArr{position:absolute;pointer-events:none;color:#e6e6e8;display:flex;transition:transform .2s ease}';document.head.appendChild(cs);
+var arr=document.createElement('span');arr.id='mbSelArr';arr.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+row.appendChild(arr);
+function pl(){var r=sel.getBoundingClientRect(),q=row.getBoundingClientRect();arr.style.left=(r.right-q.left-30)+'px';arr.style.top=(r.top-q.top+(r.height-16)/2)+'px'}
+pl();window.addEventListener('resize',pl);if(window.ResizeObserver)new ResizeObserver(pl).observe(sel);setTimeout(pl,300);
+function turn(on){arr.style.transform=on?'rotate(180deg)':'rotate(0deg)'}
 var bd=document.createElement('div');bd.id='mbFileSheetBd';
 var sh=document.createElement('div');sh.id='mbFileSheet';
 bd.appendChild(sh);document.body.appendChild(bd);
-function close(){bd.classList.remove('open')}
+function close(){bd.classList.remove('open');turn(false)}
 function open(){
   sh.innerHTML='';
   var cur=sel.value,curEl=null;
@@ -858,7 +865,7 @@ function open(){
   var tt=tbr?tbr.getBoundingClientRect().bottom:0;
   var nb=(nv&&nv.offsetHeight)?nv.getBoundingClientRect().top:window.innerHeight;
   bd.style.top=tt+'px';bd.style.bottom=(window.innerHeight-nb)+'px';
-  bd.classList.add('open');
+  bd.classList.add('open');turn(true);
   if(curEl)sh.scrollTop=curEl.offsetTop-sh.clientHeight/2+curEl.offsetHeight/2;
 var ta0=document.getElementById('editorTextarea');if(ta0)ta0.blur();window.__edSkipRestore=Date.now()+1500;
 }

@@ -232,8 +232,9 @@ async function doDuplicate() {
   await finish(cp, 'new', 'Duplicated ' + n + ' file' + (n === 1 ? '' : 's'), '');
   toast('Duplicated ' + n + ' file' + (n === 1 ? '' : 's'), 'success');
 }
+function mArr(on) { var s = document.getElementById('fmMoreArr'); if (s) s.style.transform = on ? 'rotate(0deg)' : 'rotate(-90deg)'; }
 function openMore(btn) {
-  var old = document.getElementById('fmMore'); if (old) { old.remove(); return; }
+  var old = document.getElementById('fmMore'); if (old) { old.remove(); mArr(false); return; }
   var r = btn.getBoundingClientRect();
   var ov = document.createElement('div'); ov.id = 'fmMore';
   ov.style.cssText = 'position:fixed;inset:0;z-index:450';
@@ -249,10 +250,10 @@ function openMore(btn) {
     return '<button data-m="' + it[0] + '" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 10px;border:0;border-radius:10px;background:transparent;color:#f0f0f2;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left">' + ic(it[2], it[3]) + '<span>' + it[1] + '</span></button>';
   }).join('') + '<div style="padding:6px 10px 4px;font-size:11px;color:#8f919b">Uses selected files, or all if none selected.</div>';
   ov.appendChild(card); document.body.appendChild(ov);
-  ov.onclick = function (e) { if (e.target === ov) ov.remove(); };
+  mArr(true); ov.onclick = function (e) { if (e.target === ov) { ov.remove(); mArr(false); } };
   var ACT = { txt: doCreateTxt, zip: doZip, list: doCopyList, dup: doDuplicate };
   card.querySelectorAll('[data-m]').forEach(function (b) {
-    b.onclick = function () { ov.remove(); ACT[b.getAttribute('data-m')](); };
+    b.onclick = function () { ov.remove(); mArr(false); ACT[b.getAttribute('data-m')](); };
   });
 }
 /* ---------- the big card ---------- */
@@ -306,7 +307,7 @@ function doCreateTxt() {
     if (!c) return;
     if (view === 'dest') { paintDest(); return; }
     c.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">FILES</div><div style="display:flex;gap:8px;align-items:center"><button data-act="more" style="border:1px solid #303139;background:#1c1d22;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">More</button><button data-act="all" style="border:0;background:transparent;color:#7ec8ff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:4px 0">Select all</button></div></div>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">FILES</div><div style="display:flex;gap:8px;align-items:center"><button data-act="more" style="border:1px solid #303139;background:#1c1d22;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px">More<svg id="fmMoreArr" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s ease;transform:rotate(-90deg)"><polyline points="6 9 12 15 18 9"/></svg></button>><button data-act="all" style="border:0;background:transparent;color:#7ec8ff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:4px 0">Select all</button></div></div>' +
       '<div style="font-size:18px;font-weight:800;margin:4px 0 2px">Project files</div>' +
       '<div id="fmCount" style="font-size:12px;color:#a2a3ad;margin-bottom:10px"></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">' +

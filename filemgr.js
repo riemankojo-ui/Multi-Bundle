@@ -194,7 +194,68 @@
     toast('Moved to ' + (dest ? dest.slice(0, -1) : 'project root'), 'success');
   }
 
-  /* ---------- the big card ---------- */
+  function chosenFiles() { var s = selFiles(); return s.length ? s : files.slice(); }
+function dlBlob(blob, name) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+}
+function projSafe() { return (typeof currentProjectName === 'function' ? currentProjectName() : 'project').replace(/[^\w\-]+/g, '_'); }
+async function doZip() {
+  if (!window.JSZip) { toast('ZIP tool did not load. Refresh and try again.', 'error'); return; }
+  syncCurrent();
+  var list = chosenFiles(), z = new JSZip();
+  list.forEach(function (f) { z.file(f.path, f.blob || f.text || ''); });
+  dlBlob(await z.generateAsync({ type: 'blob', compression: 'DEFLATE' }), projSafe() + '.zip');
+  toast('ZIP ready: ' + list.length + ' file' + (list.length === 1 ? '' : 's'), 'success');
+}
+function doCopyList() {
+  var list = chosenFiles();
+  try { navigator.clipboard.writeText(list.map(function (f) { return f.path; }).join('\n')); toast('Copied ' + list.length + ' file name' + (list.length === 1 ? '' : 's'), 'success'); }
+  catch (e) { toast('Could not copy', 'error'); }
+}
+async function doDuplicate() {
+  var list = selFiles();
+  if (!list.length) { toast('Select files first', 'error'); return; }
+  syncCurrent();
+  list.forEach(function (f) {
+    var dot = f.path.lastIndexOf('.'), sl = f.path.lastIndexOf('/');
+    var b = dot > sl ? f.path.slice(0, dot) : f.path, ex = dot > sl ? f.path.slice(dot) : '';
+    var np = b + '-copy' + ex, i = 2;
+    while (files.some(function (x) { return x.path === np; })) np = b + '-copy' + (i++) + ex;
+    files.push({ path: np, name: np.split('/').pop(), size: f.size, type: f.type, blob: f.blob, text: f.text });
+  });
+  files.sort(function (a, b) { return a.path.localeCompare(b.path); });
+  var n = list.length, cp = curPath();
+  close();
+  await finish(cp, 'new', 'Duplicated ' + n + ' file' + (n === 1 ? '' : 's'), '');
+  toast('Duplicated ' + n + ' file' + (n === 1 ? '' : 's'), 'success');
+}
+function openMore(btn) {
+  var old = document.getElementById('fmMore'); if (old) { old.remove(); return; }
+  var r = btn.getBoundingClientRect();
+  var ov = document.createElement('div'); ov.id = 'fmMore';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:450';
+  var card = document.createElement('div');
+  card.style.cssText = 'position:absolute;top:' + (r.bottom + 6) + 'px;right:12px;width:230px;background:#1c1d22;border:1px solid #2e2f36;border-radius:14px;padding:6px;box-shadow:0 14px 40px rgba(0,0,0,.55);font-family:system-ui,sans-serif;color:#fff';
+  var items = [
+    ['txt', 'Download TXT', '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>', '#7dd68e'],
+    ['zip', 'Download ZIP', '<path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/>', '#ffd166'],
+    ['list', 'Copy file list', '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', '#7ec8ff'],
+    ['dup', 'Duplicate', '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10"/>', '#ff6b75']
+  ];
+  card.innerHTML = items.map(function (it) {
+    return '<button data-m="' + it[0] + '" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 10px;border:0;border-radius:10px;background:transparent;color:#f0f0f2;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left">' + ic(it[2], it[3]) + '<span>' + it[1] + '</span></button>';
+  }).join('') + '<div style="padding:6px 10px 4px;font-size:11px;color:#8f919b">Uses selected files, or all if none selected.</div>';
+  ov.appendChild(card); document.body.appendChild(ov);
+  ov.onclick = function (e) { if (e.target === ov) ov.remove(); };
+  var ACT = { txt: doCreateTxt, zip: doZip, list: doCopyList, dup: doDuplicate };
+  card.querySelectorAll('[data-m]').forEach(function (b) {
+    b.onclick = function () { ov.remove(); ACT[b.getAttribute('data-m')](); };
+  });
+}
+/* ---------- the big card ---------- */
 function doCreateTxt() {
   syncCurrent();
   var pick = selFiles().filter(function (f) { return f.text != null; });
@@ -245,7 +306,7 @@ function doCreateTxt() {
     if (!c) return;
     if (view === 'dest') { paintDest(); return; }
     c.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">FILES</div><button data-act="all" style="border:0;background:transparent;color:#7ec8ff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:4px 0">Select all</button></div>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">FILES</div><div style="display:flex;gap:8px;align-items:center"><button data-act="more" style="border:1px solid #303139;background:#1c1d22;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">More</button><button data-act="all" style="border:0;background:transparent;color:#7ec8ff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:4px 0">Select all</button></div></div>' +
       '<div style="font-size:18px;font-weight:800;margin:4px 0 2px">Project files</div>' +
       '<div id="fmCount" style="font-size:12px;color:#a2a3ad;margin-bottom:10px"></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">' +
@@ -288,7 +349,7 @@ function doCreateTxt() {
     if (a) {
       var act = a.getAttribute('data-act');
       if (act === 'close') close();
-      else if (act === 'txt') doCreateTxt(); else if (act === 'file') doCreateFile();
+      else if (act === 'txt') doCreateTxt(); else if (act === 'more') openMore(a); else if (act === 'file') doCreateFile();
       else if (act === 'folder') doCreateFolder();
       else if (act === 'del') doDelete();
       else if (act === 'save') { close(); $('editorSaveBtn').click(); }

@@ -20,6 +20,7 @@ async function pick(p,cur){
   try{if(sv&&!sv.disabled){sv.click();await new Promise(function(r){setTimeout(r,300)})}}catch(e){}
   try{if(typeof window.saveCurrentProject==='function')await window.saveCurrentProject()}catch(e){}
   if(typeof cardEdit==='function')await cardEdit(p.id);
+  if(typeof window.__edReloadCurrent==='function')window.__edReloadCurrent([]);
 }
 async function open(){
   var fs=document.getElementById('mbFileSheetBd');if(fs)fs.classList.remove('open');

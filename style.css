@@ -240,8 +240,8 @@ main:has(#previewPage:not([hidden])){padding:6px 0 0!important}
 .editor-shell{
   position:relative;
   display:flex;flex-direction:column;
-  background:var(--panel);border:1px solid var(--line);border-radius:12px;
-  overflow:hidden;height:calc(100dvh - 155px);min-height:420px;
+  background:var(--panel);border:1px solid var(--line);border-radius:0;
+  overflow:hidden;height:calc(100dvh - 118px);min-height:420px;
 }
 
 /* ========== Editor toolbar ========== */
@@ -255,7 +255,7 @@ main:has(#previewPage:not([hidden])){padding:6px 0 0!important}
   align-items:center;
   background:#1a1b20;
   padding:6px;
-  border-radius:10px;
+  border-radius:0;
   border:1px solid #2a2b32;
   box-shadow:0 4px 10px rgba(0,0,0,0.2);
 }

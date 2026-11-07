@@ -195,6 +195,24 @@
   }
 
   /* ---------- the big card ---------- */
+function doCreateTxt() {
+  syncCurrent();
+  var pick = selFiles().filter(function (f) { return f.text != null; });
+  if (!pick.length) pick = files.filter(function (f) { return f.text != null; });
+  if (!pick.length) { toast('No text files to bundle', 'error'); return; }
+  var nm = (typeof currentProjectName === 'function' ? currentProjectName() : 'project');
+  var out = 'Multi Bundle Export\nProject: ' + nm + '\nFiles: ' + pick.length +
+    '\nExported: ' + new Date().toISOString() + '\n' + '='.repeat(60) + '\n\n';
+  pick.forEach(function (f) {
+    out += '\n' + '='.repeat(60) + '\nFILE: ' + f.path + '\n' + '='.repeat(60) + '\n\n' + f.text + '\n';
+  });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([out], { type: 'text/plain' }));
+  a.download = nm.replace(/[^\w\-]+/g, '_') + '.txt';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  toast('TXT created with ' + pick.length + ' file' + (pick.length === 1 ? '' : 's'), 'success');
+}
   var bk = null, c = null, view = 'main';
   function close() { if (bk) { bk.remove(); bk = null; c = null; } sel = {}; view = 'main'; }
   function ic(d, col) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="' + col + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; }
@@ -231,7 +249,7 @@
       '<div style="font-size:18px;font-weight:800;margin:4px 0 2px">Project files</div>' +
       '<div id="fmCount" style="font-size:12px;color:#a2a3ad;margin-bottom:10px"></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">' +
-        tile('file', 'Create text file', '#ff6b75', ICONS.file) +
+        tile('txt', 'Create TXT', '#ff6b75', ICONS.file) +
         tile('folder', 'Create folder', '#7ec8ff', ICONS.folder) +
         tile('move', 'Move', '#ffd166', ICONS.move) +
         tile('del', 'Delete', '#ff6b75', ICONS.trash) +
@@ -270,7 +288,7 @@
     if (a) {
       var act = a.getAttribute('data-act');
       if (act === 'close') close();
-      else if (act === 'file') doCreateFile();
+      else if (act === 'txt') doCreateTxt(); else if (act === 'file') doCreateFile();
       else if (act === 'folder') doCreateFolder();
       else if (act === 'del') doDelete();
       else if (act === 'save') { close(); $('editorSaveBtn').click(); }

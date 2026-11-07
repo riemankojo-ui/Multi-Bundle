@@ -232,7 +232,7 @@ async function doDuplicate() {
   await finish(cp, 'new', 'Duplicated ' + n + ' file' + (n === 1 ? '' : 's'), '');
   toast('Duplicated ' + n + ' file' + (n === 1 ? '' : 's'), 'success');
 }
-function mArr(on) { var s = document.getElementById('fmMoreArr'); if (s) s.style.transform = on ? ''rotate(0deg)' : 'rotate(180deg)'; }
+function mArr(on) { var s = document.getElementById('fmMoreArr'); if (s) s.style.transform = on ? 'rotate(0deg)' : 'rotate(180deg)'; }
 function openMore(btn) {
   var old = document.getElementById('fmMore'); if (old) { old.remove(); mArr(false); return; }
   var r = btn.getBoundingClientRect();

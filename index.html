@@ -838,7 +838,7 @@
 var sel=document.getElementById('editorFileSelect');
 if(!sel)return;
 var st=document.createElement('style');
-st.textContent='#mbFileSheetBd{display:none;position:fixed;left:0;right:0;top:0;bottom:0;z-index:10000;background:#17181c}#mbFileSheetBd.open{display:flex}#mbFileSheet{position:relative;width:100%;height:100%;overflow-y:auto;background:#17181c;border-top:1px solid #2c2d34;padding-bottom:env(safe-area-inset-bottom,0px)}#mbFileSheet button{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;font-weight:600;color:#e6e6e8;background:transparent;border:0;border-bottom:1px solid #25262c;border-radius:0;font-family:inherit}#mbFileSheet button.on{background:#2a2c34;color:#f5d76e}';
+st.textContent='#mbFileSheetBd{display:none;position:fixed;left:0;right:0;top:0;bottom:0;z-index:10000;background:#17181c}#mbFileSheetBd.open{display:flex}#mbFileSheet{position:relative;width:100%;height:100%;overflow-y:auto;background:#17181c;border-top:1px solid #2c2d34;padding-bottom:env(safe-area-inset-bottom,0px)}#mbFileSheet button{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13px;font-weight:600;color:#e6e6e8;background:transparent;border:0;border-bottom:1px solid #25262c;border-radius:0;font-family:inherit}#mbFileSheet button.on{background:#2a2c34;color:#f5d76e}#mbFileSheet .mbf-bar{position:sticky;top:0;z-index:2;display:flex;gap:8px;padding:10px 12px;background:#17181c;border-bottom:1px solid #2c2d34}#mbFileSheet .mbf-bar button{display:inline-flex;align-items:center;gap:7px;width:auto;padding:9px 14px;border:1px solid #303139;border-radius:10px;background:#20222a;font-size:13px;font-weight:700;text-align:center}#mbFileSheet .mbf-bar button.on{background:#2a2c34;color:#f5d76e;border-color:#6b5a1a}#mbFileSheet .mbf-empty{padding:16px 14px;font-size:13px;color:#8b8c96}#mbFileSheet .mbf-sub{display:block;font-size:11px;color:#8b8c96;font-weight:500;margin-top:2px}';
 document.head.appendChild(st);
 var row=sel.parentNode;
 var cs=document.createElement('style');cs.textContent='#editorFileSelect{-webkit-appearance:none;appearance:none;padding-right:34px!important}#mbSelArr{position:absolute;pointer-events:none;color:#e6e6e8;display:flex;transition:transform .2s ease}';document.head.appendChild(cs);
@@ -851,10 +851,57 @@ var bd=document.createElement('div');bd.id='mbFileSheetBd';
 var sh=document.createElement('div');sh.id='mbFileSheet';
 bd.appendChild(sh);document.body.appendChild(bd);
 function close(){bd.classList.remove('open');turn(false)}
-function open(){
+var mode='all';
+function isLogo(p){var b=String(p).split('/').pop();return /\.(png|svg)$/i.test(b)||/logo/i.test(b)}
+function bar(){
+  var d=document.createElement('div');d.className='mbf-bar';
+  var ic='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+  [['all','All files'],['logos',ic+'<span>Logos</span>']].forEach(function(m){
+    var b=document.createElement('button');b.type='button';b.innerHTML=m[1];if(mode===m[0])b.className='on';
+    b.onclick=function(){mode=m[0];open(true)};
+    d.appendChild(b);
+  });
+  sh.appendChild(d);
+}
+function viewImg(f){
+  var old=document.getElementById('mbImgView');if(old)old.remove();
+  var u='';try{u=URL.createObjectURL(typeof fileBlob==='function'?fileBlob(f):f.blob)}catch(e){}
+  var ov=document.createElement('div');ov.id='mbImgView';
+  ov.style.cssText='position:fixed;inset:0;z-index:10010;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;font-family:system-ui,sans-serif;color:#fff';
+  var cap=document.createElement('div');cap.textContent=f.path;cap.style.cssText='font-size:13px;font-weight:700;text-align:center;overflow-wrap:anywhere';
+  var box=document.createElement('div');box.style.cssText='max-width:100%;max-height:70%;display:flex;border-radius:12px;overflow:hidden;background:repeating-conic-gradient(#e6e6ea 0% 25%,#fff 0% 50%) 50%/20px 20px';
+  var im=document.createElement('img');im.src=u;im.style.cssText='max-width:100%;max-height:100%;object-fit:contain';
+  im.onerror=function(){box.style.background='#2b1d1d';box.style.padding='16px';box.textContent='This file cannot be shown as an image.'};
+  box.appendChild(im);
+  var x=document.createElement('button');x.type='button';x.textContent='Close';x.style.cssText='padding:10px 28px;border-radius:10px;border:1px solid #303139;background:#20222a;color:#fff;font-size:14px;font-weight:700;font-family:inherit';
+  function done(){ov.remove();if(u)URL.revokeObjectURL(u)}
+  x.onclick=done;ov.onclick=function(e){if(e.target===ov)done()};
+  ov.appendChild(cap);ov.appendChild(box);ov.appendChild(x);document.body.appendChild(ov);
+}
+function logoList(){
+  var fl=(typeof files!=='undefined'&&files)?files:[],list=fl.filter(function(f){return f&&isLogo(f.path)});
+  list.sort(function(a,b){return a.path.localeCompare(b.path)});
+  if(!list.length){var em=document.createElement('div');em.className='mbf-empty';em.textContent='No logo files found (png, svg or a file named logo).';sh.appendChild(em);return}
+  list.forEach(function(f){
+    var b=document.createElement('button');b.type='button';
+    var t=document.createElement('span');t.textContent=f.path;
+    var s=document.createElement('span');s.className='mbf-sub';s.textContent=f.text!=null?'Opens in the editor':'Image - tap to view';
+    b.appendChild(t);b.appendChild(s);
+    b.onclick=function(){
+      close();
+      if(f.text!=null){window.__edSkipRestore=Date.now()+1500;if(sel.value!==f.path){sel.value=f.path;sel.dispatchEvent(new Event('change',{bubbles:true}))}}
+      else viewImg(f);
+    };
+    sh.appendChild(b);
+  });
+}
+function open(keep){
+  if(!keep)mode='all';
   sh.innerHTML='';
+  bar();
   var cur=sel.value,curEl=null;
-  for(var i=0;i<sel.options.length;i++){(function(o){
+  if(mode==='logos')logoList();
+  else for(var i=0;i<sel.options.length;i++){(function(o){
     if(!o.value)return;
     var b=document.createElement('button');b.type='button';b.textContent=o.text;
     if(o.value===cur){b.className='on';curEl=b}

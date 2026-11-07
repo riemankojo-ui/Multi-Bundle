@@ -242,7 +242,7 @@ function openMore(btn) {
   card.style.cssText = 'position:absolute;top:' + (r.bottom + 6) + 'px;right:12px;width:230px;background:#1c1d22;border:1px solid #2e2f36;border-radius:14px;padding:6px;box-shadow:0 14px 40px rgba(0,0,0,.55);font-family:system-ui,sans-serif;color:#fff';
   var items = [
     ['txt', 'Download TXT', '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>', '#7dd68e'],
-    ['zip', 'Download ZIP', '<path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/>', '#ffd166'],
+    ['zip', 'Download ZIP', '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M10 2v2M12 4v2M10 6v2"/><rect x="9" y="12" width="4" height="6" rx="1"/>', '#ffd166'],
     ['list', 'Copy file list', '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', '#7ec8ff'],
     ['dup', 'Duplicate', '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10"/>', '#ff6b75']
   ];

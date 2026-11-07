@@ -81,7 +81,7 @@
   /* Build one problem entry from a report sent by the preview page */
   function entryOf(d) {
     var kind = d.kind;
-    var e = { kind: kind, title: '', msg: String(d.msg || '').replace(/^Uncaught\s+/, ''), where: '', code: '', plain: '', path: '', line: 0, key: '' };
+    var e = { kind: kind, title: '', msg: String(d.msg || '').replace(/^Uncaught\s+/, ''), where: '', code: '', raw: '', plain: '', path: '', line: 0, col: d.col || 0, key: '' };
     if (kind === 'load') {
       var u = String(d.url || '').replace(/^https?:\/\/[^/]+\//, '').replace(/^about:srcdoc\/?/, '');
       e.title = 'FILE NOT LOADED';
@@ -101,7 +101,8 @@
         var a = Math.max(1, loc.line - 1), b = Math.min(loc.lines.length, loc.line + 1);
         for (var n = a; n <= b; n++) {
           var tx = loc.lines[n - 1] || ''; if (tx.length > 160) tx = tx.slice(0, 160) + '\u2026';
-          e.code += '<span' + (n === loc.line ? ' class="bad"' : '') + '>' + pad(n) + '  ' + esc(tx) + '</span>';
+          e.raw += pad(n) + '  ' + tx + '\n';
+        e.code += '<span' + (n === loc.line ? ' class="bad"' : '') + '>' + pad(n) + '  ' + esc(tx) + '</span>';
         }
       } else if (d.line) {
         e.line = d.line;
@@ -115,6 +116,201 @@
     return e;
   }
   window.__mbErrEntry = entryOf;
+
+  /* ---------- Fix Error: repairs missing brackets, extra brackets, leftover old code and duplicate functions ---------- */
+  function syntaxErr(code) { try { new Function(code); return null; } catch (e) { return e; } }
+
+  /* Walk the code, skipping strings, comments, regex and template text. Returns open brackets left over and the first extra closer. */
+  function scan(s, stopEmpty) {
+    var st = [], i = 0, n = s.length, c, prev = '', closedAt = -1, pairs = { ')': '(', ']': '[', '}': '{' }, extra = -1, tpl = [];
+    function skipStr(q) { i++; while (i < n && s[i] !== q) { if (s[i] === '\\') i++; if (s[i] === '\n' && q !== '`') break; i++; } }
+    while (i < n) {
+      c = s[i];
+      if (c === '/' && s[i + 1] === '/') { while (i < n && s[i] !== '\n') i++; continue; }
+      if (c === '/' && s[i + 1] === '*') { var e = s.indexOf('*/', i + 2); i = e < 0 ? n : e + 2; continue; }
+      if (c === '"' || c === "'") { skipStr(c); i++; prev = 'a'; continue; }
+      if (c === '`') {
+        i++;
+        while (i < n && s[i] !== '`') {
+          if (s[i] === '\\') { i += 2; continue; }
+          if (s[i] === '$' && s[i + 1] === '{') { st.push({ ch: '{', at: i + 1, tpl: 1 }); i += 2; break; }
+          i++;
+        }
+        if (s[i] === '`') { i++; prev = 'a'; }
+        continue;
+      }
+      if (c === '/' && (prev === '' || '(,=:[!&|?{};+-*%<>~^'.indexOf(prev) > -1)) {
+        i++; var cls = false;
+        while (i < n && s[i] !== '\n') { if (s[i] === '\\') { i += 2; continue; } if (s[i] === '[') cls = true; else if (s[i] === ']') cls = false; else if (s[i] === '/' && !cls) break; i++; }
+        i++; prev = 'a'; continue;
+      }
+      if (c === '(' || c === '[' || c === '{') { st.push({ ch: c, at: i }); prev = c; i++; continue; }
+      if (c === ')' || c === ']' || c === '}') {
+        if (!st.length || st[st.length - 1].ch !== pairs[c]) { if (extra < 0) extra = i; i++; prev = c; continue; }
+        var top = st.pop(); i++;
+        if (stopEmpty && !st.length) { closedAt = i - 1; break; }
+        if (top.tpl) {
+          /* back inside a template string after ${ ... } */
+          while (i < n && s[i] !== '`') {
+            if (s[i] === '\\') { i += 2; continue; }
+            if (s[i] === '$' && s[i + 1] === '{') { st.push({ ch: '{', at: i + 1, tpl: 1 }); i += 2; break; }
+            i++;
+          }
+          if (s[i] === '`') i++;
+          prev = 'a';
+        } else prev = c;
+        continue;
+      }
+      if (!/\s/.test(c)) prev = /[\w$]/.test(c) ? 'a' : c;
+      i++;
+    }
+    return { open: st, extra: extra, closedAt: closedAt };
+  }
+
+  function matchClose(s, openIdx) {
+    var r = scan(s.slice(openIdx), true);
+    return r.closedAt < 0 ? -1 : openIdx + r.closedAt;
+  }
+
+  function lineStart(s, line) { var p = 0; for (var k = 1; k < line; k++) { p = s.indexOf('\n', p); if (p < 0) return -1; p++; } return p; }
+
+  /* Candidate 1: "}(name, el) {" or "}() {" - the old function body left behind after only the header was replaced */
+  function fixLeftover(s, line) {
+    var ls = lineStart(s, line); if (ls < 0) return null;
+    var le = s.indexOf('\n', ls); if (le < 0) le = s.length;
+    var ln = s.slice(ls, le);
+    var m = ln.match(/^(\s*\})\s*(?:[\w$]+\s*)?\([^()]*\)\s*\{\s*$/);
+    if (!m || /^\s*\}\s*catch\b/.test(ln)) return null;
+    var ob = ls + ln.lastIndexOf('{'), cb = matchClose(s, ob);
+    if (cb < 0) return null;
+    var after = s.slice(cb + 1).replace(/^[ \t]*\n?/, '\n');
+    return { text: s.slice(0, ls) + m[1] + after, note: 'removed leftover old code after line ' + line };
+  }
+
+  /* Candidate 2: stray closing bracket */
+  function fixExtra(s) {
+    var r = scan(s); if (r.extra < 0) return null;
+    var a = r.extra, ls = s.lastIndexOf('\n', a) + 1, le = s.indexOf('\n', a); if (le < 0) le = s.length;
+    var ln = s.slice(ls, le);
+    var line = s.slice(0, a).split('\n').length;
+    if (/^\s*[)\]}][;,]?\s*$/.test(ln)) return { text: s.slice(0, ls) + s.slice(le + 1), note: 'removed an extra bracket on line ' + line };
+    return { text: s.slice(0, a) + s.slice(a + 1), note: 'removed an extra bracket on line ' + line };
+  }
+
+  /* Candidate 3: missing closing brackets at the end */
+  function fixMissing(s) {
+    var r = scan(s); if (!r.open.length || r.extra >= 0) return null;
+    var map = { '(': ')', '[': ']', '{': '}' }, add = '', k;
+    for (k = r.open.length - 1; k >= 0; k--) add += (r.open[k].tpl ? '}' : map[r.open[k].ch]);
+    var tail = s.replace(/\s+$/, '');
+    var nl = '';
+    for (k = r.open.length - 1; k >= 0; k--) nl += map[r.open[k].ch] === '}' ? '}\n' : map[r.open[k].ch];
+    return { text: tail + '\n' + nl.replace(/\n$/, '') + '\n', note: 'added ' + r.open.length + ' missing closing bracket' + (r.open.length === 1 ? '' : 's') + ' at the end (if the file was cut off, the missing code is NOT restored)' };
+  }
+
+  /* Candidate 4: the same function written twice. The last one wins in JavaScript, so the earlier copy is removed. */
+  function fixDuplicateFn(s) {
+    var re = /^([ \t]*)(?:async\s+)?function\s*\*?\s*([\w$]+)\s*\(/gm, seen = {}, m, list = [];
+    while ((m = re.exec(s))) { (seen[m[2]] = seen[m[2]] || []).push(m.index); }
+    var name = Object.keys(seen).filter(function (k) { return seen[k].length > 1; })[0];
+    if (!name) return null;
+    var at = seen[name][0], ob = s.indexOf('{', s.indexOf(')', at)); if (ob < 0) return null;
+    var cb = matchClose(s, ob); if (cb < 0) return null;
+    var end = s.indexOf('\n', cb); end = end < 0 ? s.length : end + 1;
+    return { text: s.slice(0, at) + s.slice(end), note: 'removed the first copy of duplicate function ' + name };
+  }
+
+  /* Returns { ok, text, notes } or { ok:false, why } */
+  function fixJs(src, errLine) {
+    var s = String(src).replace(/\r\n?/g, '\n');
+    if (/^\s*(import|export)\s/m.test(s)) return { ok: false, why: 'This file uses import/export, so it cannot be checked safely.' };
+    if (!syntaxErr(s)) return { ok: false, why: 'No syntax problem found in this file.' };
+    var notes = [], round, c;
+    for (round = 0; round < 8; round++) {
+      c = (round === 0 && errLine ? fixLeftover(s, errLine) : null) || fixExtra(s) || fixMissing(s) || fixDuplicateFn(s);
+      if (!c) break;
+      s = c.text; notes.push(c.note);
+      if (!syntaxErr(s)) return { ok: true, text: s, notes: notes };
+    }
+    return { ok: false, why: 'I could not find a safe automatic fix. Open the file and check the red line.' };
+  }
+  window.__mbFixJs = fixJs;
+
+
+  /* ---------- More menu: Create TXT, Fix Error, Copy all ---------- */
+  function toast(m, t) { if (window.showToast) window.showToast(m, t); }
+  function reportText() {
+    var nm = (typeof currentProjectName === 'function' ? currentProjectName() : 'project');
+    var out = 'Multi Bundle Error Report\nProject: ' + nm + '\nTime: ' + new Date().toISOString() + '\nProblems: ' + list.length + '\n';
+    list.forEach(function (e, i) {
+      out += '\n' + '='.repeat(40) + '\n' + (i + 1) + '. ' + e.title + '\n' + e.msg + '\n' +
+        (e.where ? plainText(e.where) + '\n' : '') + (e.raw ? '\n' + e.raw : '') + (e.plain ? '\n' + e.plain + '\n' : '');
+    });
+    return out;
+  }
+  function doTxt() {
+    var nm = (typeof currentProjectName === 'function' ? currentProjectName() : 'project');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([reportText()], { type: 'text/plain' }));
+    a.download = String(nm).replace(/[^\w\-]+/g, '_') + '-errors.txt';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+    toast('Error report saved as TXT', 'success');
+  }
+  function doCopy() {
+    var txt = list.map(function (e, i) {
+      return (list.length > 1 ? (i + 1) + '. ' : '') + e.title + '\n' + e.msg + (e.where ? '\n' + plainText(e.where) : '') + (e.plain ? '\n' + e.plain : '');
+    }).join('\n\n');
+    try { navigator.clipboard.writeText(txt); toast('Copied', 'success'); } catch (x) {}
+  }
+  async function doFix() {
+    var todo = [], seenP = {};
+    list.forEach(function (e) { if (e.path && /\.js$/i.test(e.path) && !seenP[e.path]) { seenP[e.path] = 1; todo.push(e); } });
+    if (!todo.length) { toast('Fix Error works on errors inside a .js file', 'error'); return; }
+    var fl = (typeof files !== 'undefined' && files) ? files : [];
+    var sel = $('editorFileSelect'), ta = $('editorTextarea'), done = [], fails = [], last = '';
+    todo.forEach(function (e) {
+      var f = fl.find(function (x) { return x.path === e.path; }); if (!f || f.text == null) return;
+      var cur = (sel && ta && sel.value === e.path) ? ta.value : f.text;
+      var r = fixJs(cur, e.line);
+      if (!r.ok) { fails.push(base(e.path) + ': ' + r.why); return; }
+      try { localStorage.setItem('mb_prefix_' + e.path, cur); } catch (x) {}
+      f.text = r.text; f.size = r.text.length;
+      try { if (typeof currentProjectId !== 'undefined') localStorage.removeItem('mb_draft_' + currentProjectId + '_' + e.path); } catch (x) {}
+      done.push(base(e.path) + ': ' + r.notes.join(', ')); last = e.path;
+    });
+    if (!done.length) { toast(fails[0] || 'Nothing to fix', 'error'); return; }
+    close();
+    if (last && window.__edOpenFile && sel && sel.value === last) { try { window.__edOpenFile(last); } catch (x) {} }
+    try { if (typeof window.saveCurrentProject === 'function') await window.saveCurrentProject(); } catch (x) {}
+    try { if (typeof window.logHistory === 'function') window.logHistory({ type: 'edit', path: last, note: 'Fix Error: ' + done.join('; ') }); } catch (x) {}
+    toast('Fixed. ' + done.join(' | ') + '. Run the preview again.', 'success');
+  }
+  function mArr(on) { var s = $('mbeMoreArr'); if (s) s.style.transform = on ? 'rotate(180deg)' : 'rotate(0deg)'; }
+  function openMore(btn) {
+    var old = $('mbeMore'); if (old) { old.remove(); mArr(false); return; }
+    var r = btn.getBoundingClientRect();
+    var ov = document.createElement('div'); ov.id = 'mbeMore';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:460';
+    var card = document.createElement('div');
+    card.style.cssText = 'position:absolute;bottom:' + (window.innerHeight - r.top + 6) + 'px;left:' + Math.max(10, r.left) + 'px;width:230px;background:#1c1d22;border:1px solid #2e2f36;border-radius:14px;padding:6px;box-shadow:0 14px 40px rgba(0,0,0,.55);font-family:system-ui,sans-serif;color:#fff';
+    function ic(d, col) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="' + col + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; }
+    var items = [
+      ['txt', 'Create TXT', '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>', '#7dd68e'],
+      ['fix', 'Fix Error', '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.3-.7-.7-2.3z"/>', '#ffd166'],
+      ['copy', 'Copy all', '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', '#7ec8ff']
+    ];
+    card.innerHTML = items.map(function (it) {
+      return '<button data-m="' + it[0] + '" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 10px;border:0;border-radius:10px;background:transparent;color:#f0f0f2;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left">' + ic(it[2], it[3]) + '<span>' + it[1] + '</span></button>';
+    }).join('');
+    ov.appendChild(card); document.body.appendChild(ov);
+    mArr(true);
+    ov.onclick = function (e) { if (e.target === ov) { ov.remove(); mArr(false); } };
+    var ACT = { txt: doTxt, fix: doFix, copy: doCopy };
+    card.querySelectorAll('[data-m]').forEach(function (b) {
+      b.onclick = function () { ov.remove(); mArr(false); ACT[b.getAttribute('data-m')](); };
+    });
+  }
 
   function injectCss() {
     if ($('mbErrCss')) return;
@@ -168,7 +364,7 @@
         (e.path ? '<button data-a="open" data-i="' + i + '">Open ' + esc(base(e.path)) + '</button>' : '') +
       '</div>';
     });
-    h += '<div class="mbe-b"><button data-a="copy">Copy all</button><button data-a="close">Close</button></div>';
+    h += '<div class="mbe-b"><button data-a="more" style="display:inline-flex;align-items:center;justify-content:center;gap:6px">More<svg id="mbeMoreArr" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s ease;transform:rotate(0deg)"><polyline points="6 9 12 15 18 9"/></svg></button><button data-a="close">Close</button></div>';
     if (!panel) {
       panel = document.createElement('div');
       panel.id = 'mbErrPanel';
@@ -182,13 +378,7 @@
     var t = ev.target.closest ? ev.target.closest('[data-a]') : null; if (!t) return;
     var a = t.getAttribute('data-a');
     if (a === 'close') { close(); return; }
-    if (a === 'copy') {
-      var txt = list.map(function (e, i) {
-        return (list.length > 1 ? (i + 1) + '. ' : '') + e.title + '\n' + e.msg + (e.where ? '\n' + plainText(e.where) : '') + (e.plain ? '\n' + e.plain : '');
-      }).join('\n\n');
-      try { navigator.clipboard.writeText(txt); if (window.showToast) window.showToast('Copied', 'success'); } catch (x) {}
-      return;
-    }
+    if (a === 'more') { openMore(t); return; }
     if (a === 'open') {
       var en = list[parseInt(t.getAttribute('data-i'), 10)]; if (!en || !en.path) return;
       var p = en.path;

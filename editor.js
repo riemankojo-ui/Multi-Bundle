@@ -580,18 +580,36 @@ if(ta.value.length<=15000){refreshHighlight()}else{__plainMode(true)}
       if(typeof currentProjectId!=='undefined' && currentProjectId && currentPath){
         localStorage.setItem('mb_draft_'+currentProjectId+'_'+currentPath, ta.value);
       }
-    }catch(e){}
+    }catch(e){if(!window.__draftWarned){window.__draftWarned=1;toast('File is too big for auto draft. Tap Save often.','error')}}
   }, 1000);
+});
+/* Long files: check that a big paste was not cut short */
+ta.addEventListener('paste',function(e){
+  var cd=e.clipboardData,t=cd&&cd.getData?cd.getData('text'):'';
+  if(!t||t.length<5000)return;
+  t=t.replace(/\r\n?/g,'\n');
+  var want=ta.value.length-(ta.selectionEnd-ta.selectionStart)+t.length;
+  setTimeout(function(){
+    var got=ta.value.length;
+    if(got<want)toast('Paste cut short: got '+got+' of '+want+' characters. Paste in smaller parts.','error');
+    else toast('Pasted '+t.split('\n').length+' lines','success');
+  },400);
 });
 ta.addEventListener('click',updateCursor);
 ta.addEventListener('keyup',updateCursor);
 
+/* Long files: keep undo history under about 6 million characters so big files do not eat the phone memory */
+function trimHist(){
+  var tot=0,i;
+  for(i=0;i<undoStack.length;i++)tot+=undoStack[i].length;
+  while(undoStack.length>2&&(undoStack.length>60||tot>6000000)){tot-=undoStack[0].length;undoStack.shift()}
+}
 function pushHistory(force){
   const now=Date.now();
   if(!force&&now-lastPush<300)return;lastPush=now;
   const v=ta.value;
   if(undoStack.length&&undoStack[undoStack.length-1]===v)return;
-  undoStack.push(v);if(undoStack.length>60)undoStack.shift();
+  undoStack.push(v);trimHist();
 redoStack=[];
 if(currentPath) fileHistories[currentPath] = { undo: undoStack.slice(), redo: [] };
 updateBtns();
@@ -751,7 +769,7 @@ function __fastApply(nv,caret){
   ta.value=nv;ta.scrollTop=st;ta.scrollLeft=sl;
   __plainMode(true);
   if(undoStack[undoStack.length-1]!==old)undoStack.push(old);
-  undoStack.push(nv);if(undoStack.length>60)undoStack.shift();redoStack=[];
+  undoStack.push(nv);trimHist();redoStack=[];
   if(currentPath)fileHistories[currentPath]={undo:undoStack.slice(),redo:[]};
   updateBtns();markDirty();
   try{ta.setSelectionRange(caret,caret);if(window.__edSetCaret)window.__edSetCaret(caret)}catch(_){}

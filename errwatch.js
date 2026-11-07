@@ -122,7 +122,7 @@
 
   /* Walk the code, skipping strings, comments, regex and template text. Returns open brackets left over and the first extra closer. */
   function scan(s, stopEmpty) {
-    var st = [], i = 0, n = s.length, c, prev = '', closedAt = -1, pairs = { ')': '(', ']': '[', '}': '{' }, extra = -1, tpl = [];
+    var st = [], i = 0, n = s.length, c, prev = '', closedAt = -1, pairs = { ')': '(', ']': '[', '}': '{' }, extra = -1, extraStack = null, tpl = [];
     function skipStr(q) { i++; while (i < n && s[i] !== q) { if (s[i] === '\\') i++; if (s[i] === '\n' && q !== '`') break; i++; } }
     while (i < n) {
       c = s[i];
@@ -146,7 +146,7 @@
       }
       if (c === '(' || c === '[' || c === '{') { st.push({ ch: c, at: i }); prev = c; i++; continue; }
       if (c === ')' || c === ']' || c === '}') {
-        if (!st.length || st[st.length - 1].ch !== pairs[c]) { if (extra < 0) extra = i; i++; prev = c; continue; }
+        if (!st.length || st[st.length - 1].ch !== pairs[c]) { if (extra < 0) { extra = i; extraStack = st.slice(); } i++; prev = c; continue; }
         var top = st.pop(); i++;
         if (stopEmpty && !st.length) { closedAt = i - 1; break; }
         if (top.tpl) {
@@ -164,7 +164,7 @@
       if (!/\s/.test(c)) prev = /[\w$]/.test(c) ? 'a' : c;
       i++;
     }
-    return { open: st, extra: extra, closedAt: closedAt };
+    return { open: st, extra: extra, extraStack: extraStack, closedAt: closedAt };
   }
 
   function matchClose(s, openIdx) {
@@ -197,6 +197,20 @@
     return { text: s.slice(0, a) + s.slice(a + 1), note: 'removed an extra bracket on line ' + line };
   }
 
+  /* Candidate 2b: a closing bracket was forgotten in the middle - add it just before the closer that does not match */
+  function fixInsert(s) {
+    var r = scan(s); if (r.extra < 0 || !r.extraStack || !r.extraStack.length) return null;
+    var want = { ')': '(', ']': '[', '}': '{' }[s[r.extra]], map = { '(': ')', '[': ']', '{': '}' };
+    var st = r.extraStack, k = st.length - 1, add = '';
+    while (k >= 0 && st[k].ch !== want) { if (st[k].tpl) return null; add += map[st[k].ch]; k--; }
+    if (k < 0 || !add) return null;
+    var ls = s.lastIndexOf('\n', r.extra - 1) + 1;
+    var ind = s.slice(ls).match(/^[ \t]*/)[0];
+    var line = s.slice(0, r.extra).split('\n').length;
+    return { text: s.slice(0, ls) + ind + add + '\n' + s.slice(ls), note: 'added ' + add.length + ' missing bracket' + (add.length === 1 ? '' : 's') + ' (' + add + ') before line ' + line };
+  }
+  function score(s) { var r = scan(s); return r.open.length + (r.extra >= 0 ? 1 : 0); }
+
   /* Candidate 3: missing closing brackets at the end */
   function fixMissing(s) {
     var r = scan(s); if (!r.open.length || r.extra >= 0) return null;
@@ -224,12 +238,22 @@
   function fixJs(src, errLine) {
     var s = String(src).replace(/\r\n?/g, '\n');
     if (/^\s*(import|export)\s/m.test(s)) return { ok: false, why: 'This file uses import/export, so it cannot be checked safely.' };
-    if (!syntaxErr(s)) return { ok: false, why: 'No syntax problem found in this file.' };
-    var notes = [], round, c;
-    for (round = 0; round < 8; round++) {
-      c = (round === 0 && errLine ? fixLeftover(s, errLine) : null) || fixExtra(s) || fixMissing(s) || fixDuplicateFn(s);
+    if (!syntaxErr(s)) return { ok: false, why: 'No typing mistake found. This error happens while the code runs, so it needs a manual fix.' };
+    var notes = [], round, c, cl, k, best, bs, sc, cur = score(s);
+    for (round = 0; round < 12; round++) {
+      c = round === 0 && errLine ? fixLeftover(s, errLine) : null;
+      if (!c) {
+        cl = [fixInsert(s), fixExtra(s), fixMissing(s), fixDuplicateFn(s)]; best = null; bs = 1e9;
+        for (k = 0; k < cl.length; k++) {
+          if (!cl[k]) continue;
+          if (!syntaxErr(cl[k].text)) { best = cl[k]; break; }
+          sc = score(cl[k].text);
+          if (sc < cur && sc < bs) { best = cl[k]; bs = sc; }
+        }
+        c = best;
+      }
       if (!c) break;
-      s = c.text; notes.push(c.note);
+      s = c.text; cur = score(s); notes.push(c.note);
       if (!syntaxErr(s)) return { ok: true, text: s, notes: notes };
     }
     return { ok: false, why: 'I could not find a safe automatic fix. Open the file and check the red line.' };
@@ -268,18 +292,21 @@
     list.forEach(function (e) { if (e.path && /\.js$/i.test(e.path) && !seenP[e.path]) { seenP[e.path] = 1; todo.push(e); } });
     if (!todo.length) { toast('Fix Error works on errors inside a .js file', 'error'); return; }
     var fl = (typeof files !== 'undefined' && files) ? files : [];
-    var sel = $('editorFileSelect'), ta = $('editorTextarea'), done = [], fails = [], last = '';
+    var sel = $('editorFileSelect'), ta = $('editorTextarea'), done = [], fails = [], last = '', fixedFiles = [];
     todo.forEach(function (e) {
       var f = fl.find(function (x) { return x.path === e.path; }); if (!f || f.text == null) return;
       var cur = (sel && ta && sel.value === e.path) ? ta.value : f.text;
       var r = fixJs(cur, e.line);
       if (!r.ok) { fails.push(base(e.path) + ': ' + r.why); return; }
       try { localStorage.setItem('mb_prefix_' + e.path, cur); } catch (x) {}
-      f.text = r.text; f.size = r.text.length;
+      f.text = r.text; f.blob = null; f.size = r.text.length; fixedFiles.push(f);
       try { if (typeof currentProjectId !== 'undefined') localStorage.removeItem('mb_draft_' + currentProjectId + '_' + e.path); } catch (x) {}
       done.push(base(e.path) + ': ' + r.notes.join(', ')); last = e.path;
     });
     if (!done.length) { toast(fails[0] || 'Nothing to fix', 'error'); return; }
+    for (var q = 0; q < fixedFiles.length; q++) {
+      if (fixedFiles[q].uri && window.FolderAccess && FolderAccess.available) { try { await FolderAccess.saveFile(fixedFiles[q], fixedFiles[q].text); } catch (x) {} }
+    }
     close();
     if (last && window.__edOpenFile && sel && sel.value === last) { try { window.__edOpenFile(last); } catch (x) {} }
     try { if (typeof window.saveCurrentProject === 'function') await window.saveCurrentProject(); } catch (x) {}

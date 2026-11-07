@@ -58,6 +58,7 @@ async function open(){
   bd.classList.add('open');
   var on=sh.querySelector('[data-on]');
   if(on)sh.scrollTop=on.offsetTop-sh.clientHeight/2+on.offsetHeight/2;
+var ta0=document.getElementById('editorTextarea');if(ta0)ta0.blur();window.__edSkipRestore=Date.now()+1500;
 }
 b.addEventListener('click',function(e){e.stopPropagation();if(bd.classList.contains('open'))close();else open()});
 var __st=window.showTab;

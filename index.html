@@ -850,7 +850,7 @@ function open(){
     if(!o.value)return;
     var b=document.createElement('button');b.type='button';b.textContent=o.text;
     if(o.value===cur){b.className='on';curEl=b}
-    b.onclick=function(){close();if(sel.value!==o.value){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}};
+    b.onclick=function(){close();window.__edSkipRestore=Date.now()+1500;if(sel.value!==o.value){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}};
     sh.appendChild(b);
   })(sel.options[i])}
   var tbr=document.querySelector('.editor-toolbar'),nv=document.querySelector('.bottom');
@@ -859,6 +859,7 @@ function open(){
   bd.style.top=tt+'px';bd.style.bottom=(window.innerHeight-nb)+'px';
   bd.classList.add('open');
   if(curEl)sh.scrollTop=curEl.offsetTop-sh.clientHeight/2+curEl.offsetHeight/2;
+var ta0=document.getElementById('editorTextarea');if(ta0)ta0.blur();window.__edSkipRestore=Date.now()+1500;
 }
 sel.addEventListener('mousedown',function(e){e.preventDefault()});
 sel.addEventListener('click',function(e){e.preventDefault();if(bd.classList.contains('open'))close();else open()});

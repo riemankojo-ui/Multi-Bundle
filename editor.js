@@ -1133,6 +1133,7 @@ function restoreEdSel() {
     if (b > ta.value.length) b = ta.value.length;
     if (window.__edSkipRestore && Date.now() < window.__edSkipRestore) return;
 var __mr = document.getElementById('modalRoot'); if (__mr && !__mr.hidden) return;
+if (document.querySelector('#mbFileSheetBd.open,#mbProjSheetBd.open')) return;
 if (window.__edLastFocus && window.__edLastFocus !== ta && searchBar.contains(window.__edLastFocus)) return;
     ta.focus({ preventScroll: true });
     ta.setSelectionRange(a, b);

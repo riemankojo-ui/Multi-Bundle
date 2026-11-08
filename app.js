@@ -285,7 +285,7 @@ async function cardEdit(id){
 async function cardChanges(id){const p=await loadProjectIntoMemory(id);if(!p)return;if($('changesFolderInput'))$('changesFolderInput').click()}
 async function cardDelete(id,name){
   const ok=await showConfirm('Delete "'+name+'" permanently? This cannot be undone.',{title:'Delete project',confirmText:'Delete',cancelText:'Keep'});
-  if(!ok)return;if(window.mbBar)window.mbBar.start();await dbDeleteProject(id);
+  if(!ok)return;if(window.mbBar)window.mbBar.start();await dbDeleteProject(id);try{await __flushProjects()}catch(e){}
 if(currentProjectId===id){
   currentProjectId=null;files=[];setCurrentProjectName('No project loaded');
   try { localStorage.removeItem('mb_active_project'); } catch(e) {}

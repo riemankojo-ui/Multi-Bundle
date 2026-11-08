@@ -148,6 +148,7 @@
 
   window.__mbLogoCrop = function (f, openCode) {
     injectCss();
+    try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (x) {}
     var old = $('lcRoot'); if (old) old.remove();
     var isSvg = extOf(f.path) === 'svg';
     var S = { src: null, orig: null, W: 0, H: 0, rect: null, shape: 'free', ratio: null, size: 0, round: false, scale: 1, drag: null, busy: false };

@@ -86,6 +86,12 @@
       });
     }
   } catch (e) {}
+  document.addEventListener('focusin', function (e) {
+    var t = e.target;
+    if (!t || !/^(TEXTAREA|INPUT)$/.test(t.tagName)) return;
+    var o = document.getElementById('lcRoot') || document.querySelector('#mbFileSheetBd.open');
+    if (o && !o.contains(t)) t.blur();
+  }, true);
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('.bottom span[data-tab], .bottom [data-tab], .drawer-nav a, .drawer-section > button, #homeProjectsBtn, #homePreviewBtn, #homeOpenPreviewBtn, #backupsBundleBtn, #backHomeBtn, #detailEditBtn, #detailBundleBtn, .pc-btn[data-act="preview"], .pc-btn[data-act="edit"]');
     if (!b) return;

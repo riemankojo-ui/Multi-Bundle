@@ -816,6 +816,7 @@ function selectMatch(){
   updateSearchCount();
 }
 searchInput.addEventListener('input',runSearch);
+(function(){var n=0;searchInput.addEventListener('input',function(e){n++;if(!e||!/^insertFromPaste/.test(e.inputType||''))return;var k=n;setTimeout(function(){var r=$('editorReplaceInput');if(k===n&&r&&matches.length&&!/^:\d+$/.test(searchInput.value))r.focus()},150)})})();
 var __esInputs=[searchInput,$('editorReplaceInput')];
 function __esMark(el){__esInputs.forEach(function(i){if(i)i.classList.toggle('es-active',i===el)})}
 __esInputs.forEach(function(i){if(i)i.addEventListener('focus',function(){__esMark(i)})});

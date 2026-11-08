@@ -20,14 +20,26 @@
     t1 = setTimeout(function () { el.style.opacity = '0'; }, 200);
     t2 = setTimeout(function () { el.style.width = '0'; }, 600);
   }
-  window.mbBar = { start: start, done: done };
+  function run(ms, cb) {
+    busy = 0; clearTimeout(t1); clearTimeout(t2);
+    el.style.transition = 'none'; el.style.width = '0'; el.style.opacity = '1';
+    void el.offsetWidth;
+    el.style.transition = 'width ' + ms + 'ms cubic-bezier(.25,.6,.35,1)';
+    el.style.width = '100%';
+    setTimeout(function () {
+      cb();
+      t1 = setTimeout(function () { el.style.transition = 'opacity .3s ease'; el.style.opacity = '0'; }, 120);
+      t2 = setTimeout(function () { el.style.transition = 'none'; el.style.width = '0'; }, 520);
+    }, ms);
+  }
+  window.mbBar = { start: start, done: done, run: run };
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('.bottom span[data-tab], .bottom [data-tab], .drawer-nav a, .drawer-section > button');
     if (!b) return;
     if (b.__mbGo) { b.__mbGo = false; return; }
     e.stopPropagation(); e.preventDefault();
     if (b.__mbWait) return;
-    b.__mbWait = true; start();
-    setTimeout(function () { b.__mbWait = false; b.__mbGo = true; b.click(); setTimeout(done, 200); }, 250);
+    b.__mbWait = true;
+    run(400, function () { b.__mbWait = false; b.__mbGo = true; b.click(); });
   }, true);
 })();

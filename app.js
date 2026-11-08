@@ -291,6 +291,7 @@ if(currentProjectId===id){
   try { localStorage.removeItem('mb_active_project'); } catch(e) {}
 }
   await renderProjectCards();render();showToast('Project deleted');
+  setTimeout(function(){if(window.mbBar&&window.mbBar.run)window.mbBar.run(500,function(){location.reload()});else location.reload()},900);
 }
 
 function ghOkPath(p){return !p.split('/').some(function(s){return s==='.git'})}

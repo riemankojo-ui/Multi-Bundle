@@ -71,6 +71,21 @@
       finally { window.mbBar.done(); }
     };
   }
+  try {
+    if (window.firebase && firebase.auth) {
+      var first = true, lastUid;
+      firebase.auth().onAuthStateChanged(async function (u) {
+        var uid = u ? u.uid : '';
+        if (first) { first = false; lastUid = uid; return; }
+        if (uid === lastUid) return;
+        lastUid = uid;
+        window.mbBar.start();
+        await new Promise(function (r) { setTimeout(r, 700); });
+        try { await window.mbBar.refresh(); } catch (e) {}
+        window.mbBar.done();
+      });
+    }
+  } catch (e) {}
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('.bottom span[data-tab], .bottom [data-tab], .drawer-nav a, .drawer-section > button, #homeProjectsBtn, #homePreviewBtn, #homeOpenPreviewBtn, #backupsBundleBtn, #backHomeBtn, #detailEditBtn, #detailBundleBtn, .pc-btn[data-act="preview"], .pc-btn[data-act="edit"]');
     if (!b) return;

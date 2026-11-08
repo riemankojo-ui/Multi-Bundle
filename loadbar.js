@@ -32,7 +32,18 @@
       t2 = setTimeout(function () { el.style.transition = 'none'; el.style.width = '0'; }, 520);
     }, ms);
   }
-  window.mbBar = { start: start, done: done, run: run };
+  function finish(cb) {
+    if (!busy) { run(300, cb); return; }
+    busy = 0; clearTimeout(t1); clearTimeout(t2);
+    el.style.transition = 'width .25s ease';
+    el.style.width = '100%';
+    setTimeout(function () {
+      cb();
+      t1 = setTimeout(function () { el.style.transition = 'opacity .3s ease'; el.style.opacity = '0'; }, 120);
+      t2 = setTimeout(function () { el.style.transition = 'none'; el.style.width = '0'; }, 520);
+    }, 270);
+  }
+  window.mbBar = { start: start, done: done, run: run, finish: finish };
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('.bottom span[data-tab], .bottom [data-tab], .drawer-nav a, .drawer-section > button, #homeProjectsBtn, #homePreviewBtn, #homeOpenPreviewBtn, #backupsBundleBtn, #backHomeBtn, #detailEditBtn, #detailBundleBtn, .pc-btn[data-act="preview"], .pc-btn[data-act="edit"]');
     if (!b) return;

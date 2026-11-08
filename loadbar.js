@@ -24,6 +24,10 @@
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('.bottom span[data-tab], .bottom [data-tab], .drawer-nav a');
     if (!b) return;
-    start(); setTimeout(done, 450);
+    if (b.__mbGo) { b.__mbGo = false; return; }
+    e.stopPropagation(); e.preventDefault();
+    if (b.__mbWait) return;
+    b.__mbWait = true; start();
+    setTimeout(function () { b.__mbWait = false; b.__mbGo = true; b.click(); setTimeout(done, 200); }, 250);
   }, true);
 })();

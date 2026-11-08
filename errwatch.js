@@ -428,6 +428,31 @@
     toast('Fixed. ' + done.join(' | ') + '. Run the preview again.', 'success');
   }
   function mArr(on) { var s = $('mbeMoreArr'); if (s) s.style.transform = on ? 'rotate(180deg)' : 'rotate(0deg)'; }
+  function hideStoreKey() {
+    var id = (typeof currentProjectId !== 'undefined' && currentProjectId) ? currentProjectId : (typeof currentProjectName === 'function' ? currentProjectName() : 'app');
+    return 'mb_err_hidden_' + id;
+  }
+  function hideKeyOf(e) { return [e.kind, e.msg, e.path].join('|'); }
+  function hiddenList() { try { return JSON.parse(localStorage.getItem(hideStoreKey()) || '[]'); } catch (x) { return []; } }
+  function isHidden(e) { return hiddenList().indexOf(hideKeyOf(e)) > -1; }
+  function hideAt(i) {
+    var en = list[i]; if (!en) return;
+    var hl = hiddenList(), k = hideKeyOf(en);
+    if (hl.indexOf(k) < 0) hl.push(k);
+    try { localStorage.setItem(hideStoreKey(), JSON.stringify(hl)); } catch (x) {}
+    list = list.filter(function (x) { return hideKeyOf(x) !== k; });
+    render();
+    toast('This message is hidden for this app', 'success');
+  }
+  function doHide() { hideAt(0); }
+  function doHideAll() {
+    if (!list.length) return;
+    var hl = hiddenList(), n = list.length;
+    list.forEach(function (e) { var k = hideKeyOf(e); if (hl.indexOf(k) < 0) hl.push(k); });
+    try { localStorage.setItem(hideStoreKey(), JSON.stringify(hl)); } catch (x) {}
+    close();
+    toast(n > 1 ? 'These messages are hidden for this app' : 'This message is hidden for this app', 'success');
+  }
   function openMore(btn) {
     var old = $('mbeMore'); if (old) { old.remove(); mArr(false); return; }
     var r = btn.getBoundingClientRect();
@@ -439,6 +464,7 @@
     var items = [
       ['txt', 'Create TXT', '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>', '#7dd68e'],
       ['fix', 'Fix Error', '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.3-.7-.7-2.3z"/>', '#ffd166'],
+      ['hide', 'Hide Massage', '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>', '#ff9aa2'],
       ['copy', 'Copy all', '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', '#7ec8ff']
     ];
     card.innerHTML = items.map(function (it) {
@@ -447,7 +473,7 @@
     ov.appendChild(card); document.body.appendChild(ov);
     mArr(true);
     ov.onclick = function (e) { if (e.target === ov) { ov.remove(); mArr(false); } };
-    var ACT = { txt: doTxt, fix: doFix, copy: doCopy };
+    var ACT = { txt: doTxt, fix: doFix, hide: doHide, copy: doCopy };
     card.querySelectorAll('[data-m]').forEach(function (b) {
       b.onclick = function () { ov.remove(); mArr(false); ACT[b.getAttribute('data-m')](); };
     });
@@ -503,6 +529,7 @@
         (e.code ? '<div class="mbe-c">' + e.code + '</div>' : '') +
         (e.plain ? '<div class="mbe-h">' + esc(e.plain) + '</div>' : '') +
         (e.path ? '<button data-a="open" data-i="' + i + '">Open ' + esc(base(e.path)) + '</button>' : '') +
+        '<button data-a="hide1" data-i="' + i + '" style="margin-left:6px">Hide Massage</button>' +
       '</div>';
     });
     h += '<div class="mbe-b"><button data-a="more" style="display:inline-flex;align-items:center;justify-content:center;gap:6px">More<svg id="mbeMoreArr" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s ease;transform:rotate(0deg)"><polyline points="6 9 12 15 18 9"/></svg></button><button data-a="close">Close</button></div>';
@@ -520,6 +547,7 @@
     var a = t.getAttribute('data-a');
     if (a === 'close') { close(); return; }
     if (a === 'more') { openMore(t); return; }
+    if (a === 'hide1') { hideAt(parseInt(t.getAttribute('data-i'), 10)); return; }
     if (a === 'open') {
       var en = list[parseInt(t.getAttribute('data-i'), 10)]; if (!en || !en.path) return;
       var p = en.path;
@@ -534,6 +562,7 @@
     var d = ev.data; if (!d || d.type !== 'mb-err') return;
     if (d.id !== curId) { curId = d.id; list = []; }
     var en = entryOf(d);
+    if (isHidden(en)) return;
     if (en.kind === 'blank') { if (list.length) return; }
     else list = list.filter(function (x) { return x.kind !== 'blank'; });
     if (list.some(function (x) { return x.key === en.key; })) return;

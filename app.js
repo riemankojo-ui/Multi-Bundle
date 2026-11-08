@@ -603,7 +603,7 @@ async function importRepo(fullName,branch,isPublic){
     }));
     const clean=result.filter(function(x){return x});
     const prevFiles=files;const pickedName=await namePromise;if(!pickedName||!String(pickedName).trim()){window.__ghPullName=null;statusFn('Import cancelled.');return}await processIncoming(clean,window.__ghPullName||repo,pickedName);window.__ghPullName=null;if(files!==prevFiles)await markGithubSource(fullName,bn);
-    statusFn('Imported '+fullName+' — '+clean.length+' files.');showToast('Imported '+repo,'success');
+    statusFn('Imported '+fullName+' — '+clean.length+' files.');showToast('Imported '+repo,'success');try{await __flushProjects()}catch(e0){}setTimeout(function(){if(window.mbBar&&window.mbBar.run)window.mbBar.run(500,function(){location.reload()});else location.reload()},600);
     if(window.mbBar&&window.mbBar.finish)window.mbBar.finish(function(){location.reload()});else location.reload();
   }catch(e){statusFn('Import failed: '+e.message)}
 }

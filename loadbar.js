@@ -44,6 +44,14 @@
     }, 270);
   }
   window.mbBar = { start: start, done: done, run: run, finish: finish };
+  function soft(cb) {
+    if (String(cb).indexOf('location.reload') < 0) { cb(); return; }
+    try { if (typeof renderProjectCards === 'function') renderProjectCards(); } catch (e) {}
+    try { if (typeof render === 'function') render(); } catch (e) {}
+  }
+  var _run = run, _fin = finish;
+  window.mbBar.run = function (ms, cb) { _run(ms, function () { soft(cb); }); };
+  window.mbBar.finish = function (cb) { _fin(function () { soft(cb); }); };
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('.bottom span[data-tab], .bottom [data-tab], .drawer-nav a, .drawer-section > button, #homeProjectsBtn, #homePreviewBtn, #homeOpenPreviewBtn, #backupsBundleBtn, #backHomeBtn, #detailEditBtn, #detailBundleBtn, .pc-btn[data-act="preview"], .pc-btn[data-act="edit"]');
     if (!b) return;

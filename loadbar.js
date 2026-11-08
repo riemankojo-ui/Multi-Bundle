@@ -34,7 +34,7 @@
   }
   window.mbBar = { start: start, done: done, run: run };
   document.addEventListener('click', function (e) {
-    var b = e.target.closest && e.target.closest('.bottom span[data-tab], .bottom [data-tab], .drawer-nav a, .drawer-section > button');
+    var b = e.target.closest && e.target.closest('.bottom span[data-tab], .bottom [data-tab], .drawer-nav a, .drawer-section > button, #homeProjectsBtn, #homePreviewBtn, #homeOpenPreviewBtn, #backupsBundleBtn, #backHomeBtn, #detailEditBtn, #detailBundleBtn, .pc-btn[data-act="preview"], .pc-btn[data-act="edit"]');
     if (!b) return;
     if (b.__mbGo) { b.__mbGo = false; return; }
     e.stopPropagation(); e.preventDefault();

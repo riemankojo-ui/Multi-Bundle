@@ -3,6 +3,9 @@
   var st = document.createElement('style');
   st.textContent = '#mbBar{position:fixed;left:0;top:0;height:2px;width:0;z-index:10050;background:#CD853F;box-shadow:0 0 6px #CD853F;pointer-events:none;opacity:0;transition:width .3s ease,opacity .25s ease}';
   document.head.appendChild(st);
+var ps = document.createElement('style');
+ps.textContent = '#mbProjSheet button{font-size:16px!important;padding:14px 16px!important;line-height:1.3!important}#mbProjSheet button small{font-size:12px!important}#mbProjSheet .mbp-empty{font-size:15px!important}';
+document.head.appendChild(ps);
   var fs = document.createElement('style');
   fs.textContent = '#mbFileSheet button{font-size:17px;padding:17px 16px;line-height:1.3}#mbFileSheet .mbf-sub{font-size:13px;margin-top:4px}#mbFileSheet .mbf-empty{font-size:15px}';
   document.head.appendChild(fs);

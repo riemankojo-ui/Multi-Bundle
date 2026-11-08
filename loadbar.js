@@ -44,6 +44,17 @@
     }, 270);
   }
   window.mbBar = { start: start, done: done, run: run, finish: finish };
+  window.mbBar.set = function (p) {
+    p = Math.max(0, Math.min(99, p));
+    el.style.opacity = '1';
+    el.style.transition = 'width .25s ease,opacity .25s ease';
+    el.style.width = p + '%';
+  };
+  window.mbBar.refresh = async function () {
+    try { if (typeof window.__refreshProjects === 'function') await window.__refreshProjects(); } catch (e) {}
+    try { if (typeof renderProjectCards === 'function') await renderProjectCards(); } catch (e) {}
+    try { if (typeof render === 'function') render(); } catch (e) {}
+  };
   function soft(cb) {
     if (String(cb).indexOf('location.reload') < 0) { cb(); return; }
     try { if (typeof renderProjectCards === 'function') renderProjectCards(); } catch (e) {}

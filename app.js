@@ -452,7 +452,7 @@ if($('zipInput'))$('zipInput').addEventListener('change',async function(e){
   e.target.value='';
 });
 
-function setGhStatus(t){if($('githubStatus'))$('githubStatus').textContent=t}
+function setGhStatus(t){if($('githubStatus'))$('githubStatus').textContent=t;try{var m=/(\d+)\s*\/\s*(\d+)/.exec(t||'');if(m&&window.mbBar&&window.mbBar.set)window.mbBar.set(m[1]/m[2]*90)}catch(e){}}
 function setGhPublicStatus(t){if($('ghPublicStatus'))$('ghPublicStatus').textContent=t}
 function getToken(){return ghToken}
 

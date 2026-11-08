@@ -135,7 +135,7 @@ async function saveRecord(scan,rows){
 /* ---------- sheet UI ---------- */
 var S={scan:null,rows:[],busy:false};
 function setNote(t,cls){var n=$('pbNote');if(n){n.textContent=t||'';n.className='pb-note'+(cls?' '+cls:'')}}
-function setStatus(t){var n=$('pbStatus');if(n)n.textContent=t||''}
+function setStatus(t){var n=$('pbStatus');if(n)n.textContent=t||'';try{var m=/(\d+)\s*\/\s*(\d+)/.exec(t||'');if(m&&window.mbBar&&window.mbBar.set)window.mbBar.set(m[1]/m[2]*90);else if(/Creating commit/.test(t||'')&&window.mbBar&&window.mbBar.set)window.mbBar.set(95)}catch(e){}}
 function closeSheet(){var b=$('pbBack');if(b)b.remove();S.busy=false;S.armed=false;clearTimeout(S.armT)}
 function updateGo(){updateRestore();
   var n=S.rows.filter(function(r){return r.on}).length;var g=$('pbGo');if(!g)return;
@@ -544,7 +544,7 @@ async function runPublish(){
       '<button class="pb-go" id="pbDone">Done</button></div>';
     var d=$('pbDone');if(d)d.onclick=closeSheet;
     initLive();
-    toast('Published to GitHub','success');
+    toast('Published to GitHub','success');if(window.mbBar&&window.mbBar.refresh)window.mbBar.refresh();
     if(window.mbBar)window.mbBar.done();
     /* reload only when Done is tapped */
     S.busy=false;

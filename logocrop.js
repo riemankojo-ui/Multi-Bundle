@@ -304,6 +304,7 @@
     function close() { window.removeEventListener('resize', layout); if (ro) ro.disconnect(); root.remove(); }
     function save(replace) {
       if (S.busy) return;
+      if (S.src === S.orig && !S.round && !S.size && Math.round(S.rect.x) === 0 && Math.round(S.rect.y) === 0 && Math.round(S.rect.w) >= S.W && Math.round(S.rect.h) >= S.H) { close(); toast('No changes made', 'success'); return; }
       S.busy = true; paint();
       exportBlob(async function (blob) {
         try {

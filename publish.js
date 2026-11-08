@@ -529,6 +529,7 @@ async function runPublish(){
   var n=S.rows.filter(function(r){return r.on}).length;if(!n)return;
   S.busy=true;updateGo();
   var msg=($('pbMsg').value||'').trim()||'Update from Multi Bundle';
+  if(window.mbBar)window.mbBar.start();
   try{
     var res=await pushRows(S.scan,S.rows,msg,setStatus);
     await saveRecord(S.scan,S.rows);
@@ -544,9 +545,10 @@ async function runPublish(){
     var d=$('pbDone');if(d)d.onclick=closeSheet;
     initLive();
     toast('Published to GitHub','success');
+    if(window.mbBar)window.mbBar.done();
     /* reload only when Done is tapped */
     S.busy=false;
-  }catch(e){S.busy=false;setStatus('');setNote(explain(e,true),'bad');updateGo()}
+  }catch(e){if(window.mbBar)window.mbBar.done();S.busy=false;setStatus('');setNote(explain(e,true),'bad');updateGo()}
 }
 function settingsRepo(){try{return JSON.parse(localStorage.getItem('mb_deploy_'+pid())||'null')||{}}catch(e){return {}}}
 function logoBox(p){

@@ -52,6 +52,14 @@
   var _run = run, _fin = finish;
   window.mbBar.run = function (ms, cb) { _run(ms, function () { soft(cb); }); };
   window.mbBar.finish = function (cb) { _fin(function () { soft(cb); }); };
+  var _imp = window.importRepo;
+  if (typeof _imp === 'function') {
+    window.importRepo = async function () {
+      window.mbBar.start();
+      try { return await _imp.apply(this, arguments); }
+      finally { window.mbBar.done(); }
+    };
+  }
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('.bottom span[data-tab], .bottom [data-tab], .drawer-nav a, .drawer-section > button, #homeProjectsBtn, #homePreviewBtn, #homeOpenPreviewBtn, #backupsBundleBtn, #backHomeBtn, #detailEditBtn, #detailBundleBtn, .pc-btn[data-act="preview"], .pc-btn[data-act="edit"]');
     if (!b) return;

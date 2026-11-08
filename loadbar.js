@@ -22,7 +22,7 @@
   }
   window.mbBar = { start: start, done: done };
   document.addEventListener('click', function (e) {
-    var b = e.target.closest && e.target.closest('.bottom a, .bottom button, .drawer-nav a');
+    var b = e.target.closest && e.target.closest('.bottom span[data-tab], .bottom [data-tab], .drawer-nav a');
     if (!b) return;
     start(); setTimeout(done, 450);
   }, true);

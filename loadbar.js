@@ -22,7 +22,7 @@
   }
   window.mbBar = { start: start, done: done };
   document.addEventListener('click', function (e) {
-    var b = e.target.closest && e.target.closest('.bottom span[data-tab], .bottom [data-tab], .drawer-nav a');
+    var b = e.target.closest && e.target.closest('.bottom span[data-tab], .bottom [data-tab], .drawer-nav a, .drawer-section > button');
     if (!b) return;
     if (b.__mbGo) { b.__mbGo = false; return; }
     e.stopPropagation(); e.preventDefault();

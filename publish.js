@@ -544,7 +544,7 @@ async function runPublish(){
     var d=$('pbDone');if(d)d.onclick=closeSheet;
     initLive();
     toast('Published to GitHub','success');
-    setTimeout(function(){if(window.mbBar&&window.mbBar.run)window.mbBar.run(500,function(){location.reload()});else location.reload()},900);
+    /* reload only when Done is tapped */
     S.busy=false;
   }catch(e){S.busy=false;setStatus('');setNote(explain(e,true),'bad');updateGo()}
 }

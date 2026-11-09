@@ -674,3 +674,10 @@ button,a,.btn,.head-btn,.editor-btn,.snap-btn,.pc-btn,.project-card,.updates-pro
 .updates-proj:active,.project-card:hover,.project-card:active{border-color:var(--line)!important}
 .project-card.active:active{border-color:var(--accent)!important}
 .es-clear:active{background:#2a2c34!important;transform:translateY(-50%)!important}
+
+/* long press: no highlight, no selection */
+body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,[contenteditable="true"],pre,code,.selectable,input *,textarea *{-webkit-user-select:text!important;user-select:text!important}
+::selection{background:transparent}
+input::selection,textarea::selection,[contenteditable="true"]::selection,pre::selection,code::selection{background:rgba(125,160,255,.35)}
+img,a,button,svg{-webkit-user-drag:none}

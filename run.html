@@ -135,8 +135,9 @@ var YML=[
 '        env:',
 '          GH_TOKEN: ${{ github.token }}',
 '        run: |',
-'          cp "$RUNNER_TEMP/cap/android/app/build/outputs/apk/debug/app-debug.apk" "$RUNNER_TEMP/app.apk"',
-'          gh release create "apk-${{ github.run_number }}" "$RUNNER_TEMP/app.apk" --title "APK build ${{ github.run_number }}" --notes "$APP_NAME $VERSION" --target "$GITHUB_SHA"',
+'          SAFE=$(printf "%s" "$APP_NAME" | tr -c "A-Za-z0-9._-" "-" | sed "s/--*/-/g; s/^-//; s/-$//"); [ -n "$SAFE" ] || SAFE=app',
+'          cp "$RUNNER_TEMP/cap/android/app/build/outputs/apk/debug/app-debug.apk" "$RUNNER_TEMP/$SAFE.apk"',
+'          gh release create "apk-${{ github.run_number }}" "$RUNNER_TEMP/$SAFE.apk" --title "APK build ${{ github.run_number }}" --notes "$APP_NAME $VERSION" --target "$GITHUB_SHA"',
 ''].join('\n');
 
 function $(id){return document.getElementById(id)}
@@ -244,8 +245,9 @@ function fixWf(t){
       ji+'      run: |',
       ji+'        APK=$(find mb_out -name "*.apk" | head -1)',
       ji+'        if [ -z "$APK" ]; then echo "No APK found in the artifacts"; exit 1; fi',
-      ji+'        cp "$APK" app.apk',
-      ji+'        gh release create "apk-${{ github.run_number }}" app.apk --title "APK build ${{ github.run_number }}" --notes "Built with Multi Bundle" --target "$GITHUB_SHA"'
+      ji+'        N="${{ github.event.repository.name }}.apk"',
+      ji+'        cp "$APK" "$N"',
+      ji+'        gh release create "apk-${{ github.run_number }}" "$N" --title "APK build ${{ github.run_number }}" --notes "Built with Multi Bundle" --target "$GITHUB_SHA"'
     ];
     L.splice.apply(L,[e,0].concat(job));
     s=L.join('\n');

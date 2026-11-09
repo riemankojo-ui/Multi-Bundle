@@ -7,7 +7,7 @@
   function toast(m, t) { if (window.showToast) window.showToast(m, t); }
   function get(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v === '1'; } catch (e) { return d; } }
   function put(k, v) { try { localStorage.setItem(k, v ? '1' : '0'); } catch (e) {} }
-  var S = { wrap: get('mb_ed_wrap', false), ln: get('mb_ed_ln', true), awake: get('mb_ed_awake', false) };
+  var S = { wrap: get('mb_ed_wrap', false), ln: get('mb_ed_ln', true), awake: get('mb_ed_awake', false), autofix: get('mb_ed_autofix', true), autocreate: get('mb_ed_autocreate', true) };
 
   /* ---------- Limit lines ---------- */
   var mirror = document.createElement('div');
@@ -133,7 +133,9 @@
   card.innerHTML = '<div class="es-ttl">Editor settings</div>' +
     row('wrap', 'Limit lines', 'Long lines wrap, nothing goes under the right side') +
     row('ln', 'Line numbers', 'Show the numbers on the left') +
-    row('awake', 'Keep screen on', 'Screen stays awake while you code');
+    row('awake', 'Keep screen on', 'Screen stays awake while you code') +
+    row('autofix', 'Auto Fix Error', 'Show Fix Error in the error card More menu') +
+    row('autocreate', 'Auto Create Files', 'Let the app add workflow files to GitHub');
   document.body.appendChild(card);
 
   function paint() {
@@ -159,6 +161,7 @@
     var k = b.getAttribute('data-k'); S[k] = !S[k]; put('mb_ed_' + k, S[k]); paint();
     if (k === 'wrap') applyWrap();
     else if (k === 'ln') applyLn();
+    else if (k === 'autofix' || k === 'autocreate') { toast((k === 'autofix' ? 'Auto Fix Error ' : 'Auto Create Files ') + (S[k] ? 'on' : 'off'), 'success'); }
     else if (S.awake) {
       lock().then(function () { toast('Screen will stay on', 'success'); }).catch(function () {
         S.awake = false; put('mb_ed_awake', false); paint(); toast('Keep screen on is not supported here', 'error');

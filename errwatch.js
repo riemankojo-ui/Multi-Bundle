@@ -380,6 +380,7 @@
     ov.onclick = function (e) { if (e.target === ov || e.target.id === 'mbFixRepX') ov.remove(); };
   }
   async function doFix() {
+    if (localStorage.getItem('mb_ed_autofix') === '0') { toast('Auto Fix Error is off. Turn it on in Editor settings.', 'error'); return; }
     var fl = (typeof files !== 'undefined' && files) ? files : [];
     var sel = $('editorFileSelect'), ta = $('editorTextarea');
     var res = fixAll(fl, function (f) { return (sel && ta && sel.value === f.path) ? ta.value : f.text; }, list.slice());
@@ -467,6 +468,7 @@
       ['hide', 'Hide Massage', '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>', '#ff9aa2'],
       ['copy', 'Copy all', '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', '#7ec8ff']
     ];
+    if (localStorage.getItem('mb_ed_autofix') === '0') items = items.filter(function (it) { return it[0] !== 'fix'; });
     card.innerHTML = items.map(function (it) {
       return '<button data-m="' + it[0] + '" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 10px;border:0;border-radius:10px;background:transparent;color:#f0f0f2;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left">' + ic(it[2], it[3]) + '<span>' + it[1] + '</span></button>';
     }).join('');

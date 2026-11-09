@@ -147,6 +147,7 @@ function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function b64u(s){return btoa(unescape(encodeURIComponent(s)))}
 function fromB64u(s){return decodeURIComponent(escape(atob(s.replace(/\s/g,''))))}
 async function gh(method,path,body){
+  if(method==='PUT'&&/\/contents\//.test(path)&&localStorage.getItem('mb_ed_autocreate')==='0'){var ge=new Error('Auto Create Files is off. Turn it on in Editor settings (gear button) to let the app add workflow files to GitHub.');ge.status=0;throw ge}
   var r=await fetch('https://api.github.com'+path,{method:method,headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+tk(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
   var d=null;try{d=await r.json()}catch(e){}
   if(!r.ok||method!=='GET')LOG(method+' '+path.split('?')[0]+' -> '+r.status+(r.ok?'':' '+((d&&d.message)||'')),r.ok?'dim':'err');
@@ -267,7 +268,7 @@ async function build(p,v,say){
   var hasIn=(WF==='build-apk.yml'&&!cur);try{if(cur&&cur.content&&/app_name/.test(fromB64u(cur.content)))hasIn=true}catch(e){}
   if(cur&&cur.content){
     var fx=null,orig='';
-    try{orig=fromB64u(cur.content);fx=fixWf(orig)}catch(e){}
+    try{orig=fromB64u(cur.content);if(localStorage.getItem('mb_ed_autofix')!=='0')fx=fixWf(orig)}catch(e){}
     if(fx&&fx.blocked)return {fail:true,run:'https://github.com/'+repo+'/blob/'+br+'/'+WF_PATH,why:fx.blocked};
     if(fx&&fx.text!==orig.replace(/\r\n?/g,'\n')){
       say('Adding fixes to your build workflow\u2026');

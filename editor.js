@@ -1122,7 +1122,7 @@ function applyEdTheme(t){
   try{localStorage.setItem('mb_edtheme',t||'')}catch(e){}
 }
 if(themeBtn&&themeCard){
-  themeBtn.onclick=function(e){e.stopPropagation();themeCard.classList.toggle('open')};
+  themeBtn.onclick=function(e){e.stopPropagation();var ps0=document.getElementById('mbProjSheetBd');if(ps0)ps0.classList.remove('open');var fs0=document.getElementById('mbFileSheetBd');if(fs0)fs0.classList.remove('open');themeCard.classList.toggle('open')};
   themeCard.onclick=function(e){e.stopPropagation()};
   themeCard.querySelectorAll('[data-th]').forEach(function(b){b.onclick=function(){applyEdTheme(b.dataset.th);themeCard.classList.remove('open')}});
   document.addEventListener('click',function(){themeCard.classList.remove('open')});

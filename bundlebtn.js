@@ -35,6 +35,7 @@ async function pick(p,cur){
   }else if(typeof window.__edReloadCurrent==='function')window.__edReloadCurrent([]);
 }
 async function open(){
+  var tc0=document.getElementById('editorThemeCard');if(tc0)tc0.classList.remove('open');
   var fs=document.getElementById('mbFileSheetBd');if(fs)fs.classList.remove('open');
   var all=[];try{all=await window.dbGetAll()}catch(e){}
   all.sort(function(x,y){return (y.savedAt||0)-(x.savedAt||0)});

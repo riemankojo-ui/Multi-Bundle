@@ -821,7 +821,7 @@ var __esInputs=[searchInput,$('editorReplaceInput')];
 function __esMark(el){__esInputs.forEach(function(i){if(i)i.classList.toggle('es-active',i===el)})}
 __esInputs.forEach(function(i){if(i)i.addEventListener('focus',function(){__esMark(i)})});
 ta.addEventListener('focus',function(){__esMark(null)});
-(function(){var lastTouch=0,done=false;document.addEventListener('touchstart',function(){lastTouch=Date.now();done=false},true);__esInputs.forEach(function(el){if(!el)return;el.addEventListener('blur',function(){setTimeout(function(){if(done||Date.now()-lastTouch<500)return;if(!searchBar.classList.contains('open')||el.className.indexOf('es-active')<0)return;if(document.activeElement&&document.activeElement!==document.body)return;done=true;el.focus({preventScroll:true})},150)})})})();
+(function(){var lastTouch=0,done=false;document.addEventListener('touchstart',function(){lastTouch=Date.now();done=false},true);__esInputs.forEach(function(el){if(!el)return;el.addEventListener('blur',function(){setTimeout(function(){if(done||document.hidden||Date.now()-lastTouch<500)return;if(!searchBar.classList.contains('open')||el.className.indexOf('es-active')<0)return;if(document.activeElement&&document.activeElement!==document.body)return;done=true;el.focus({preventScroll:true})},150)})})})();
 searchInput.addEventListener('keydown',function(e){
   if(e.key==='Enter'){e.preventDefault();e.shiftKey?prevMatch():nextMatch()}
   if(e.key==='Escape')closeSearch();
@@ -1184,6 +1184,26 @@ function __backToSearch(){
 function __returned(){[100,300,700].forEach(function(ms){setTimeout(__backToSearch,ms)})}
 document.addEventListener('visibilitychange',function(){if(!document.hidden)__returned()});
 window.addEventListener('pageshow',__returned);
+var __srchEl=null;
+document.addEventListener('focusin',function(e){
+  var t=e.target;
+  if(t===searchInput||t===$('editorReplaceInput'))__srchEl=t;
+  else if(t===ta)__srchEl=null;
+},true);
+function __srchBack(){
+  if(document.hidden||!__srchEl||!searchBar.classList.contains('open'))return;
+  try{
+    var el=__srchEl,a=el.selectionStart,b=el.selectionEnd;
+    el.blur();
+    el.focus({preventScroll:true});
+    try{el.setSelectionRange(a,b)}catch(x){}
+    __esMark(el);
+  }catch(x){}
+}
+function __srchReturn(){[60,250,600,1200].forEach(function(ms){setTimeout(__srchBack,ms)})}
+document.addEventListener('visibilitychange',function(){if(!document.hidden)__srchReturn()});
+window.addEventListener('focus',__srchReturn);
+window.addEventListener('pageshow',__srchReturn);
 // Save when you leave the app, restore when you come back
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) saveEdSel();

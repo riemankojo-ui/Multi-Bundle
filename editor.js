@@ -1171,6 +1171,19 @@ if (ta) {
     ta.addEventListener(ev, saveEdSel);
   });
 }
+var __lastSrch=null;
+document.addEventListener('focusin',function(e){
+  var t=e.target;
+  if(t===searchInput||t===$('editorReplaceInput'))__lastSrch=t;
+  else if(t===ta)__lastSrch=null;
+},true);
+function __backToSearch(){
+  if(document.hidden||!__lastSrch||!searchBar.classList.contains('open'))return;
+  try{__lastSrch.focus({preventScroll:true});__esMark(__lastSrch)}catch(e){}
+}
+function __returned(){[100,300,700].forEach(function(ms){setTimeout(__backToSearch,ms)})}
+document.addEventListener('visibilitychange',function(){if(!document.hidden)__returned()});
+window.addEventListener('pageshow',__returned);
 // Save when you leave the app, restore when you come back
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) saveEdSel();

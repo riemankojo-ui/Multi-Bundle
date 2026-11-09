@@ -475,7 +475,7 @@
     ov.appendChild(card); document.body.appendChild(ov);
     mArr(true);
     ov.onclick = function (e) { if (e.target === ov) { ov.remove(); mArr(false); } };
-    var ACT = { txt: doTxt, fix: doFix, hide: doHide, copy: doCopy };
+    var ACT = { txt: doTxt, fix: doFix, hide: doHideAll, copy: doCopy };
     card.querySelectorAll('[data-m]').forEach(function (b) {
       b.onclick = function () { ov.remove(); mArr(false); ACT[b.getAttribute('data-m')](); };
     });
@@ -531,7 +531,6 @@
         (e.code ? '<div class="mbe-c">' + e.code + '</div>' : '') +
         (e.plain ? '<div class="mbe-h">' + esc(e.plain) + '</div>' : '') +
         (e.path ? '<button data-a="open" data-i="' + i + '">Open ' + esc(base(e.path)) + '</button>' : '') +
-        '<button data-a="hide1" data-i="' + i + '" style="margin-left:6px">Hide Massage</button>' +
       '</div>';
     });
     h += '<div class="mbe-b"><button data-a="more" style="display:inline-flex;align-items:center;justify-content:center;gap:6px">More<svg id="mbeMoreArr" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s ease;transform:rotate(0deg)"><polyline points="6 9 12 15 18 9"/></svg></button><button data-a="close">Close</button></div>';

@@ -952,7 +952,14 @@ function renderPreview(){
   pvDraw();
 }
 $('editorPreviewRefresh').onclick=renderPreview;
-window.__pvOn=function(){return !!document.querySelector('#editorPreviewPane.open')};
+window.__pvOn=function(){var ep=document.getElementById('editorPage');return !!document.querySelector('#editorPreviewPane.open,#mbFileSheetBd.open,#mbProjSheetBd.open,#drawer.open')||!!(ep&&ep.hidden)};
+(function(){
+  function kill(){var a=document.activeElement,m=document.getElementById('modalRoot');if(m&&!m.hidden)return;if(a&&a!==document.body&&/^(TEXTAREA|INPUT|SELECT)$/.test(a.tagName)&&a.blur)a.blur()}
+  function killLater(){[0,120,350,700,1200].forEach(function(ms){setTimeout(function(){if(window.__pvOn())kill()},ms)})}
+  document.addEventListener('visibilitychange',function(){if(document.hidden)kill();else killLater()});
+  window.addEventListener('pagehide',kill);
+  window.addEventListener('pageshow',killLater);
+})();
 window.__pvKbOff=function(){[0,80,200,450,800].forEach(function(ms){setTimeout(function(){var a=document.activeElement;if(a&&a!==document.body&&a.tagName!=='IFRAME'&&a.blur)a.blur();ta.blur()},ms)})};
 $('editorPreviewBtn').onclick=function(){pvOpen();$('editorPreviewPane').classList.add('open');ta.readOnly=true;window.__pvKbOff();renderPreview()};
 var pvPath='',pvHist=[];
@@ -1184,7 +1191,7 @@ function __backToSearch(){
   if(document.hidden||(window.__pvOn&&window.__pvOn())||!__lastSrch||!searchBar.classList.contains('open'))return;
   try{__lastSrch.focus({preventScroll:true});__esMark(__lastSrch)}catch(e){}
 }
-function __returned(){[100,300,700].forEach(function(ms){setTimeout(__backToSearch,ms)})}
+function __returned(){}
 document.addEventListener('visibilitychange',function(){if(!document.hidden)__returned()});
 window.addEventListener('pageshow',__returned);
 var __srchEl=null;
@@ -1203,7 +1210,7 @@ function __srchBack(){
     __esMark(el);
   }catch(x){}
 }
-function __srchReturn(){[60,250,600,1200].forEach(function(ms){setTimeout(__srchBack,ms)})}
+function __srchReturn(){}
 document.addEventListener('visibilitychange',function(){if(!document.hidden)__srchReturn()});
 window.addEventListener('focus',__srchReturn);
 window.addEventListener('pageshow',__srchReturn);

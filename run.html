@@ -45,6 +45,7 @@ a.btn{display:grid;place-items:center;text-decoration:none}
 .lk{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 18px}
 .lk a,.lk button{border:0;background:none;color:#8f919b;font:700 12px system-ui,sans-serif;padding:8px 2px;cursor:pointer;text-decoration:none}
 .lk a:active,.lk button:active{color:#f01424}
+.lk a.dl{color:#fff;font-size:14px;text-decoration:underline;text-underline-offset:3px}
 .ract .row{display:flex;gap:8px}.ract .row .btn{flex:1}
 </style>
 <script src="/topbar.js"></script>
@@ -428,8 +429,9 @@ function acts(primary,secs){
     if(o.fn)el.onclick=o.fn;
     return el;
   }
-  if(primary)box.appendChild(mk(primary,'btn'));
-  if(links.length){var lk=document.createElement('div');lk.className='lk';links.forEach(function(o){lk.appendChild(mk(o,''))});box.appendChild(lk)}
+  if(primary&&primary.href&&/^Download/i.test(primary.t)){links.unshift(primary);primary=null}
+if(primary)box.appendChild(mk(primary,'btn'));
+  if(links.length){var lk=document.createElement('div');lk.className='lk';links.forEach(function(o){lk.appendChild(mk(o,/^Download/i.test(o.t)?'dl':''))});box.appendChild(lk)}
   var row=document.createElement('div');row.className='row';
   row.appendChild(mk({t:'Cancel run',fn:cancelRun},'btn ghost'));
   var rr=mk({t:'Rerun',fn:function(){start()}},'btn ghost');rr.disabled=run;

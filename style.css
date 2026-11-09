@@ -658,3 +658,19 @@ iframe{background:#0d0e12!important}
   .bottom small{font-size:13px;letter-spacing:0}
   #previewPage:not([hidden]){height:calc(100dvh - 90px)!important}
 }
+
+/* soft tap: no color change, gentle fade and tiny press */
+*{-webkit-tap-highlight-color:transparent!important}
+button,a,.btn,.head-btn,.editor-btn,.snap-btn,.pc-btn,.project-card,.updates-proj,.gh-repo,.drawer-nav a,.drawer-section button,.eth-opt,.upd-save{transition:opacity .4s ease,transform .4s ease!important}
+:is(button,a,[onclick],[role=button],[data-k],[data-a],[data-act],[data-m],[data-f],.bottom span,.pill,.project-card,.updates-proj,.gh-repo):not(.es-clear):active{transform:scale(.98)!important;opacity:.8!important}
+:is(button,a,[onclick],[role=button],[data-k],[data-a],[data-act],[data-m],[data-f],.bottom span,.pill){transition:opacity .35s ease,transform .35s ease!important}
+.head-btn:active{background:#20222a!important}
+.editor-btn:active,.editor-btn.primary:active{background:#20222a!important}
+.drawer-nav a:hover,.drawer-nav a:active{background:transparent!important;color:#cfd0d8!important}
+.drawer-nav a.selected:active{background:#1a1b20!important;color:#fff!important}
+.drawer-section button:active{background:#1c1d22!important}
+.gh-repo:active,.eth-opt:active,.upd-save:active{background:transparent!important}
+.eth-opt.on:active{background:#25262d!important}
+.updates-proj:active,.project-card:hover,.project-card:active{border-color:var(--line)!important}
+.project-card.active:active{border-color:var(--accent)!important}
+.es-clear:active{background:#2a2c34!important;transform:translateY(-50%)!important}

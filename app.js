@@ -864,7 +864,7 @@ function bundlePick(id,all){
     var out='Multi Bundle Export\nProject: '+nm+'\nFiles: '+pick.length+(pick.length<tf.length?' (selected from '+tf.length+' text files)':'')+'\nExported: '+new Date().toISOString()+'\n'+'='.repeat(60)+'\n\n';
     pick.forEach(function(f){out+='\n'+'='.repeat(60)+'\nFILE: '+f.path+'\n'+'='.repeat(60)+'\n\n'+f.text+'\n'});
     var blob=new Blob([out],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);
-    a.download=nm.replace(/[^\w\-]+/g,'_')+'.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);
+    a.download=nm.replace(/[^\w\-]+/g,'_')+(pick.length===1?'-'+pick[0].path.split('/').pop().replace(/[^\w\-.]+/g,'_'):'')+'.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);
     setTimeout(function(){URL.revokeObjectURL(a.href)},2000);close();showToast('TXT created with '+pick.length+' file'+(pick.length===1?'':'s'),'success');
   };
 }

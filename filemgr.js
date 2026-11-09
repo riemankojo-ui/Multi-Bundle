@@ -270,7 +270,9 @@ function doCreateTxt() {
   });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([out], { type: 'text/plain' }));
-  a.download = nm.replace(/[^\w\-]+/g, '_') + '.txt';
+  var pn = nm.replace(/[^\w\-]+/g, '_');
+  var one = pick.length === 1 ? pick[0].path.split('/').pop().replace(/[^\w\-.]+/g, '_') : '';
+  a.download = pn + (one ? '-' + one : '') + '.txt';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
   toast('TXT created with ' + pick.length + ' file' + (pick.length === 1 ? '' : 's'), 'success');

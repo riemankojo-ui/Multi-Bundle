@@ -54,6 +54,7 @@ async function computeScan(repo,branch,p,fl){
   var pInfo=gh('GET','/repos/'+repo);
 var pUser=fetch('https://api.github.com/user',{headers:{'Authorization':'Bearer '+token(),'Accept':'application/vnd.github+json'}});
 var pRef=gh('GET','/repos/'+repo+'/git/ref/heads/'+brPath(branch));
+var pTree=gh('GET','/repos/'+repo+'/git/trees/'+brPath(branch)+'?recursive=1');pTree.catch(function(){});
 pUser.catch(function(){});pRef.catch(function(){});
 var info=await pInfo;
   if(info.permissions&&info.permissions.push===false){var pe=new Error('no write access');pe.status=-1;throw pe}
@@ -69,7 +70,7 @@ var info=await pInfo;
   var commit=null;
   var treeSha=null;
   var tree;
-try{tree=await gh('GET','/repos/'+repo+'/git/trees/'+headSha+'?recursive=1');treeSha=tree.sha}
+try{tree=await pTree;treeSha=tree.sha}
 catch(e1){commit=await gh('GET','/repos/'+repo+'/git/commits/'+headSha);treeSha=commit.tree.sha;tree=await gh('GET','/repos/'+repo+'/git/trees/'+treeSha+'?recursive=1')}
   if(tree.truncated){var te=new Error('This repo is too large to compare here.');te.status=0;throw te}
   var remote={};
@@ -139,7 +140,7 @@ function setStatus(t){var n=$('pbStatus');if(n)n.textContent=t||'';try{var m=/(\
 function closeSheet(){var b=$('pbBack');if(b)b.remove();S.busy=false;S.armed=false;clearTimeout(S.armT)}
 function updateGo(){updateRestore();
   var n=S.rows.filter(function(r){return r.on}).length;var g=$('pbGo');if(!g)return;
-  g.disabled=!n||S.busy;g.textContent=n?('Publish '+n+' file'+(n===1?'':'s')):'Publish';
+  g.disabled=!n||S.busy||!S.scan;g.textContent=n?('Publish '+n+' file'+(n===1?'':'s')):'Publish';
 }
 function renderRows(){
   var box=$('pbList');if(!box)return;
@@ -464,7 +465,17 @@ async function runScan(){
   setNote('Checking GitHub\u2026');setStatus('');$('pbList').innerHTML='';S.rows=[];S.scan=null;updateGo();
   try{
     var recs=await dbGetAll();var p=recs.find(function(x){return x.id===pid()})||null;
-    var r=await computeScan(repo,branch,p,curFiles());
+    var __pr=computeScan(repo,branch,p,curFiles());__pr.catch(function(){});
+    try{
+      var __fl=curFiles(),__hc=window.__pbHc||(window.__pbHc=new Map()),__b=(p&&p.githubShas&&p.githubRepo===repo&&(p.githubBranch||'main')===branch)?p.githubShas:null,__q=[];
+      await Promise.all(__fl.map(async function(f){
+        var c=__hc.get(f.path),key=f.blob||f.text,h;
+        if(c&&c.k===key)h=c.h;else{var bb=await fileBytes(f);if(!bb)return;h=await sha1blob(bb);__hc.set(f.path,{k:key,h:h})}
+        if(__b&&__b[f.path]!==h)__q.push({path:f.path,f:f,ls:h,isNew:__b[f.path]==null,conflict:false,on:true});
+      }));
+      if(__q.length&&!S.scan){S.rows=__q;renderRows();setNote('Checking GitHub\u2026')}
+    }catch(eq){}
+    var r=await __pr;
     S.scan=r.scan;S.rows=r.rows;renderRows();void 0;
     if(!r.rows.length){setNote('Everything here is already.','ok')}
     else{

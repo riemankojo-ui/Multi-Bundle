@@ -821,7 +821,7 @@ var __esInputs=[searchInput,$('editorReplaceInput')];
 function __esMark(el){__esInputs.forEach(function(i){if(i)i.classList.toggle('es-active',i===el)})}
 __esInputs.forEach(function(i){if(i)i.addEventListener('focus',function(){__esMark(i)})});
 ta.addEventListener('focus',function(){__esMark(null)});
-(function(){var lastTouch=0,done=false;document.addEventListener('touchstart',function(){lastTouch=Date.now();done=false},true);__esInputs.forEach(function(el){if(!el)return;el.addEventListener('blur',function(){setTimeout(function(){if(done||document.hidden||Date.now()-lastTouch<500)return;if(!searchBar.classList.contains('open')||el.className.indexOf('es-active')<0)return;if(document.activeElement&&document.activeElement!==document.body)return;done=true;el.focus({preventScroll:true})},150)})})})();
+(function(){var lastTouch=0,done=false;document.addEventListener('touchstart',function(){lastTouch=Date.now();done=false},true);__esInputs.forEach(function(el){if(!el)return;el.addEventListener('blur',function(){setTimeout(function(){if(done||document.hidden||(window.__pvOn&&window.__pvOn())||Date.now()-lastTouch<500)return;if(!searchBar.classList.contains('open')||el.className.indexOf('es-active')<0)return;if(document.activeElement&&document.activeElement!==document.body)return;done=true;el.focus({preventScroll:true})},150)})})})();
 searchInput.addEventListener('keydown',function(e){
   if(e.key==='Enter'){e.preventDefault();e.shiftKey?prevMatch():nextMatch()}
   if(e.key==='Escape')closeSearch();
@@ -952,7 +952,9 @@ function renderPreview(){
   pvDraw();
 }
 $('editorPreviewRefresh').onclick=renderPreview;
-$('editorPreviewBtn').onclick=function(){pvOpen();$('editorPreviewPane').classList.add('open');ta.readOnly=true;ta.blur();renderPreview()};
+window.__pvOn=function(){return !!document.querySelector('#editorPreviewPane.open')};
+window.__pvKbOff=function(){[0,80,200,450,800].forEach(function(ms){setTimeout(function(){var a=document.activeElement;if(a&&a!==document.body&&a.tagName!=='IFRAME'&&a.blur)a.blur();ta.blur()},ms)})};
+$('editorPreviewBtn').onclick=function(){pvOpen();$('editorPreviewPane').classList.add('open');ta.readOnly=true;window.__pvKbOff();renderPreview()};
 var pvPath='',pvHist=[];
 function pvIsHtml(p){return /\.html?$/i.test(p||'')}
 function pvIsSvg(p){return /\.svg$/i.test(p||'')}
@@ -1116,7 +1118,7 @@ function restoreEdSel() {
     if (a == null || b == null) return;
     if (a > ta.value.length) a = ta.value.length;
     if (b > ta.value.length) b = ta.value.length;
-    ta.focus({ preventScroll: true });
+    if (document.activeElement === ta) ta.focus({ preventScroll: true });
     ta.setSelectionRange(a, b);
   } catch (e) {}
 }
@@ -1158,10 +1160,11 @@ function restoreEdSel() {
     if (a > ta.value.length) a = ta.value.length;
     if (b > ta.value.length) b = ta.value.length;
     if (window.__edSkipRestore && Date.now() < window.__edSkipRestore) return;
+if (window.__pvOn && window.__pvOn()) return;
 var __mr = document.getElementById('modalRoot'); if (__mr && !__mr.hidden) return;
 if (document.querySelector('#mbFileSheetBd.open,#mbProjSheetBd.open')) return;
 if (window.__edLastFocus && window.__edLastFocus !== ta && searchBar.contains(window.__edLastFocus)) return;
-    ta.focus({ preventScroll: true });
+    if (document.activeElement === ta) ta.focus({ preventScroll: true });
     ta.setSelectionRange(a, b);
     if (__edSel.scroll != null && !window.__edKeepScroll) ta.scrollTop = __edSel.scroll;
   } catch (e) {}
@@ -1178,7 +1181,7 @@ document.addEventListener('focusin',function(e){
   else if(t===ta)__lastSrch=null;
 },true);
 function __backToSearch(){
-  if(document.hidden||!__lastSrch||!searchBar.classList.contains('open'))return;
+  if(document.hidden||(window.__pvOn&&window.__pvOn())||!__lastSrch||!searchBar.classList.contains('open'))return;
   try{__lastSrch.focus({preventScroll:true});__esMark(__lastSrch)}catch(e){}
 }
 function __returned(){[100,300,700].forEach(function(ms){setTimeout(__backToSearch,ms)})}
@@ -1191,7 +1194,7 @@ document.addEventListener('focusin',function(e){
   else if(t===ta)__srchEl=null;
 },true);
 function __srchBack(){
-  if(document.hidden||!__srchEl||!searchBar.classList.contains('open'))return;
+  if(document.hidden||(window.__pvOn&&window.__pvOn())||!__srchEl||!searchBar.classList.contains('open'))return;
   try{
     var el=__srchEl,a=el.selectionStart,b=el.selectionEnd;
     el.blur();

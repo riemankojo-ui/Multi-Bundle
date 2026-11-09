@@ -959,6 +959,25 @@ window.__pvOn=function(){var ep=document.getElementById('editorPage');return !!d
   document.addEventListener('visibilitychange',function(){if(document.hidden)kill();else killLater()});
   window.addEventListener('pagehide',kill);
   window.addEventListener('pageshow',killLater);
+var want=null,prevOv=false,KN='#editorPreviewPane.open,#mbFileSheetBd.open,#mbProjSheetBd.open,#drawer.open';
+function genOv(){var k=document.body.children;for(var i=0;i<k.length;i++){var e=k[i];if(e.tagName!=='DIV'||e.id==='modalRoot')continue;var cs=getComputedStyle(e);if(cs.position!=='fixed'||cs.display==='none'||cs.visibility==='hidden'||cs.pointerEvents==='none'||+cs.opacity===0)continue;var r=e.getBoundingClientRect();if(r.width>innerWidth*.8&&r.height>innerHeight*.4)return true}return false}
+function ovOpen(){return !!document.querySelector(KN)||genOv()}
+function isEd(t){return t===ta||t===searchInput||t===$('editorReplaceInput')}
+document.addEventListener('focusin',function(e){if(isEd(e.target))want=e.target},true);
+document.addEventListener('focusout',function(e){var t=e.target;if(!isEd(t))return;setTimeout(function(){if(want===t&&!ovOpen()&&!document.hidden&&document.activeElement!==t)want=null},400)},true);
+setInterval(function(){
+  var now=ovOpen(),ep=$('editorPage');
+  if(prevOv&&!now&&!document.hidden&&want&&!(ep&&ep.hidden)&&!(document.activeElement&&isEd(document.activeElement))){
+    var el=want;
+    try{
+      if(el===ta)ta.readOnly=false;
+      el.focus({preventScroll:true});
+      if(el===ta){try{ta.setSelectionRange(__edSel.start,__edSel.end)}catch(x){}}
+      else{try{__esMark(el)}catch(x){}}
+    }catch(x){}
+  }
+  prevOv=now;
+},150);
 })();
 window.__pvKbOff=function(){[0,80,200,450,800].forEach(function(ms){setTimeout(function(){var a=document.activeElement;if(a&&a!==document.body&&a.tagName!=='IFRAME'&&a.blur)a.blur();ta.blur()},ms)})};
 $('editorPreviewBtn').onclick=function(){pvOpen();$('editorPreviewPane').classList.add('open');ta.readOnly=true;window.__pvKbOff();renderPreview()};

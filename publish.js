@@ -466,7 +466,7 @@ async function runScan(){
     var recs=await dbGetAll();var p=recs.find(function(x){return x.id===pid()})||null;
     var r=await computeScan(repo,branch,p,curFiles());
     S.scan=r.scan;S.rows=r.rows;renderRows();void 0;
-    if(!r.rows.length){setNote('Everything here is already on GitHub.','ok')}
+    if(!r.rows.length){setNote('Everything here is already.','ok')}
     else{
       var warn=r.rows.filter(function(x){return x.conflict}).length;
       var t=r.rows.length+' file'+(r.rows.length===1?'':'s')+' ready to publish.';var nd=r.rows.filter(function(x){return x.isDel}).length;if(nd)t+=' '+nd+' will be deleted from GitHub.';

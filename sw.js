@@ -1,5 +1,5 @@
 /* Multi Bundle Service Worker — v8 */
-const CACHE='multibundle-v218';
+const CACHE='multibundle-v219';
 const ASSETS=['/','/index.html','/style.css','/app.js','/errwatch.js','/editor.js','/settings.js','/publish.js','/sync.js','/backups.js','/edtools.js','/bundlebtn.js','/manifest.json','/logo.png','/logo-m.png','/apkbuild.html','/run.html','/store-android.html','/store-ios.html','/workflow.html','/cloud.html','/topbar.js'];
 
 {

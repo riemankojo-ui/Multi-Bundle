@@ -83,12 +83,14 @@
           return;
         } catch (ze) {
           if (String(ze && ze.message || ze) === 'cancelled') return;
+          alert('ZIP step failed: ' + String(ze && ze.message || ze));
         }
       }
       await P.saveAs({ name: name, data: await b64(blob), base64: true, mime: 'application/vnd.android.package-archive' });
       toast('Saved ' + name);
     } catch (err) {
       if (String(err && err.message || err) === 'cancelled') return;
+      alert('Download step failed: ' + String(err && err.message || err));
       toast('Could not save here. Opening browser.');
       window.open(href, '_blank');
     }

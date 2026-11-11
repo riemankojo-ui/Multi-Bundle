@@ -1,8 +1,9 @@
 // Saves APK downloads from inside the app, through the folder picker.
 (function () {
   var C = window.Capacitor;
-  if (!(C && C.isNativePlatform && C.isNativePlatform())) return;
-  var P = C.registerPlugin('FolderAccess');
+  var NATIVE = !!(C && C.isNativePlatform && C.isNativePlatform());
+  C = C || { registerPlugin: function () { return null; } };
+  var P = NATIVE ? C.registerPlugin('FolderAccess') : { saveAs: function (o) { return new Promise(function (ok) { var bin = atob(o.data), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([u], { type: o.mime })); a.download = o.name; document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 1000); ok(); }); } };
 
   function tk() {
     try { return sessionStorage.getItem('mb_apk_tk') || localStorage.getItem('mb_apk_tk') || localStorage.getItem('mb_gh_active_token') || ''; } catch (e) { return ''; }

@@ -318,7 +318,11 @@ async function build(p,v,say){
     run=(rs.workflow_runs||[]).find(function(r){return r.id>before})||null;
   }
   if(!run)throw new Error('The build did not start. Check the Actions tab on GitHub.');
-  var t0=Date.now();
+  try{localStorage.setItem('mb_run_'+(q.get('t')||''),String(run.id))}catch(e){}
+  return await watchRun(repo,run,say);
+}
+async function watchRun(repo,run,say){
+  var i,t0=Date.now();
   while(true){
     chk();
     run=await gh('GET','/repos/'+repo+'/actions/runs/'+run.id);
@@ -335,6 +339,8 @@ async function build(p,v,say){
   }
   var asset=rel&&(rel.assets||[]).find(function(a){return /\.apk$/i.test(a.name)});
   if(!asset)return {fail:true,run:run.html_url,why:'APK file not found in the release'};
+  var want=(v.name||'').replace(/[^A-Za-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'');
+  if(want&&asset.name.toLowerCase()!==(want+'.apk').toLowerCase()){try{asset=await gh('PATCH','/repos/'+repo+'/releases/assets/'+asset.id,{name:want+'.apk'})}catch(e){}}
   return {url:asset.browser_download_url,run:run.html_url};
 }
 
@@ -465,7 +471,7 @@ function hintFor(e){
   return '';
 }
 
-async function start(){
+async function start(rid){
   $('rApp').textContent=v.name+'  v'+v.ver;
   $('rRepo').textContent=p.githubRepo+' \u00b7 '+p.githubBranch+' \u00b7 '+v.id;
   setState('','RUNNING');setPct(2,true);$('rTime').textContent='0:00';
@@ -481,7 +487,7 @@ async function start(){
   LOG('Package '+v.id,'dim');
   clearInterval(tick);tick=setInterval(updTime,1000);wake();
   try{
-    var res=await build(p,v,onSay);
+    var res=rid?await watchRun(p.githubRepo,await gh('GET','/repos/'+p.githubRepo+'/actions/runs/'+rid),onSay):await build(p,v,onSay);
     stopRun();
     try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}
     if(res.fail){
@@ -521,6 +527,8 @@ var tid=q.get('t')||'',prev='';
 try{prev=sessionStorage.getItem('mb_run_t')||''}catch(e){}
 if(tid&&prev===tid){
   $('rApp').textContent=v.name+'  v'+v.ver;
+  var rid='';try{rid=localStorage.getItem('mb_run_'+tid)||''}catch(e){}
+  if(rid){start(rid);return}
   LOG('This build was already started. Open the form to start another one.','dim');
   setState('no','STOPPED');acts({t:'Back to form',fn:toForm},[]);
 }else{

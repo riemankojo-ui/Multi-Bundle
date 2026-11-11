@@ -214,7 +214,7 @@ async function restoreFromGitHub(){
     if(!todo.length)return;
     (async function(){
       try{
-        var pr=scan.repo.split('/');if(1)throw 0;
+        var pr=scan.repo.split('/');
         var res=await fetch('https://api.github.com/graphql',{method:'POST',headers:{'Authorization':'Bearer '+(window.getToken?window.getToken():''),'Content-Type':'application/json'},body:JSON.stringify({query:'query($o:String!,$n:String!,$e:String!){repository(owner:$o,name:$n){object(expression:$e){... on Commit{history(first:'+list.length+'){nodes{oid changedFilesIfAvailable}}}}}}',variables:{o:pr[0],n:pr[1],e:scan.branch}})});
         if(res.ok){
           var d=await res.json();
@@ -238,7 +238,7 @@ async function restoreFromGitHub(){
           }catch(e){if(__rows[k])__rows[k].textContent=''}
         }
       };
-      for(var t=0;t<8;t++)w2();
+      for(var t=0;t<20;t++)w2();
     })();
   })();
   var x=document.createElement('button');x.textContent='Cancel';

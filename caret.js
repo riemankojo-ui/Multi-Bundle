@@ -5,7 +5,7 @@
   var hl = wrap.querySelector('.editor-hl');
   var st = document.createElement('style');
   st.textContent = '.editor-code #editorTextarea{caret-color:transparent!important}' +
-    '#mbCaret{position:absolute;z-index:3;width:2px;border-radius:1px;background:#ffd166;pointer-events:none;display:none;animation:mbBlink 1s steps(1) infinite}' +
+    '#mbCaret{position:absolute;z-index:3;width:2px;border-radius:1px;background:#aeb2bd;pointer-events:none;display:none;animation:mbBlink 1s steps(1) infinite}' +
     '@keyframes mbBlink{50%{opacity:0}}';
   document.head.appendChild(st);
   var c = document.createElement('div');
@@ -57,7 +57,7 @@
     if (p.y < -p.h || p.y > wrap.clientHeight) { c.style.display = 'none'; return; }
     c.style.display = 'block';
     c.style.left = p.x + 'px';
-    var lh = parseFloat(getComputedStyle(ta).lineHeight) || p.h * 1.3, hh = Math.max(p.h, lh) + 4;
+    var lh = parseFloat(getComputedStyle(ta).lineHeight) || p.h * 1.3, hh = Math.max(p.h, lh) + 12;
     c.style.top = (p.y - (hh - p.h) / 2) + 'px';
     c.style.height = hh + 'px';
     if (p.x !== lx || p.y !== ly) { lx = p.x; ly = p.y; c.style.animation = 'none'; void c.offsetWidth; c.style.animation = ''; }

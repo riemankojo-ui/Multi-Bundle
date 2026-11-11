@@ -370,7 +370,8 @@ body:not(.kb-open) #editorPage:not([hidden]) .editor-shell:not(.fullscreen){heig
 .editor-hl::-webkit-scrollbar{display:none}
 .editor-code #editorTextarea{
   color: transparent !important;
-  caret-color: var(--red);
+  caret-color: #ffd166;
+  caret-shape: bar;
   z-index: 2;
   resize: none;
   -webkit-text-fill-color: transparent !important;

@@ -326,7 +326,7 @@
   function applyOp(res) {
     if (!res) return false;
     ta.value = res.v;
-    ta.blur(); // Force keyboard down
+    ta.focus({ preventScroll: true }); // keep the cursor
     ta.setSelectionRange(res.a, res.b);
     ta.dispatchEvent(new Event('input', { bubbles: true }));
     return true;
@@ -405,7 +405,7 @@
     cut: function () {
       var a = ta.selectionStart, b = ta.selectionEnd;
       if (a === b) return toast('Select something first (try Select all)');
-      var t = ta.value.slice(a, b); copyText(t, 'Cut ' + t.length + ' characters');
+      var t = ta.value.slice(a, b); copyText(t, 'Cut ' + t.length + ' characters'); setTimeout(function () { ta.focus({ preventScroll: true }); try { ta.setSelectionRange(a, a); } catch (e) {} }, 30);
       applyOp({ v: ta.value.slice(0, a) + ta.value.slice(b), a: a, b: a });
     },
     delsel: function () {

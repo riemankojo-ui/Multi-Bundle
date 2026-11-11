@@ -1237,7 +1237,8 @@ window.addEventListener('focus',__srchReturn);
 window.addEventListener('pageshow',__srchReturn);
 // Save when you leave the app, restore when you come back
 document.addEventListener('visibilitychange', function () {
-  if (document.hidden) saveEdSel();
+  if (!document.hidden && window.__edHad) { [200, 500].forEach(function (ms) { setTimeout(function () { if (document.hidden || (window.__pvOn && window.__pvOn())) return; try { ta.focus({ preventScroll: true }); restoreEdSel(); } catch (e) {} }, ms); }); }
+  if (document.hidden) { window.__edHad = (document.activeElement === ta); saveEdSel(); }
   else setTimeout(function () {
     restoreEdSel();
     try { var c0 = ta.parentNode; if (c0) c0.classList.remove('mb-sel'); refreshHighlight(); syncScroll(); paintMatches(); document.dispatchEvent(new Event('selectionchange')); } catch (e) {}

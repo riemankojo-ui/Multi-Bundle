@@ -46,6 +46,21 @@
     };
     document.body.appendChild(d);
   }
+  function crc32(u) { var t = crc32.t; if (!t) { t = crc32.t = []; for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } } var r = 0xFFFFFFFF; for (var i = 0; i < u.length; i++) r = t[(r ^ u[i]) & 255] ^ (r >>> 8); return (r ^ 0xFFFFFFFF) >>> 0; }
+  async function makeZip(folder, name, blob) {
+    var data = new Uint8Array(await blob.arrayBuffer()), enc = new TextEncoder(), p = enc.encode(folder + '/' + name), d = enc.encode(folder + '/'), parts = [], cd = [], off = 0;
+    function u16(v) { return [v & 255, (v >>> 8) & 255]; }
+    function u32(v) { return [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255]; }
+    function add(pb, bytes, c, dir) {
+      var lh = new Uint8Array([].concat(u32(0x04034b50), u16(20), u16(0x0800), u16(0), u16(0), u16(33), u32(c), u32(bytes.length), u32(bytes.length), u16(pb.length), u16(0)));
+      var ch = new Uint8Array([].concat(u32(0x02014b50), u16(20), u16(20), u16(0x0800), u16(0), u16(0), u16(33), u32(c), u32(bytes.length), u32(bytes.length), u16(pb.length), u16(0), u16(0), u16(0), u16(0), u32(dir ? 0x10 : 0), u32(off)));
+      parts.push(lh, pb, bytes); cd.push(ch, pb); off += lh.length + pb.length + bytes.length;
+    }
+    add(d, new Uint8Array(0), 0, true); add(p, data, crc32(data), false);
+    var cl = 0; cd.forEach(function (x) { cl += x.length; });
+    var end = new Uint8Array([].concat(u32(0x06054b50), u16(0), u16(0), u16(2), u16(2), u32(cl), u32(off), u16(0)));
+    return new Blob(parts.concat(cd, [end]), { type: 'application/zip' });
+  }
   async function save(href, repo, tag, name, zip) {
     var h = { Accept: 'application/vnd.github+json' }, t = tk();
     if (t) h.Authorization = 'Bearer ' + t;
@@ -60,7 +75,7 @@
       var blob = await r.blob();
       if (zip) {
         try {
-          var Z = await loadZip(), z = new Z(), base = name.replace(/\.apk$/i, '');
+          var base = name.replace(/\.apk$/i, ''), z = { folder: function () { return { file: function () {} }; }, generateAsync: function () { return makeZip(base, name, blob); } };
           z.folder(base).file(name, blob);
           var zb = await z.generateAsync({ type: 'blob' });
           await P.saveAs({ name: base + '.zip', data: await b64(zb), base64: true, mime: 'application/zip' });
@@ -84,6 +99,6 @@
     var m = /^https:\/\/github\.com\/([^\/]+\/[^\/]+)\/releases\/download\/([^\/]+)\/([^\/?#]+\.apk)$/i.exec(a.href);
     if (!m) return;
     e.preventDefault(); e.stopPropagation();
-    ask(function (zip) { save(a.href, m[1], decodeURIComponent(m[2]), decodeURIComponent(m[3]), zip); });
+    save(a.href, m[1], decodeURIComponent(m[2]), decodeURIComponent(m[3]), true);
   }, true);
 })();

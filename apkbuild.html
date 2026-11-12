@@ -172,6 +172,7 @@ async function loadWf(){
 $('wfCard').onclick=function(e){
   var row=e.target.closest?e.target.closest('[data-f]'):null;
   if(!row)return;
+  if(/aab|bundle/i.test(row.getAttribute('data-f')||'')){location.href='store-android.html?pid='+enc(p.id)+'&name='+enc(p.name||'App')+'&repo='+enc(p.githubRepo)+'&branch='+enc(p.githubBranch||'main');return}
   if(!okRepo||!okTk){toast(!okRepo?'Publish the project to GitHub first':'GitHub is not connected');return}
   var v={name:fN.value.trim(),id:fI.value.trim().toLowerCase(),ver:fV.value.trim()};
   if(!v.name){toast('Enter an app name');fN.focus();return}

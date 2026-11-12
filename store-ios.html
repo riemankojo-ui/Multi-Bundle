@@ -41,6 +41,11 @@ input[type=text]:focus{border-color:var(--red)}
 .act{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:#fff;font-family:inherit;text-align:left;cursor:pointer;margin-bottom:10px}
 .act:active{transform:scale(.99)}
 .act:disabled{opacity:.45}
+#fDl{font-size:0!important;text-decoration:none!important}
+#fDl::after{content:"Download Store Files";font-size:14px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+#fDl,.fb a{transition:color .2s ease}
+#fDl:active,.fb a:active{color:#f01424!important}
+#resBox .fb:last-child{border-top:1px solid #25262d;padding-top:12px;margin-top:12px!important}
 .act .ic{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:#1b1c22;border:1px solid #2c2d35}
 .act .tx{flex:1;min-width:0}
 .act b{display:block;font-size:14px}
@@ -181,7 +186,7 @@ async function showFiles(repo,v,as,logUrl,ios){
   function upd(){var n=sel().length;$('fCnt').textContent=n+' of '+items.length+' selected';$('fDl').disabled=!n;$('fDl').textContent='Download'}
   box.querySelector('.fl').onchange=upd;upd();
   try{saved.res={repo:repo,v:v,logUrl:logUrl,logs:logs.slice(),items:items};persist()}catch(e){}
-  $('fDl').onclick=async function(){
+  $('fDl').onclick=async function(){ return zipStore({repo:repo,v:v},sel());
     var b=this,list=sel();if(b.disabled||!list.length)return;
     b.disabled=true;b.textContent='Downloading...';
     for(var j=0;j<list.length;j++){
@@ -190,6 +195,28 @@ async function showFiles(repo,v,as,logUrl,ios){
     }
     upd();
   };
+}
+async function zipStore(r,s){
+  if(!s.length)return;
+  if(!window.JSZip){toast('ZIP tool did not load. Refresh and try again.');return}
+  var b=document.getElementById('fDl');if(b){if(b.disabled)return;b.disabled=true}
+  try{
+    var nm=String((r.v&&(r.v.name||r.v.app_name))||'Store-Files').replace(/[^A-Za-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'')||'Store-Files',z=new JSZip(),fo=z.folder(nm);
+    for(var i=0;i<s.length;i++){
+      toast('Adding '+s[i].name+'...');
+      var m=/\/releases\/download\/([^\/]+)\//.exec(s[i].url||'');
+      var q=m?'/api/dl?repo='+encodeURIComponent(r.repo)+'&tag='+encodeURIComponent(decodeURIComponent(m[1]))+'&name='+encodeURIComponent(s[i].name):'/api/dl?repo='+encodeURIComponent(r.repo)+'&asset='+s[i].id;
+      var x=await fetch(q,{headers:tk()?{'x-gh':tk()}:{}});
+      if(!x.ok)throw new Error(s[i].name+' HTTP '+x.status);
+      fo.file(s[i].name,await x.blob());
+    }
+    toast('Making ZIP...');
+    var zb=await z.generateAsync({type:'blob'}),u=URL.createObjectURL(zb),a=document.createElement('a');
+    a.href=u;a.download=nm+'.zip';document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(u)},4000);
+    toast('Saved '+nm+'.zip');
+  }catch(e){alert('Download failed: '+((e&&e.message)||e))}
+  if(b)b.disabled=false;
 }
 function fixWf(t,tag){
   var notes=[],s=t.replace(/\r\n?/g,'\n'),i,L;

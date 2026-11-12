@@ -277,6 +277,22 @@ async function build(p,v,say){
   say('Checking repo\u2026');
   var info=await gh('GET','/repos/'+repo);
   if(info.permissions&&info.permissions.push===false)throw new Error('Your GitHub account cannot write to '+repo+'.');
+  try{
+    var tr=await gh('GET','/repos/'+repo+'/git/trees/'+encodeURIComponent(br)+'?recursive=1');
+    var fl=(tr.tree||[]).filter(function(x){return x.type==='blob'&&!/^(node_modules|android\/app\/build)\//.test(x.path)});
+    var has=function(re){return fl.find(function(x){return re.test(x.path)})};
+    var kb=function(x){return x&&x.size?' ('+Math.max(1,Math.round(x.size/1024))+' KB)':''};
+    LOG('Repo has '+fl.length+' files','dim');
+    var lg=has(/^(logo|icon|favicon)[^\/]*\.(png|jpe?g|webp|svg)$/i)||has(/(^|\/)(logo|icon)[^\/]*\.(png|jpe?g|webp|svg)$/i);
+    if(lg)LOG('Logo is good: '+lg.path+kb(lg),'ok');else LOG('No logo found, the app will use the default icon','err');
+    var ix=has(/(^|\/)index\.html$/i);
+    if(ix)LOG('Web app is good: '+ix.path,'ok');else LOG('No index.html found in the repo','err');
+    var cc=has(/^capacitor\.config\.(json|ts|js)$/i);
+    if(cc)LOG('Capacitor config is good: '+cc.path,'ok');else LOG('No capacitor config yet, it will be created','dim');
+    var mf=has(/(^|\/)manifest\.json$/i);
+    if(mf)LOG('Manifest is good: '+mf.path,'ok');
+    if(has(/^native\//))LOG('Native plugin files found','ok');
+  }catch(e){LOG('Could not check the repo files: '+((e&&e.message)||'error'),'dim')}
   chk();
   var cur=null;
   try{cur=await gh('GET','/repos/'+repo+'/contents/'+WF_PATH+'?ref='+encodeURIComponent(br))}catch(e){if(e.status!==404)throw e}

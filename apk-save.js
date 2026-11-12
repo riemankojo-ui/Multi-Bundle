@@ -70,7 +70,7 @@
       var as = (rel.assets || []).find(function (x) { return x.name === name; });
       if (!as && NATIVE) throw new Error('APK not found');
       h.Accept = 'application/octet-stream';
-      var r = NATIVE ? await fetch('https://api.github.com/repos/' + repo + '/releases/assets/' + as.id, { headers: h }) : await fetch('/api/dl?repo=' + encodeURIComponent(repo) + '&tag=' + encodeURIComponent(tag) + '&name=' + encodeURIComponent(name));
+      var r = NATIVE ? await fetch('https://api.github.com/repos/' + repo + '/releases/assets/' + as.id, { headers: h }) : await fetch('/api/dl?repo=' + encodeURIComponent(repo) + '&tag=' + encodeURIComponent(tag) + '&name=' + encodeURIComponent(name), { headers: t ? { 'x-gh': t } : {} });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       var blob = await r.blob();
       if (zip) {

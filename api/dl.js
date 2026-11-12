@@ -11,7 +11,15 @@ export default async function handler(req) {
   const headers = {};
   const gh = req.headers.get('x-gh');
   if (gh) headers.Authorization = 'Bearer ' + gh;
-  const r = await fetch('https://github.com/' + repo + '/releases/download/' + tag + '/' + name, { headers, redirect: 'follow' });
+  let r;
+  if (gh) {
+    const meta = await (await fetch('https://api.github.com/repos/' + repo + '/releases/tags/' + tag, { headers: { Authorization: 'Bearer ' + gh, Accept: 'application/vnd.github+json', 'User-Agent': 'multibundle' } })).json();
+    const as = (meta.assets || []).find(function (x) { return x.name === name; });
+    if (!as) return new Response('asset not found', { status: 404 });
+    r = await fetch('https://api.github.com/repos/' + repo + '/releases/assets/' + as.id, { headers: { Authorization: 'Bearer ' + gh, Accept: 'application/octet-stream', 'User-Agent': 'multibundle' }, redirect: 'follow' });
+  } else {
+    r = await fetch('https://github.com/' + repo + '/releases/download/' + tag + '/' + name, { redirect: 'follow' });
+  }
   return new Response(r.body, {
     status: r.status,
     headers: { 'content-type': 'application/octet-stream', 'cache-control': 'no-store' }

@@ -46,7 +46,7 @@
   function totalSize(p) { return (p.files || []).reduce(function (a, f) { return a + (f.size || 0); }, 0); }
 
   var cache = [];
-  var state = { pid: null, sel: {}, busy: false };
+  var state = { pid: null, sel: {}, busy: false, currentDir: '', fileQ: '' };
 
   async function loadProjects() {
     try { cache = (typeof dbGetAll === 'function') ? await dbGetAll() : []; } catch (e) { cache = []; }
@@ -72,25 +72,47 @@
     function fileIcon(path) {
   return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#a2a3ad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>';
 }
-    var dirs = {}, rows = '';
-    fl.forEach(function(f) {
-      var dir = dirName(f.path) || '';
-      if (dir && !dirs[dir]) {
-        dirs[dir] = true;
-        rows += '<div class="bk-dir-row"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>' + esc(dir.replace(/\/$/, '')) + '</span></div>';
-      }
-      var sel = state.sel[f.path];
-      rows += '<button class="bk-frow' + (sel ? ' on' : '') + '" data-fp="' + esc(f.path) + '">' +
-        (state.selecting ? '<span class="bk-chk">' + (sel ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#ff2d46" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</span>' : '') +
-        fileIcon(f.path) +
-        '<span class="bk-fn"><b>' + esc(baseName(f.path)) + '</b>' + (dir ? '<i>' + esc(dir) + '</i>' : '') + '</span>' +
-        '<em>' + fmtSize(f.size) + '</em></button>';
-    });
+    var rows = '';
+if (state.fileQ) {
+  fl.forEach(function(f) {
+    var sel = state.sel[f.path];
+    rows += '<button class="bk-frow' + (sel ? ' on' : '') + '" data-fp="' + esc(f.path) + '">' +
+      (state.selecting ? '<span class="bk-chk">' + (sel ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#ff2d46" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</span>' : '') +
+      fileIcon(f.path) +
+      '<span class="bk-fn"><b>' + esc(baseName(f.path)) + '</b><i>' + esc(dirName(f.path)) + '</i></span>' +
+      '<em>' + fmtSize(f.size) + '</em></button>';
+  });
+} else {
+  var dirs = {}, filesInDir = [];
+  fl.forEach(function(f) {
+    if (f.path.indexOf(state.currentDir) === 0) {
+      var rel = f.path.slice(state.currentDir.length);
+      if (rel.indexOf('/') > -1) dirs[rel.split('/')[0]] = true;
+      else filesInDir.push(f);
+    }
+  });
+  Object.keys(dirs).sort().forEach(function(d) {
+    rows += '<button class="bk-frow" data-dir="' + esc(state.currentDir + d + '/') + '" style="cursor:pointer;">' +
+      '<span style="width:20px;height:20px;flex:none"></span>' +
+      '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#a2a3ad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' +
+      '<span class="bk-fn"><b>' + esc(d) + '</b></span>' +
+      '<span style="color:#a2a3ad;margin-left:auto;padding-right:10px;font-size:16px;">›</span></button>';
+  });
+  filesInDir.forEach(function(f) {
+    var sel = state.sel[f.path];
+    rows += '<button class="bk-frow' + (sel ? ' on' : '') + '" data-fp="' + esc(f.path) + '">' +
+      (state.selecting ? '<span class="bk-chk">' + (sel ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#ff2d46" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</span>' : '') +
+      fileIcon(f.path) +
+      '<span class="bk-fn"><b>' + esc(baseName(f.path)) + '</b></span>' +
+      '<em>' + fmtSize(f.size) + '</em></button>';
+  });
+}
     if (!fl.length) rows = '<div class="bk-empty">This project has no files.</div>';
     var selCount = Object.keys(state.sel).length;
     var actionCard = state.selecting ? '<div class="bk-action-card"><div class="bk-ac-row"><button class="bk-ac-btn" id="bkZip"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="10" y="4" width="2" height="2"/><rect x="12" y="6" width="2" height="2"/><rect x="10" y="8" width="2" height="2"/><rect x="12" y="10" width="2" height="2"/><rect x="10" y="13" width="4" height="5" rx="1"/></svg><span>ZIP</span></button><button class="bk-ac-btn" id="bkRaw"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Save</span></button><button class="bk-ac-btn" id="bkDrive"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l5-9 4 7h9l-5 9H7L3 15z"/><path d="M8 6l4 7"/><path d="M16 15l-4-7"/></svg><span>Drive</span></button><button class="bk-ac-btn bk-ac-del" id="bkDel"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg><span>Delete</span></button></div><div class="bk-ac-info"><span id="bkCount">' + selCount + ' selected</span><button class="bk-ac-cancel" id="bkCancel">Cancel</button></div></div>' : '';
-    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">' +
-  '<button class="bk-back" id="bkBack" style="margin:0;flex:none;padding:10px 12px;">\u2039</button>' +
+    var backLabel = state.currentDir ? '\u2039 Up' : '\u2039 All projects';
+return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">' +
+  '<button class="bk-back" id="bkBack" style="margin:0;flex:none;padding:10px 12px;">' + backLabel + '</button>' +
   '<div style="flex:1; position:relative;">' +
     '<input type="text" id="bkFileSearch" class="bk-file-search" placeholder="Search files..." value="' + esc(state.fileQ || '') + '" style="width:100%; box-sizing:border-box; background:#20222a; border:1px solid #303139; color:#fff; border-radius:10px; padding:10px 12px; font-size:14px; outline:none; padding-right:32px;">' +
     '<button id="bkFileSearchClear" class="bk-search-clear" style="display:' + (state.fileQ ? 'flex' : 'none') + '; position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:0; color:#a2a3ad; font-size:18px; cursor:pointer; align-items:center; justify-content:center;">&times;</button>' +
@@ -464,7 +486,7 @@ var body = $('bkBody'); if (!body) return;
   var tb=document.querySelector('.bk-topbar'); if(tb) tb.style.display = 'none';
   var body=$('bkBody'); if(!body) {ov.remove();return;}
   body.innerHTML=detailHtml(p);
-    $('bkBack').onclick=function(){state.fileQ='';showList();};
+    $('bkBack').onclick=function(){var o=document.createElement('div');o.style.cssText='position:fixed;left:0;right:0;top:44px;bottom:60px;z-index:10001;background:#0d0e12;display:flex;align-items:center;justify-content:center';o.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';document.body.appendChild(o);setTimeout(function(){state.fileQ='';showList();o.remove();},450);};
     var fs=$('bkFileSearch');
 if(fs){
   fs.oninput=function(){
@@ -472,7 +494,7 @@ if(fs){
     var cl=$('bkFileSearchClear'); if(cl) cl.style.display=fs.value?'flex':'none';
     var curPos = fs.selectionStart;
     body.innerHTML=detailHtml(p);
-    $('bkBack').onclick=function(){state.fileQ='';showList();};
+    $('bkBack').onclick=function(){var o=document.createElement('div');o.style.cssText='position:fixed;left:0;right:0;top:44px;bottom:60px;z-index:10001;background:#0d0e12;display:flex;align-items:center;justify-content:center';o.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';document.body.appendChild(o);setTimeout(function(){state.fileQ='';showList();o.remove();},450);};
     wireActions(); bindRows();
     var newFs = $('bkFileSearch');
     if(newFs) { newFs.focus(); newFs.setSelectionRange(curPos, curPos); }
@@ -483,7 +505,7 @@ if(fc){
   fc.onclick=function(){
     state.fileQ='';
     body.innerHTML=detailHtml(p);
-    $('bkBack').onclick=function(){state.fileQ='';showList();};
+    $('bkBack').onclick=function(){var o=document.createElement('div');o.style.cssText='position:fixed;left:0;right:0;top:44px;bottom:60px;z-index:10001;background:#0d0e12;display:flex;align-items:center;justify-content:center';o.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';document.body.appendChild(o);setTimeout(function(){state.fileQ='';showList();o.remove();},450);};
     wireActions(); bindRows();
   };
 }
@@ -493,7 +515,7 @@ if(fc){
       if(r)r.onclick=function(){runRaw(p);};
       if(d)d.onclick=function(){driveChooser(p);};
       if(del)del.onclick=function(){runDelete(p);};
-      if(cx)cx.onclick=function(){state.sel={};state.selecting=false;body.innerHTML=detailHtml(p);$('bkBack').onclick=function(){state.fileQ='';showList();};wireActions();bindRows();};
+      if(cx)cx.onclick=function(){state.sel={};state.selecting=false;body.innerHTML=detailHtml(p);$('bkBack').onclick=function(){var o=document.createElement('div');o.style.cssText='position:fixed;left:0;right:0;top:44px;bottom:60px;z-index:10001;background:#0d0e12;display:flex;align-items:center;justify-content:center';o.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';document.body.appendChild(o);setTimeout(function(){state.fileQ='';showList();o.remove();},450);};wireActions();bindRows();};
       updateBar(p);
     }
     function bindRows(){
@@ -507,20 +529,20 @@ if(fc){
           if(!state.selecting)state.selecting=true;
           var fp=btn.dataset.fp;
           if(state.sel[fp])delete state.sel[fp];else state.sel[fp]=true;
-          body.innerHTML=detailHtml(p);$('bkBack').onclick=function(){state.fileQ='';showList();};wireActions();bindRows();
+          body.innerHTML=detailHtml(p);$('bkBack').onclick=function(){var o=document.createElement('div');o.style.cssText='position:fixed;left:0;right:0;top:44px;bottom:60px;z-index:10001;background:#0d0e12;display:flex;align-items:center;justify-content:center';o.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';document.body.appendChild(o);setTimeout(function(){state.fileQ='';showList();o.remove();},450);};wireActions();bindRows();
         },500);},{passive:true});
         btn.addEventListener('touchend',function(){clearTimeout(longTimer);},{passive:true});
         btn.addEventListener('touchmove',function(){clearTimeout(longTimer);},{passive:true});
         btn.onclick=function(e){
           if(e.target.closest('.bk-more'))return;
-          if(state.selecting){var fp=btn.dataset.fp;if(state.sel[fp])delete state.sel[fp];else state.sel[fp]=true;body.innerHTML=detailHtml(p);$('bkBack').onclick=function(){state.fileQ='';showList();};wireActions();bindRows();}
+          if(state.selecting){var fp=btn.dataset.fp;if(state.sel[fp])delete state.sel[fp];else state.sel[fp]=true;body.innerHTML=detailHtml(p);$('bkBack').onclick=function(){var o=document.createElement('div');o.style.cssText='position:fixed;left:0;right:0;top:44px;bottom:60px;z-index:10001;background:#0d0e12;display:flex;align-items:center;justify-content:center';o.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';document.body.appendChild(o);setTimeout(function(){state.fileQ='';showList();o.remove();},450);};wireActions();bindRows();}
         };
       });
     }
       bindRows();
   window.scrollTo&&window.scrollTo(0,0);
   ov.remove();
-  }, 80);
+        }, 450);
 }
 
   async function render() {

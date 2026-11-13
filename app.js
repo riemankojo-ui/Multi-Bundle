@@ -847,7 +847,20 @@ async function renderBundleProjects(){
   all.sort(function(a,b){return (b.savedAt||0)-(a.savedAt||0)});
   card.innerHTML='<label class="eyebrow">PROJECTS</label><h2>Pick a project</h2><p class="note" style="margin:4px 0 12px">Tap a project to choose which files go into the TXT.</p>'+
     (all.length?all.map(function(p){var n=(p.id===currentProjectId?files:(p.files||[])).length;return '<div class="file-row" data-bp="'+esc(p.id)+'" style="cursor:pointer"><div class="file-icon">'+esc((p.name||'?').slice(0,2).toUpperCase())+'</div><div class="file-meta"><div class="file-name">'+esc(p.name||'Untitled')+'</div><div class="file-path">'+n+' files'+(p.id===currentProjectId?' \u00b7 open now':'')+'</div></div><div class="file-size">Select</div></div>'}).join(''):'<p class="note">No saved projects yet. Import one in the Projects tab.</p>');
-  card.querySelectorAll('[data-bp]').forEach(function(r){r.onclick=function(){bundlePick(r.getAttribute('data-bp'),all)}});
+  card.querySelectorAll('[data-bp]').forEach(function(r){
+  r.onclick=function(){
+    var projId = r.getAttribute('data-bp');
+    var ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0d0e12;display:flex;align-items:center;justify-content:center';
+    ov.innerHTML = '<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';
+    document.body.appendChild(ov);
+
+    setTimeout(function(){
+      bundlePick(projId, all);
+      ov.remove();
+    }, 450);
+  };
+});
 }
 window.renderBundleProjects=renderBundleProjects;
 function bundlePick(id,all){
@@ -855,12 +868,12 @@ function bundlePick(id,all){
   var list=(id===currentProjectId?files:deserializeFiles(p.files||[])).slice().sort(function(a,b){return a.path.localeCompare(b.path)});
   var tf=list.filter(function(f){return f.text!=null});var nBin=list.length-tf.length;
   var b=document.createElement('div');b.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
-  var c=document.createElement('div');c.style.cssText='width:100%;max-width:560px;max-height:82vh;display:flex;flex-direction:column;background:#15161a;border:1px solid #2a2b32;border-radius:18px 18px 0 0;padding:16px;box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff';
+  var c=document.createElement('div');c.style.cssText='width:100%;max-width:100%;height:100dvh;background:#15161a;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 16px);box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff';
   var bs='padding:12px;border-radius:12px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;border:1px solid #303139;background:#20222a;color:#fff';
   c.innerHTML='<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#f01424">CREATE TXT</div><div style="font-size:18px;font-weight:800;margin:2px 0 4px;overflow-wrap:anywhere">'+esc(p.name||'Untitled')+'</div><div id="bpCount" style="font-size:12px;color:#a2a3ad;margin-bottom:10px"></div>'+
-    '<div style="display:flex;gap:8px;margin-bottom:10px"><button id="bpAll" style="'+bs+';flex:1">Select all</button><button id="bpNone" style="'+bs+';flex:1">Select none</button></div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:10px"><button id="bpAll" style="'+bs+';flex:none;padding:8px 14px;font-size:12px;">Select all</button><button id="bpNone" style="'+bs+';flex:none;padding:8px 14px;font-size:12px;">Select none</button></div>'+
     '<div id="bpList" style="overflow:auto;flex:1;border:1px solid #25262c;border-radius:12px"></div>'+
-    '<div style="display:flex;gap:8px;margin-top:12px"><button id="bpCancel" style="'+bs+';flex:1">Cancel</button><button id="bpGo" style="'+bs+';flex:2;background:#f01424;border:0">Create TXT</button></div>';
+    '<div style="display:flex;gap:8px;margin-top:12px"><button id="bpCancel" style="'+bs+';flex:none;padding:10px 16px;font-size:13px;">Cancel</button><button id="bpGo" style="'+bs+';flex:1;background:var(--red);border:0">Create TXT</button></div>';
   b.appendChild(c);document.body.appendChild(b);
   var box=c.querySelector('#bpList');
   box.innerHTML=tf.length?tf.map(function(f,i){return '<label style="display:flex;gap:10px;align-items:center;padding:11px 12px;border-bottom:1px solid #25262c;font-size:13px"><input type="checkbox" data-i="'+i+'" checked style="width:18px;height:18px;accent-color:#f01424;flex-shrink:0"><span style="overflow-wrap:anywhere;flex:1">'+esc(f.path)+'</span><span style="color:#a2a3ad;font-size:11px;flex-shrink:0">'+size(f.size||0)+'</span></label>'}).join(''):'<div style="padding:16px;font-size:13px;color:#a2a3ad">This project has no text files to bundle.</div>';
@@ -871,16 +884,36 @@ function bundlePick(id,all){
   c.querySelector('#bpNone').onclick=function(){boxes.forEach(function(x){x.checked=false});upd()};
   function close(){b.remove()}
   b.onclick=function(e){if(e.target===b)close()};
-  c.querySelector('#bpCancel').onclick=close;
+  c.querySelector('#bpCancel').onclick=function(){
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:#0d0e12;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';
+  document.body.appendChild(ov);
+  setTimeout(function(){
+    close();
+    ov.remove();
+  }, 350);
+};
   c.querySelector('#bpGo').onclick=function(){
-    var pick=boxes.filter(function(x){return x.checked}).map(function(x){return tf[+x.getAttribute('data-i')]});if(!pick.length)return;
+  var pick=boxes.filter(function(x){return x.checked}).map(function(x){return tf[+x.getAttribute('data-i')]});if(!pick.length)return;
+  
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:#0d0e12;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';
+  document.body.appendChild(ov);
+
+  setTimeout(function(){
     var nm=p.name||'project';
     var out='Multi Bundle Export\nProject: '+nm+'\nFiles: '+pick.length+(pick.length<tf.length?' (selected from '+tf.length+' text files)':'')+'\nExported: '+new Date().toISOString()+'\n'+'='.repeat(60)+'\n\n';
     pick.forEach(function(f){out+='\n'+'='.repeat(60)+'\nFILE: '+f.path+'\n'+'='.repeat(60)+'\n\n'+f.text+'\n'});
     var blob=new Blob([out],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);
     a.download=nm.replace(/[^\w\-]+/g,'_')+(pick.length===1?'-'+pick[0].path.split('/').pop().replace(/[^\w\-.]+/g,'_'):'')+'.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);
-    setTimeout(function(){URL.revokeObjectURL(a.href)},2000);close();showToast('TXT created with '+pick.length+' file'+(pick.length===1?'':'s'),'success');
-  };
+    setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
+    close();
+    ov.remove();
+    showToast('TXT created with '+pick.length+' file'+(pick.length===1?'':'s'),'success');
+  }, 450);
+};
 }
 function showTab(name){window.scrollTo(0,0);try{document.documentElement.scrollTop=0;document.body.scrollTop=0}catch(e){}
   if(name!=='editor'&&document.body.classList.contains('editor-full')&&$('editorFullBtn'))$('editorFullBtn').click();

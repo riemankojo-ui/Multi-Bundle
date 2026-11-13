@@ -1474,7 +1474,7 @@ if ($('ghOauthBtn')) {
   $('ghOauthBtn').onclick = async function() {
     const provider = new firebase.auth.GithubAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    provider.addScope('repo');provider.addScope('workflow');
+    provider.addScope('repo');provider.addScope('workflow');provider.addScope('delete_repo');
     try {
       const cu = firebase.auth().currentUser;
 const linked = !!(cu && cu.providerData && cu.providerData.some(function (p) { return p.providerId === 'github.com'; }));

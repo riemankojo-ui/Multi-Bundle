@@ -816,7 +816,34 @@ function selectMatch(){
   updateSearchCount();
 }
 searchInput.addEventListener('input',runSearch);
-(function(){var n=0,pv='';searchInput.addEventListener('input',function(e){n++;var v=searchInput.value,jump=v.length-pv.length;pv=v;var pasted=e&&(/^insertFromPaste/.test(e.inputType||'')||jump>=6||(e.data&&e.data.length>=6));if(!pasted)return;var k=n;setTimeout(function(){var r=$('editorReplaceInput');if(k===n&&r&&matches.length&&!/^:\d+$/.test(searchInput.value))r.focus()},150)})})();
+(function(){
+  var n=0, pv='';
+  searchInput.addEventListener('input', function(e){
+    n++;
+    var v = searchInput.value;
+    var jump = v.length - pv.length;
+    pv = v;
+    
+    // Auto-jump if it's a paste, a large jump, OR if the typed query is getting long (3+ chars)
+    var pasted = e && (
+      /^insertFromPaste/.test(e.inputType||'') || 
+      jump >= 3 || 
+      (e.data && e.data.length >= 3) || 
+      v.length >= 3
+    );
+    
+    if(!pasted) return;
+    
+    var k = n;
+    setTimeout(function(){
+      var r = $('editorReplaceInput');
+      // Only focus if they stopped typing (k===n), there are matches, and it's not a line number search
+      if(k === n && r && matches.length && !/^:\d+$/.test(searchInput.value)) {
+        r.focus();
+      }
+    }, 80); // <--- Made the jump much faster (80ms)
+  });
+})();
 var __esInputs=[searchInput,$('editorReplaceInput')];
 function __esMark(el){__esInputs.forEach(function(i){if(i)i.classList.toggle('es-active',i===el)})}
 __esInputs.forEach(function(i){if(i)i.addEventListener('focus',function(){__esMark(i)})});

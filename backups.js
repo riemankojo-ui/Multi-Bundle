@@ -65,12 +65,13 @@
   }
 
   function detailHtml(p) {
-    var fl = sortedFiles(p);
+  var fl = sortedFiles(p);
+  if (state.fileQ) {
+    fl = fl.filter(function(f) { return f.path.toLowerCase().indexOf(state.fileQ) > -1; });
+  }
     function fileIcon(path) {
-      var ext = String(path).split('.').pop().toLowerCase();
-      var color = /^(js|ts|jsx|tsx)$/.test(ext) ? '#f5d76e' : /^(html?)$/.test(ext) ? '#ff8c00' : /^(css|scss)$/.test(ext) ? '#5bc0eb' : /^(json|md)$/.test(ext) ? '#a2a3ad' : /^(png|jpg|jpeg|gif|svg|webp)$/.test(ext) ? '#ea4335' : '#a2a3ad';
-      return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>';
-    }
+  return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#a2a3ad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>';
+}
     var dirs = {}, rows = '';
     fl.forEach(function(f) {
       var dir = dirName(f.path) || '';
@@ -88,11 +89,15 @@
     if (!fl.length) rows = '<div class="bk-empty">This project has no files.</div>';
     var selCount = Object.keys(state.sel).length;
     var actionCard = state.selecting ? '<div class="bk-action-card"><div class="bk-ac-row"><button class="bk-ac-btn" id="bkZip"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="10" y="4" width="2" height="2"/><rect x="12" y="6" width="2" height="2"/><rect x="10" y="8" width="2" height="2"/><rect x="12" y="10" width="2" height="2"/><rect x="10" y="13" width="4" height="5" rx="1"/></svg><span>ZIP</span></button><button class="bk-ac-btn" id="bkRaw"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Save</span></button><button class="bk-ac-btn" id="bkDrive"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l5-9 4 7h9l-5 9H7L3 15z"/><path d="M8 6l4 7"/><path d="M16 15l-4-7"/></svg><span>Drive</span></button><button class="bk-ac-btn bk-ac-del" id="bkDel"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg><span>Delete</span></button></div><div class="bk-ac-info"><span id="bkCount">' + selCount + ' selected</span><button class="bk-ac-cancel" id="bkCancel">Cancel</button></div></div>' : '';
-    return '<button class="bk-back" id="bkBack">\u2039 All projects</button>' +
-      '<section class="card"><div class="bk-head"><div><label class="eyebrow">PROJECT</label><h2>' + esc(p.name || 'Untitled') + '</h2></div><span class="pill">' + fl.length + ' file' + (fl.length === 1 ? '' : 's') + '</span></div>' +
-      '<p class="bk-hint" style="margin:0 0 8px">Long-press a file to select.</p></section>' +
-      actionCard +
-      '<div class="bk-files">' + rows + '</div>';
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">' +
+  '<button class="bk-back" id="bkBack" style="margin:0;flex:none;padding:10px 12px;">\u2039</button>' +
+  '<div style="flex:1; position:relative;">' +
+    '<input type="text" id="bkFileSearch" class="bk-file-search" placeholder="Search files..." value="' + esc(state.fileQ || '') + '" style="width:100%; box-sizing:border-box; background:#20222a; border:1px solid #303139; color:#fff; border-radius:10px; padding:10px 12px; font-size:14px; outline:none; padding-right:32px;">' +
+    '<button id="bkFileSearchClear" class="bk-search-clear" style="display:' + (state.fileQ ? 'flex' : 'none') + '; position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:0; color:#a2a3ad; font-size:18px; cursor:pointer; align-items:center; justify-content:center;">&times;</button>' +
+  '</div>' +
+'</div>' +
+actionCard +
+'<div class="bk-files">' + rows + '</div>';
   }
 
   function selectedFiles(p) { return sortedFiles(p).filter(function (f) { return state.sel[f.path]; }); }
@@ -358,7 +363,8 @@
 
   function showList() {
     state.pid = null; state.sel = {};
-    var body = $('bkBody'); if (!body) return;
+var tb = document.querySelector('.bk-topbar'); if(tb) tb.style.display = 'flex';
+var body = $('bkBody'); if (!body) return;
     var q = (($('bkSearch')||{}).value||'').toLowerCase().trim();
     var filtered = q ? cache.filter(function(p){return (p.name||'').toLowerCase().indexOf(q)>-1;}) : cache;
     body.innerHTML = listHtml(filtered);
@@ -371,22 +377,7 @@
     }
     var sc = $('bkSearchClear');
     if (sc && !sc._wired) { sc._wired=true; sc.onclick=function(){var si=$('bkSearch');if(si){si.value='';si.oninput();}};  }
-    var mb = $('bkMenuBtn');
-    if (mb && !mb._wired) {
-      mb._wired = true;
-      mb.onclick = function(e) {
-        e.stopPropagation();
-        var old = document.getElementById('bkMenuSheet'); if (old) { old.remove(); return; }
-        var sh = document.createElement('div'); sh.id = 'bkMenuSheet'; sh.className = 'bk-sheet-ov';
-        sh.innerHTML = '<div class="bk-sheet"><div class="bk-sheet-title">Options</div>' +
-          '<button class="bk-sheet-btn" id="bkMenuBundle"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Make TXT bundle</button>' +
-          '</div>';
-        document.body.appendChild(sh);
-        sh.onclick = function(e){ if(e.target===sh) sh.remove(); };
-        var b1 = document.getElementById('bkMenuBundle');
-        if(b1) b1.onclick = function(){ sh.remove(); if(typeof window.showTab==='function') window.showTab('bundle'); };
-      };
-    }
+    
   }
 
   function currentProject() { return cache.find(function (x) { return x.id === state.pid; }) || null; }
@@ -462,15 +453,40 @@
   }
 
   function openProject(id) {
-    state.pid=id; state.sel={}; state.selecting=false; state.fileQ=state.fileQ||'';
-    var p=currentProject(); if(!p){showList();return;}
-    var body=$('bkBody'); if(!body) return;
-    body.innerHTML=detailHtml(p);
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;left:0;right:0;top:44px;bottom:60px;z-index:10001;background:#0d0e12;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';
+  document.body.appendChild(ov);
+  
+  setTimeout(function(){
+  state.pid=id; state.sel={}; state.selecting=false; state.fileQ=state.fileQ||'';
+  var p=currentProject(); if(!p){showList();ov.remove();return;}
+  var tb=document.querySelector('.bk-topbar'); if(tb) tb.style.display = 'none';
+  var body=$('bkBody'); if(!body) {ov.remove();return;}
+  body.innerHTML=detailHtml(p);
     $('bkBack').onclick=function(){state.fileQ='';showList();};
     var fs=$('bkFileSearch');
-    if(fs){fs.oninput=function(){state.fileQ=fs.value.toLowerCase().trim();var cl=$('bkFileSearchClear');if(cl)cl.style.display=fs.value?'':'none';body.innerHTML=detailHtml(p);$('bkBack').onclick=function(){state.fileQ='';showList();};wireActions();bindRows();};}
-    var fc=$('bkFileSearchClear');
-    if(fc){fc.onclick=function(){state.fileQ='';body.innerHTML=detailHtml(p);$('bkBack').onclick=function(){state.fileQ='';showList();};wireActions();bindRows();};}
+if(fs){
+  fs.oninput=function(){
+    state.fileQ=fs.value.toLowerCase().trim();
+    var cl=$('bkFileSearchClear'); if(cl) cl.style.display=fs.value?'flex':'none';
+    var curPos = fs.selectionStart;
+    body.innerHTML=detailHtml(p);
+    $('bkBack').onclick=function(){state.fileQ='';showList();};
+    wireActions(); bindRows();
+    var newFs = $('bkFileSearch');
+    if(newFs) { newFs.focus(); newFs.setSelectionRange(curPos, curPos); }
+  };
+}
+var fc=$('bkFileSearchClear');
+if(fc){
+  fc.onclick=function(){
+    state.fileQ='';
+    body.innerHTML=detailHtml(p);
+    $('bkBack').onclick=function(){state.fileQ='';showList();};
+    wireActions(); bindRows();
+  };
+}
     function wireActions(){
       var z=$('bkZip'),r=$('bkRaw'),d=$('bkDrive'),del=$('bkDel'),cx=$('bkCancel');
       if(z)z.onclick=function(){runZip(p);};
@@ -501,9 +517,11 @@
         };
       });
     }
-    bindRows();
-    window.scrollTo&&window.scrollTo(0,0);
-  }
+      bindRows();
+  window.scrollTo&&window.scrollTo(0,0);
+  ov.remove();
+  }, 80);
+}
 
   async function render() {
     if (!$('bkBody')) return;
@@ -513,7 +531,7 @@
 
   function build() {
     var page = $('backupsPage'); if (!page) return false;
-    page.innerHTML = '<div class="bk-topbar"><span class="bk-topbar-title">Backups</span><div class="bk-topbar-tools"><div class="bk-search-wrap"><input class="bk-search" id="bkSearch" type="text" placeholder="Search projects\u2026"><button class="bk-search-clear" id="bkSearchClear" style="display:none">\u00d7</button></div><button class="bk-menu-btn" id="bkMenuBtn"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg></button></div></div><div id="bkBody"></div>';
+    page.innerHTML = '<div class="bk-topbar"><span class="bk-topbar-title">Backups</span><div class="bk-topbar-tools"><div class="bk-search-wrap"><input class="bk-search" id="bkSearch" type="text" placeholder="Search projects\u2026"><button class="bk-search-clear" id="bkSearchClear" style="display:none">\u00d7</button></div></div></div><div id="bkBody"></div>';
     return true;
   }
 

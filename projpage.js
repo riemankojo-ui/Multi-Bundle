@@ -111,7 +111,7 @@
     }).join('');
     if (typeof renderDraftBox === 'function') renderDraftBox(p);
 
-    $('ppBack').onclick = function () { if (typeof showProjectsList === 'function') showProjectsList(); };
+    $('ppBack').onclick = function () { var ov = document.createElement('div'); ov.style.cssText = 'position:fixed;left:0;right:0;top:44px;bottom:60px;z-index:10001;background:#0d0e12;display:flex;align-items:center;justify-content:center'; ov.innerHTML = '<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>'; document.body.appendChild(ov); setTimeout(function () { if (typeof showProjectsList === 'function') showProjectsList(); setTimeout(function () { ov.remove(); }, 350); }, 250); };
     $('ppPrev').onclick = function () { cardPreview(p.id); };
     $('ppEdit').onclick = function () { cardEdit(p.id); };
     $('ppBundle').onclick = function () { showTab('bundle'); if (typeof render === 'function') render(); };
@@ -162,7 +162,7 @@
   window.openProjectDetail = open;
 
   if (cards) cards.addEventListener('click', function (e) {
-    var card = e.target.closest && e.target.closest('.project-card');
+    var card = null;
     if (!card || e.target.closest('.pc-btn')) return;
     e.stopPropagation(); e.preventDefault();
     open(card.getAttribute('data-id'));

@@ -247,7 +247,7 @@ async function renderProjectCards(){
       btn.onclick=function(e){
         e.stopPropagation();const act=btn.dataset.act;
         if(act==='preview')cardPreview(id);else if(act==='edit')cardEdit(id);
-        else if(act==='changes')cardChanges(id);else if(act==='delete')cardDelete(id,card.querySelector('.pc-name').textContent);else if(act==='more')cardMenu(btn,id,card.querySelector('.pc-name').textContent);
+        else if(act==='changes')cardChanges(id);else if(act==='delete')cardDelete(id,card.querySelector('.pc-name').textContent);else if(act==='more'){var ov=document.createElement('div');ov.style.cssText='position:fixed;left:0;right:0;top:44px;bottom:60px;z-index:10001;background:#0d0e12;display:flex;align-items:center;justify-content:center';ov.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';document.body.appendChild(ov);setTimeout(function(){window.openProjectDetail(id);setTimeout(function(){ov.remove()},350)},250)}
       };
     });
     card.onclick=async function(e){

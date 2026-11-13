@@ -56,7 +56,10 @@
   var FOLDER = '<svg viewBox="0 0 24 24" width="14" height="14" fill="#fff" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
 
   function listHtml(list) {
-    if (!list.length) return '<div class="bk-empty">No saved projects yet. Import a project in the Projects tab and it will show up here.</div>';
+  var q = (($('bkSearch')||{}).value||'').trim();
+  if (!list.length) {
+    return '<div class="bk-empty">' + (q ? 'No projects match "' + esc(q) + '".' : 'No saved projects yet. Import a project in the Projects tab and it will show up here.') + '</div>';
+  }
     return '<div class="bk-list">' + list.map(function (p) {
       var n = (p.files || []).length;
       return '<button class="bk-proj" data-id="' + esc(p.id) + '"><span class="bk-ic">' + FOLDER + '</span><span class="bk-info"><b>' + esc(p.name || 'Untitled') + '</b><small>' + n + ' file' + (n === 1 ? '' : 's') + '</small></span><span class="bk-chev"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></button>';
@@ -126,7 +129,7 @@ if (state.fileQ) {
     var actionCard = state.selecting ? '<div class="bk-action-card"><div class="bk-ac-row"><button class="bk-ac-btn" id="bkZip"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="10" y="4" width="2" height="2"/><rect x="12" y="6" width="2" height="2"/><rect x="10" y="8" width="2" height="2"/><rect x="12" y="10" width="2" height="2"/><rect x="10" y="13" width="4" height="5" rx="1"/></svg><span>ZIP</span></button><button class="bk-ac-btn" id="bkRaw"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Save</span></button><button class="bk-ac-btn" id="bkDrive"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l5-9 4 7h9l-5 9H7L3 15z"/><path d="M8 6l4 7"/><path d="M16 15l-4-7"/></svg><span>Drive</span></button><button class="bk-ac-btn bk-ac-del" id="bkDel"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg><span>Delete</span></button></div><div class="bk-ac-info"><span id="bkCount" style="font-size:11px;font-weight:700;color:var(--muted);">' + selCount + ' selected</span><div style="display:flex;align-items:center;"><button id="bkSelectAll" style="background:none;border:0;color:#cfe0ff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;padding:4px 6px;margin-right:4px;">Select All</button><button class="bk-ac-cancel" id="bkCancel" style="font-size:12px;">Cancel</button></div></div></div>' : '';
     var searchHtml = '<div style="background:#17181c; border:1px solid #2c2d35; border-radius:16px; padding:6px 16px; display:flex; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.15);">' +
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#a2a3ad" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:12px; flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
-  '<input type="text" id="bkFileSearch" placeholder="Search files..." value="' + esc(state.fileQ || '') + '" style="flex:1; background:transparent; border:0; color:#fff; padding:14px 0; font-size:15px; outline:none; font-family:inherit;">' +
+  '<input type="search" id="bkFileSearch" name="q" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore placeholder="Search files..." value="' + esc(state.fileQ || '') + '" style="flex:1; background:transparent; border:0; color:#fff; padding:14px 0; font-size:15px; outline:none; font-family:inherit;-webkit-appearance:none;">' +
   '<button id="bkFileSearchClear" style="display:' + (state.fileQ ? 'flex' : 'none') + '; background:none; border:0; color:#a2a3ad; font-size:22px; cursor:pointer; padding:0 4px;">&times;</button>' +
 '</div>';
 
@@ -432,12 +435,23 @@ if (bn) bn.onclick = function () {
   }, 350);
 };
     var si = $('bkSearch');
-    if (si && !si._wired) {
-      si._wired = true;
-      si.oninput = function(){ var cl=$('bkSearchClear');if(cl)cl.style.display=si.value?'':'none'; showList(); };
+if (si) {
+  si.oninput = function(){ 
+    var cl=$('bkSearchClear');
+    if(cl) cl.style.display=si.value?'flex':'none'; 
+    showList(); 
+  };
+}
+var sc = $('bkSearchClear');
+if (sc) { 
+  sc.onclick=function(){
+    var si=$('bkSearch');
+    if(si){
+      si.value='';
+      si.dispatchEvent(new Event('input'));
     }
-    var sc = $('bkSearchClear');
-    if (sc && !sc._wired) { sc._wired=true; sc.onclick=function(){var si=$('bkSearch');if(si){si.value='';si.oninput();}};  }
+  };  
+}
     
   }
 
@@ -718,7 +732,7 @@ if(btn.dataset.dir && !state.selecting){
 
   function build() {
   var page = $('backupsPage'); if (!page) return false;
-  page.innerHTML = '<div class="bk-topbar"><span class="bk-topbar-title">Backups</span><div class="bk-topbar-tools"><div class="bk-search-wrap"><input class="bk-search" id="bkSearch" type="text" placeholder="Search projects\u2026"><button class="bk-search-clear" id="bkSearchClear" style="display:none">\u00d7</button></div></div></div><div id="bkBody"></div>';
+  page.innerHTML = '<div class="bk-topbar"><span class="bk-topbar-title">Backups</span><div class="bk-topbar-tools"><div class="bk-search-wrap"><input class="bk-search" id="bkSearch" type="search" name="q" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore style="-webkit-appearance:none;" placeholder="Search projects\u2026"><button class="bk-search-clear" id="bkSearchClear" style="display:none">\u00d7</button></div></div></div><div id="bkBody"></div>';
   return true;
 }
 
@@ -728,7 +742,7 @@ if(btn.dataset.dir && !state.selecting){
   st.textContent = [
     '#bkBody{display:flex;flex-direction:column;gap:12px; padding-top:0!important;}',
     'main:has(#backupsPage:not([hidden])) { padding-top:8px !important; }',
-      '.bk-list{display:flex;flex-direction:column;background:#101115;border:1px solid #25262c;border-radius:14px;overflow:hidden;margin-bottom:16px}',
+      '.bk-list{display:flex;flex-direction:column;background:#101115;border:1px solid #25262c;border-top:0;border-radius:0 0 16px 16px;overflow:hidden;margin:0 0 16px 0;box-shadow:0 4px 12px rgba(0,0,0,0.1)}',
 '.bk-proj{display:flex;align-items:center;gap:12px;text-align:left;background:transparent;border:0;border-bottom:1px solid #25262c;border-radius:0;padding:16px 14px;color:var(--text);cursor:pointer;width:100%;font-family:inherit;transition:background .14s ease}',
 '.bk-proj:last-child{border-bottom:0}',
 '.bk-proj:active{background:#1a1b20}',
@@ -737,8 +751,8 @@ if(btn.dataset.dir && !state.selecting){
       '.bk-proj small{font-size:11px;color:var(--muted)}',
       '.bk-proj .bk-chev{color:var(--muted);display:flex;align-items:center}',
       '.bk-ic{width:32px;height:32px;border-radius:9px;background:#2f3a52;color:#cfe0ff;display:grid;place-items:center;flex:none}',
-      '.bk-link{background:none;border:0;color:#cfe0ff;font-size:12px;font-weight:700;text-align:left;padding:6px 2px;cursor:pointer;font-family:inherit}',
-      '.bk-empty{color:var(--muted);font-size:12.5px;line-height:1.5;text-align:center;padding:22px 8px}',
+      '.bk-link{background:none;border:0;color:#cfe0ff;font-size:13px;font-weight:700;text-align:left;padding:8px 2px;margin:0;cursor:pointer;font-family:inherit}',
+'.bk-empty{color:var(--muted);font-size:12.5px;line-height:1.5;text-align:center;padding:22px 16px;margin:0 14px;}',
       '.bk-back{align-self:flex-start;background:#1c1d22;border:1px solid var(--line);color:#e5e6ea;border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .14s ease}',
       '.bk-back:active{transform:scale(.96)}',
       '.bk-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}',
@@ -764,11 +778,11 @@ if(btn.dataset.dir && !state.selecting){
       '.bk-ac-info{display:flex;align-items:center;justify-content:space-between}',
       '#bkCount{font-size:12px;font-weight:700;color:var(--muted)}',
       '.bk-ac-cancel{background:none;border:0;color:#ff2d46;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;padding:4px 0}',
-      '.bk-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:#17181c;position:sticky;top:0;z-index:5;border-bottom:1px solid #25262c}',
+      '.bk-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:#17181c;position:sticky;top:0;z-index:5;border:1px solid #25262c;border-bottom:0;border-radius:16px 16px 0 0;margin:8px 0 0 0;box-shadow:0 4px 12px rgba(0,0,0,0.15)}',
 '.bk-topbar-title{font-size:20px;font-weight:800;color:#fff;white-space:nowrap}',
 '.bk-topbar-tools{flex:1;max-width:220px}',
 '.bk-search-wrap{position:relative;width:100%}',
-'.bk-search,.bk-file-search{background:#0f1013;border:1px solid #303139;color:#fff;border-radius:99px;padding:10px 34px 10px 16px;font-size:14px;outline:none;font-family:inherit;width:100%;box-sizing:border-box;transition:border-color .2s}',
+'.bk-search,.bk-file-search{background:#0f1013;border:1px solid #303139;color:#fff;border-radius:99px;padding:10px 34px 10px 16px;font-size:14px;outline:none;font-family:inherit;width:100%;box-sizing:border-box;transition:border-color .2s;-webkit-appearance:none}',
 '.bk-search:focus,.bk-file-search:focus{border-color:var(--red)}',
       '.bk-search-clear{position:absolute;right:6px;background:none;border:0;color:#a2a3ad;font-size:16px;cursor:pointer;line-height:1;padding:2px 4px}',
       '.bk-menu-btn{background:#20222a;border:1px solid #303139;color:#e6e6e8;border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer}',

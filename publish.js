@@ -540,7 +540,7 @@ async function runPublish(){
   if(S.busy||!S.scan)return;
   var n=S.rows.filter(function(r){return r.on}).length;if(!n)return;
   S.busy=true;updateGo();
-  var msg=($('pbMsg').value||'').trim()||'Update from Multi Bundle';
+  var msg=($('pbMsg').value||'').trim()||'Update from Multi Bundle';var __pr0=document.getElementById('pbRing');if(__pr0)__pr0.style.display='none';
   if(window.mbBar)window.mbBar.start();
   try{
     var res=await pushRows(S.scan,S.rows,msg,setStatus);

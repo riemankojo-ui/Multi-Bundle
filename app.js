@@ -231,12 +231,13 @@ async function renderProjectCards(){
     return '<div class="project-card'+active+'" data-id="'+esc(p.id)+'">'+
       '<div class="pc-top">'+iconHtml+
       '<div class="pc-info"><div class="pc-name">'+esc(p.name||'Untitled')+'</div>'+
-      '<div class="pc-meta">'+p.files.length+' file'+(p.files.length===1?'':'s')+' · '+timeAgo(p.savedAt)+'</div></div></div>'+
+      '<div class="pc-meta">'+esc(p.githubRepo||'Local project')+'</div></div></div>'+
+      '<div class="pc-foot"><span class="pc-chip">'+(p.githubRepo?'<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>':'<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>')+esc(p.githubRepo?(p.githubBranch||'main'):'This phone')+'</span><span class="pc-when">'+p.files.length+' file'+(p.files.length===1?'':'s')+' · '+timeAgo(p.savedAt)+'</span></div>'+
       '<div class="pc-actions">'+
       '<button class="pc-btn primary" data-act="preview">Preview</button>'+
       '<button class="pc-btn" data-act="edit" title="Edit code">Edit</button>'+
       '<button class="pc-btn" data-act="changes" title="Import changes">Sync</button>'+
-      '<button class="pc-btn danger" data-act="delete" title="Delete">×</button>'+
+      '<button class="pc-btn dots" data-act="more" title="More"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>'+
       '</div></div>';
   }).join('');
     if(all.length>__projShown){const mb=document.createElement('button');mb.className='btn secondary pc-more';mb.textContent='More';mb.onclick=function(){__projShown+=6;renderProjectCards()};box.appendChild(mb)}
@@ -246,7 +247,7 @@ async function renderProjectCards(){
       btn.onclick=function(e){
         e.stopPropagation();const act=btn.dataset.act;
         if(act==='preview')cardPreview(id);else if(act==='edit')cardEdit(id);
-        else if(act==='changes')cardChanges(id);else if(act==='delete')cardDelete(id,card.querySelector('.pc-name').textContent);
+        else if(act==='changes')cardChanges(id);else if(act==='delete')cardDelete(id,card.querySelector('.pc-name').textContent);else if(act==='more')cardMenu(btn,id,card.querySelector('.pc-name').textContent);
       };
     });
     card.onclick=async function(e){
@@ -283,6 +284,19 @@ async function cardEdit(id){
   showTab('editor')
 }
 async function cardChanges(id){const p=await loadProjectIntoMemory(id);if(!p)return;if($('changesFolderInput'))$('changesFolderInput').click()}
+function cardMenu(btn,id,name){
+  var old=document.getElementById('pcMenu');if(old){old.remove();return}
+  var r=btn.getBoundingClientRect();
+  var ov=document.createElement('div');ov.id='pcMenu';ov.style.cssText='position:fixed;left:0;right:0;top:0;bottom:0;z-index:460';
+  var card=document.createElement('div');
+  var items=[['delete','Delete','<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>','#ff6b75']];
+  card.style.cssText='position:absolute;right:'+Math.max(8,window.innerWidth-r.right)+'px;width:200px;background:#1c1d22;border:1px solid #2e2f36;border-radius:12px;padding:6px;box-shadow:0 14px 40px rgba(0,0,0,.55);font-family:system-ui,sans-serif';
+  card.innerHTML=items.map(function(it){return '<button data-m="'+it[0]+'" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 10px;border:0;border-radius:8px;background:transparent;color:'+it[3]+';font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="'+it[3]+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+it[2]+'</svg><span>'+it[1]+'</span></button>'}).join('');
+  if(window.innerHeight-r.bottom>110)card.style.top=(r.bottom+6)+'px';else card.style.bottom=(window.innerHeight-r.top+6)+'px';
+  ov.appendChild(card);document.body.appendChild(ov);
+  ov.onclick=function(e){if(e.target===ov)ov.remove()};
+  card.querySelectorAll('[data-m]').forEach(function(b){b.onclick=function(){ov.remove();if(b.getAttribute('data-m')==='delete')cardDelete(id,name)}});
+}
 async function cardDelete(id,name){
   const ok=await showConfirm('Delete "'+name+'" permanently? This cannot be undone.',{title:'Delete project',confirmText:'Delete',cancelText:'Keep'});
   if(!ok)return;if(window.mbBar)window.mbBar.start();await dbDeleteProject(id);try{await __flushProjects()}catch(e){}

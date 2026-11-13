@@ -522,9 +522,9 @@
     var st = document.createElement('style'); st.id = 'bkStyle';
     st.textContent = [
       '#bkBody{display:flex;flex-direction:column;gap:12px}',
-      '.bk-list{display:flex;flex-direction:column;gap:0;border:1px solid #25262c;border-radius:14px;overflow:hidden;background:#17181c}',
-      '.bk-proj{display:flex;align-items:center;gap:12px;text-align:left;background:transparent;border:0;border-bottom:1px solid #1f2026;padding:12px 14px;color:var(--text);cursor:pointer;width:100%;font-family:inherit;transition:background .14s ease}',
-      '.bk-proj:last-child{border-bottom:0}',
+      '.bk-list{display:flex;flex-direction:column;gap:10px}',
+      '.bk-proj{display:flex;align-items:center;gap:12px;text-align:left;background:#17181c;border:1px solid #25262c;border-radius:14px;padding:12px 14px;color:var(--text);cursor:pointer;width:100%;font-family:inherit;transition:background .14s ease}',
+      
       '.bk-proj:active{background:#1d1e24}',
       '.bk-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}',
       '.bk-proj b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}',

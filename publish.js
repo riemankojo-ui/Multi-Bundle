@@ -162,7 +162,7 @@ function disarm(reset){
 function __restoreMenu(btn){var old=document.getElementById('pbMenu');if(old){old.remove();return}var r=btn.getBoundingClientRect();var ov=document.createElement('div');ov.id='pbMenu';ov.style.cssText='position:fixed;top:0;right:0;bottom:0;left:0;z-index:10002';var c=document.createElement('div');c.style.cssText='position:absolute;top:'+(r.bottom+8)+'px;right:'+Math.max(8,window.innerWidth-r.right)+'px;min-width:210px;background:#15171c;border:1px solid #2a2c34;border-radius:12px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.5)';var b=document.createElement('button');b.type='button';b.style.cssText='display:block;width:100%;text-align:left;background:none;border:0;padding:12px 10px;color:#fff;font:inherit;cursor:pointer';b.innerHTML='<span style="display:block;font-weight:800;font-size:15px">Restore</span><span style="display:block;font-size:12px;color:#a2a3ad;margin-top:2px">Go back to a GitHub version</span>';b.onclick=function(){ov.remove();restoreFromGitHub()};c.appendChild(b);ov.appendChild(c);ov.onclick=function(e){if(e.target===ov)ov.remove()};document.body.appendChild(ov)}
 function updateRestore(){
   var b=$('pbRestore');if(!b)return;
-  var any=S.rows.length>0;
+  var any=true;
   b.hidden=!any;b.disabled=!!S.busy;if(!b.__m){b.__m=1;b.innerHTML='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>'}b.onclick=function(){__restoreMenu(b)};
   if(!any)disarm(false);
 }

@@ -134,7 +134,7 @@ async function saveRecord(scan,rows){
 }
 
 /* ---------- sheet UI ---------- */
-var S={scan:null,rows:[],busy:false};
+var S={scan:null,rows:[],_b:false};function __pbRing(on){var o=document.getElementById('pbRing');if(on){if(!o){o=document.createElement('div');o.id='pbRing';o.style.cssText='position:fixed;top:0;right:0;bottom:0;left:0;z-index:10050;background:#17181c;display:flex;align-items:center;justify-content:center';o.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';document.body.appendChild(o)}o.style.display='flex'}else if(o)o.style.display='none'}window.__pbRing=function(ms){__pbRing(true);setTimeout(function(){if(!S._b)__pbRing(false)},ms||450)};Object.defineProperty(S,'busy',{get:function(){return this._b},set:function(v){this._b=!!v;if(v)__pbRing(true);else setTimeout(function(){if(!S._b)__pbRing(false)},250)}});
 function setNote(t,cls){var n=$('pbNote');if(n){n.textContent=t||'';n.className='pb-note'+(cls?' '+cls:'')}}
 function setStatus(t){var n=$('pbStatus');if(n)n.textContent=t||'';try{var m=/(\d+)\s*\/\s*(\d+)/.exec(t||'');if(m&&window.mbBar&&window.mbBar.set)window.mbBar.set(m[1]/m[2]*90);else if(/Creating commit/.test(t||'')&&window.mbBar&&window.mbBar.set)window.mbBar.set(95)}catch(e){}}
 function closeSheet(){var b=$('pbBack');if(b)b.remove();S.busy=false;S.armed=false;clearTimeout(S.armT)}
@@ -198,7 +198,7 @@ async function restoreFromGitHub(){
     var r=document.createElement('button');
     r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #23252c;padding:14px 4px;color:#fff;font:inherit;cursor:pointer';
     r.innerHTML='<span style="min-width:0"><span style="display:block;font-weight:700;font-size:13px">'+esc(when)+(i===0?' <span style="color:#5ed69a;font-size:11px;font-weight:800;margin-left:6px">LATEST</span>':'')+'</span><span style="display:block;font-size:12px;color:#a2a3ad;margin-top:3px;word-break:break-all">'+esc(repoUrl)+'</span></span><span style="text-align:right;white-space:nowrap"><span class="vcount" style="display:block;font-size:12px;color:#a2a3ad">\u2026</span><span style="display:block;font-size:11px;color:#7d7e89;margin-top:3px">'+esc(rel)+' \u00b7 '+esc(String(c.sha).slice(0,7))+'</span></span>';
-    r.onclick=function(){ov.remove();__versionSheet(c.sha,when,scan.repo)};r.dataset.i=i;
+    r.onclick=function(){window.__pbRing(450);ov.remove();__versionSheet(c.sha,when,scan.repo)};r.dataset.i=i;
     sc.appendChild(r);
   });
   box.appendChild(sc);
@@ -287,7 +287,7 @@ function __versionSheet(sha,when,repo){
     var b=document.createElement('button');
     b.style.cssText='display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid #23252c;padding:14px 0;color:#fff;font:inherit;cursor:pointer';
     b.innerHTML='<span style="display:block;font-weight:800;font-size:16px;color:'+color+'">'+label+'</span><span style="display:block;font-size:12px;color:#a2a3ad;margin-top:3px">'+desc+'</span>';
-    b.onclick=function(){ov.remove();fn()};
+    b.onclick=function(){window.__pbRing(450);ov.remove();fn()};
     box.appendChild(b);
   }
 

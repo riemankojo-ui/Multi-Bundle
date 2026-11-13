@@ -118,7 +118,6 @@ async function pushRows(scan,rows,msg,onProgress){
   var tree=await gh('POST','/repos/'+scan.repo+'/git/trees',{base_tree:scan.treeSha,tree:entries});
   var commit=await gh('POST','/repos/'+scan.repo+'/git/commits',{message:msg,tree:tree.sha,parents:[scan.headSha]});
   await gh('PATCH','/repos/'+scan.repo+'/git/refs/heads/'+brPath(scan.branch),{sha:commit.sha,force:false});
-  try{var CK0='mb_vcount_'+scan.repo,c0=JSON.parse(localStorage.getItem(CK0)||'{}');c0[commit.sha]=sel.length;localStorage.setItem(CK0,JSON.stringify(c0))}catch(e){}
   return {sha:commit.sha,count:sel.length};
 }
 async function saveRecord(scan,rows){
@@ -200,15 +199,6 @@ async function restoreFromGitHub(){
     r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #23252c;padding:14px 4px;color:#fff;font:inherit;cursor:pointer';
     r.innerHTML='<span style="min-width:0"><span style="display:block;font-weight:700;font-size:13px">'+esc(when)+(i===0?' <span style="color:#5ed69a;font-size:11px;font-weight:800;margin-left:6px">LATEST</span>':'')+'</span><span style="display:block;font-size:12px;color:#a2a3ad;margin-top:3px;word-break:break-all">'+esc(repoUrl)+'</span></span><span style="text-align:right;white-space:nowrap"><span class="vcount" style="display:block;font-size:12px;color:#a2a3ad">\u2026</span><span style="display:block;font-size:11px;color:#7d7e89;margin-top:3px">'+esc(rel)+' \u00b7 '+esc(String(c.sha).slice(0,7))+'</span></span>';
     r.onclick=function(){ov.remove();__versionSheet(c.sha,when,scan.repo)};r.dataset.i=i;
-    r.style.transition='background .2s ease';
-    var __pt=0,__cl=function(){clearTimeout(__pt);r.style.background='none'};
-    if(!document.getElementById('vrpStyle')){var __s=document.createElement('style');__s.id='vrpStyle';__s.textContent='.vrp>span:first-child>span:nth-child(2){color:#f01424!important;text-decoration:underline;text-underline-offset:3px}';document.head.appendChild(__s)}
-    __cl=function(){clearTimeout(__pt);r.classList.remove('vrp')};
-    r.addEventListener('pointerdown',function(){clearTimeout(__pt);__pt=setTimeout(function(){r.classList.add('vrp')},90)});
-    ['pointerup','pointerleave'].forEach(function(n){r.addEventListener(n,__cl,{passive:true})});
-    ['pointercancel','touchmove','touchcancel'].forEach(function(n){r.addEventListener(n,__cl,{passive:true})});
-    sc.addEventListener('scroll',__cl,{passive:true});
-    ['pointerup','pointercancel','pointerleave','touchmove'].forEach(function(n){r.addEventListener(n,function(){r.style.background='none'},{passive:true})});
     sc.appendChild(r);
   });
   box.appendChild(sc);
@@ -483,10 +473,10 @@ async function runScan(){
         if(c&&c.k===key)h=c.h;else{var bb=await fileBytes(f);if(!bb)return;h=await sha1blob(bb);__hc.set(f.path,{k:key,h:h})}
         if(__b&&__b[f.path]!==h)__q.push({path:f.path,f:f,ls:h,isNew:__b[f.path]==null,conflict:false,on:true});
       }));
-      if(__q.length&&!S.scan){S.rows=__q;renderRows();setNote('Checking GitHub\u2026')}
+      if(__q.length&&!S.scan){setNote('Checking GitHub\u2026')}
     }catch(eq){}
     var r=await __pr;
-    S.scan=r.scan;S.rows=r.rows;renderRows();void 0;try{__prefetchCounts()}catch(e){}
+    S.scan=r.scan;S.rows=r.rows;renderRows();void 0;
     if(!r.rows.length){setNote('Everything here is already.','ok')}
     else{
       var warn=r.rows.filter(function(x){return x.conflict}).length;

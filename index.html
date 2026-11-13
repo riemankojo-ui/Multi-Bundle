@@ -932,8 +932,8 @@ function ringGo(fn,ms){
     ov.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';
     document.body.appendChild(ov);
   }
-  ov.style.top=bd.style.top;ov.style.bottom=bd.style.bottom;ov.style.display='flex';
-  setTimeout(function(){fn();setTimeout(function(){ov.style.display='none'},ms||350)},250);
+  ov.style.top='0';ov.style.bottom='0';ov.style.zIndex='10003';ov.style.display='flex';
+  requestAnimationFrame(function(){requestAnimationFrame(function(){fn();requestAnimationFrame(function(){setTimeout(function(){ov.style.display='none'},ms||350)})})});
 }
 function groupRows(cur,fresh){
   var bs=[].slice.call(sh.querySelectorAll('button[data-fp]'));

@@ -887,7 +887,11 @@ function bar(){
       if(searchQ&&o.value.toLowerCase().indexOf(searchQ)===-1)return;
       var b=document.createElement('button');b.type='button';b.setAttribute('data-fp',o.value);b.style.display='flex';b.style.alignItems='center';b.style.gap='12px';b.innerHTML=IC_FILE+'<span></span>';b.lastChild.textContent=o.value.split('/').pop();
       if(!searchQ&&o.value===cur)b.className='on';
-      b.onclick=function(){ringGo(function(){close();window.__edSkipRestore=Date.now()+1500;if(sel.value!==o.value){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}},450)};
+      var lpT;
+b.addEventListener('touchstart', function(){ lpT = setTimeout(function(){ if(window.showToast) window.showToast('Long press to select'); }, 500); }, {passive:true});
+b.addEventListener('touchend', function(){ clearTimeout(lpT); }, {passive:true});
+b.addEventListener('touchmove', function(){ clearTimeout(lpT); }, {passive:true});
+b.onclick=function(){ringGo(function(){close();window.__edSkipRestore=Date.now()+1500;if(sel.value!==o.value){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}},450)};
       sh.appendChild(b);
     })(sel.options[i])}
     if(!searchQ)groupRows(cur,true);
@@ -987,7 +991,11 @@ function open(keep){
     if(searchQ && o.value.toLowerCase().indexOf(searchQ)===-1)return;
     var b=document.createElement('button');b.type='button';b.setAttribute('data-fp',o.value);b.style.display='flex';b.style.alignItems='center';b.style.gap='12px';b.innerHTML=IC_FILE+'<span></span>';b.lastChild.textContent=o.value.split('/').pop();
     if(!searchQ && o.value===cur){b.className='on';curEl=b}
-    b.onclick=function(){ringGo(function(){close();window.__edSkipRestore=Date.now()+1500;if(sel.value!==o.value){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}},450)};
+    var lpT;
+b.addEventListener('touchstart', function(){ lpT = setTimeout(function(){ if(window.showToast) window.showToast('Long press to select'); }, 500); }, {passive:true});
+b.addEventListener('touchend', function(){ clearTimeout(lpT); }, {passive:true});
+b.addEventListener('touchmove', function(){ clearTimeout(lpT); }, {passive:true});
+b.onclick=function(){ringGo(function(){close();window.__edSkipRestore=Date.now()+1500;if(sel.value!==o.value){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}},450)};
     sh.appendChild(b);
   })(sel.options[i])}
   if(!searchQ)groupRows(cur,!keep);

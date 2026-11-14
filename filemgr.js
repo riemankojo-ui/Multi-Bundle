@@ -354,7 +354,7 @@ function openMore(btn) {
   var old = document.getElementById('fmMore'); if (old) { old.remove(); mArr(false); return; }
   var r = btn.getBoundingClientRect();
   var ov = document.createElement('div'); ov.id = 'fmMore';
-  ov.style.cssText = 'position:fixed;inset:0;z-index:450';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:50';
   var card = document.createElement('div');
   card.style.cssText = 'position:absolute;top:' + (r.bottom + 6) + 'px;right:12px;width:230px;background:#1c1d22;border:1px solid #2e2f36;border-radius:14px;padding:6px;box-shadow:0 14px 40px rgba(0,0,0,.55);font-family:system-ui,sans-serif;color:#fff';
   var items = [
@@ -375,8 +375,8 @@ function openMore(btn) {
   card.innerHTML = items.map(function (it) {
     return '<button data-m="' + it[0] + '" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 10px;border:0;border-radius:10px;background:transparent;color:#f0f0f2;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left">' + ic(it[2], it[3]) + '<span>' + it[1] + '</span></button>';
   }).join('') + '<div style="padding:6px 10px 4px;font-size:11px;color:#8f919b">Uses selected files, or all if none selected.</div>';
-  ov.appendChild(card); document.body.appendChild(ov);
-  mArr(true); ov.onclick = function (e) { if (e.target === ov) { ov.remove(); mArr(false); } };
+  ov.appendChild(card); (bk || document.body).appendChild(ov);
+  mArr(!menu); ov.onclick = function (e) { if (e.target === ov) { ov.remove(); mArr(false); } };
   var ACT = { txt: doCreateTxt, zip: doZip, list: doCopyList, dup: doDuplicate, folder: doCreateFolder, move: function () { goDest('move'); }, copy: function () { goDest('copy'); }, del: doDelete };
   card.querySelectorAll('[data-m]').forEach(function (b) {
     b.onclick = function () { ov.remove(); mArr(false); ACT[b.getAttribute('data-m')](); };
@@ -404,7 +404,7 @@ function doCreateTxt() {
   toast('TXT created with ' + pick.length + ' file' + (pick.length === 1 ? '' : 's'), 'success');
 }
   var bk = null, c = null, view = 'main';
-  function close() { if (bk) { bk.remove(); bk = null; c = null; } sel = {}; view = 'main'; selMode = false; openF = {}; fmDir = ''; }
+  function close() { var mm = document.getElementById('fmMore'); if (mm) mm.remove(); mArr(false); if (bk) { bk.remove(); bk = null; c = null; } sel = {}; view = 'main'; selMode = false; openF = {}; fmDir = ''; }
   function ic(d, col) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="' + col + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; }
   function tile(act, label, col, d, span) {
     return '<button data-act="' + act + '" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;border:1px solid #2a2b32;background:#1c1d22;color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-align:left;' + (span ? 'grid-column:span 2;' : '') + '">' + ic(d, col) + '<span>' + label + '</span></button>';

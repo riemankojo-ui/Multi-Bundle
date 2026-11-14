@@ -434,10 +434,20 @@ if (previousUid && previousUid !== user.uid) resetScreen();
       if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
   }
   
-  // Give the app time to fetch the live address and render everything before hiding
-  setTimeout(function() {
-      hideAuthLoader();
-  }, 1500);
+  // Wait for the live address and APK card to load before hiding the spinner
+  if (user) {
+      try {
+          var livePromise = (typeof refreshHomeLive === "function") ? refreshHomeLive() : Promise.resolve();
+          var apkPromise = (typeof updateApkCard === "function") ? updateApkCard() : Promise.resolve();
+          
+          // Wait for both, but max 3 seconds so the app doesn't get stuck
+          await Promise.race([
+              Promise.all([livePromise, apkPromise]),
+              new Promise(function(resolve) { setTimeout(resolve, 3000); })
+          ]);
+      } catch (err) {}
+  }
+  hideAuthLoader();
 });
 
   // ---------- sign out, in steps ----------

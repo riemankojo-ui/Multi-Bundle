@@ -193,25 +193,47 @@
   }
   function quiet(e) { return e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request'); }
 
-  async function googleLogin() {
-    if (busy) return;
-    setBusy(true); setMsg('');
-    const provider = new firebase.auth.GoogleAuthProvider();
+  function showAuthLoader() {
+  var ld = document.getElementById('authLoader');
+  if(!ld) {
+      ld = document.createElement('div');
+      ld.id = 'authLoader';
+      ld.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0d0e12;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#a2a3ad;font-family:system-ui,sans-serif;font-weight:bold;';
+      ld.innerHTML = '<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div><div>Loading workspace...</div>';
+      document.body.appendChild(ld);
+  }
+}
+function hideAuthLoader() {
+  var ld = document.getElementById('authLoader');
+  if (ld) ld.remove();
+}
+
+async function googleLogin() {
+  if (busy) return;
+  setBusy(true); setMsg('');
+  showAuthLoader();
+  const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
     try {
       await auth.signInWithPopup(provider);
     } catch (e) {
-      if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
-        try { await auth.signInWithRedirect(provider); return; } catch (e2) { setMsg(friendly(e2)); }
-      } else if (!quiet(e)) { setMsg(friendly(e)); }
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment' || e.code === 'auth/cancelled-popup-request') {
+  try { 
+    // Save a flag so we know we are in the middle of a redirect
+    sessionStorage.setItem('mb_logging_in', 'true');
+    await auth.signInWithRedirect(provider); 
+    return; 
+  } catch (e2) { setMsg(friendly(e2)); hideAuthLoader(); }
+} else if (!quiet(e)) { setMsg(friendly(e)); hideAuthLoader(); } else { hideAuthLoader(); }
     }
     setBusy(false);
   }
 
   async function githubLogin() {
-    if (busy) return;
-    setBusy(true); setMsg('');
-    const provider = new firebase.auth.GithubAuthProvider();
+  if (busy) return;
+  setBusy(true); setMsg('');
+  showAuthLoader();
+  const provider = new firebase.auth.GithubAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     provider.addScope('repo');
     try {
@@ -236,9 +258,10 @@
     if (!email || !pw) { setMsg('Enter your email and password.'); return; }
     window.__gateNameVal = (($('gateName') && $('gateName').value) || '').trim();
     ['gateEmail', 'gatePassword', 'gateName'].forEach(function (id) { if ($(id)) $(id).value = ''; });
-    setBusy(true); setMsg('');
-    try {
-    if (mode === 'signup') {
+setBusy(true); setMsg('');
+showAuthLoader();
+try {
+if (mode === 'signup') {
       const name = window.__gateNameVal || '';
       const cred = await auth.createUserWithEmailAndPassword(email, pw);
       if (name) {
@@ -255,6 +278,7 @@
     if ($('gateEmail')) $('gateEmail').value = '';
     if ($('gatePassword')) $('gatePassword').value = '';
     if ($('gateName')) $('gateName').value = '';
+    hideAuthLoader();
   }
   setBusy(false);
 }
@@ -304,11 +328,18 @@
 
   // Redirect sign-in comes back here (popup blocked). Catch errors and the GitHub token.
   auth.getRedirectResult().then(async function (res) {
-    if (res && res.credential && res.credential.providerId === 'github.com') await afterGithub(res);
-  }).catch(function (error) {
-    if (error.code !== 'auth/redirect-cancelled-by-user') setMsg(friendly(error));
-    setBusy(false);
-  });
+  if (res && res.credential && res.credential.providerId === 'github.com') await afterGithub(res);
+  
+  // If we just came back from a Google redirect, hide the loading screen immediately
+  if (res && res.user) {
+     setBusy(false);
+     if (loginGate) loginGate.style.display = "none";
+     if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
+  }
+}).catch(function (error) {
+  if (error.code !== 'auth/redirect-cancelled-by-user') setMsg(friendly(error));
+  setBusy(false);
+});
 
   // ---------- why did it sign out? ----------
   var __lastTokErr = '';
@@ -368,11 +399,10 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
         if (previousUid && previousUid !== user.uid) { clearTimeout(window.__cpT); window.__cpLatest = null; }
         else if (window.__cpLatest && window.cloudProj) setTimeout(function () { window.cloudProj.save(window.__cpLatest); }, 4000);
       } catch (e) {}
-      if (loginGate) loginGate.style.display = "none";
-      setBusy(false);
-      // A different account than the one on screen: clear the old project from memory first
-      if (previousUid && previousUid !== user.uid) resetScreen();
-    } else {
+        if (loginGate) loginGate.style.display = "none";
+setBusy(false);
+if (previousUid && previousUid !== user.uid) resetScreen();
+} else {
       if (previousUid && !signingOut) {
         window.__softSession = true; try { localStorage.removeItem('mb_restored_' + previousUid); } catch (e) {}
         try { localStorage.setItem('mb_lastout', new Date().toISOString()); } catch (e) {}
@@ -397,10 +427,16 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
       setBusy(false);
       resetScreen();
     }
-    if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
-    if (user && typeof window.__cloudSweep === "function") window.__cloudSweep();
-    if (user && typeof window.__restoreFromCloud === "function") window.__restoreFromCloud();
-  });
+      if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
+  if (user && typeof window.__cloudSweep === "function") window.__cloudSweep();
+  if (user && typeof window.__restoreFromCloud === "function") {
+      await window.__restoreFromCloud();
+      if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
+  }
+  
+  // Hide the loading screen that was triggered by the Login buttons
+  hideAuthLoader();
+});
 
   // ---------- sign out, in steps ----------
   function editorHasUnsaved() {
@@ -427,7 +463,9 @@ document.body.classList.remove('auth-loading'); document.documentElement.classLi
     if (typeof ghToken !== 'undefined') ghToken = '';
     if ($('githubLoggedIn')) $('githubLoggedIn').hidden = true;
     if ($('githubLoggedOut')) $('githubLoggedOut').hidden = false;
-    signingOut = true; const so = document.createElement('div'); so.style.cssText = 'position:fixed;inset:0;background:#0d0e12;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#a2a3ad;font-size:16px;font-weight:bold;font-family:system-ui,sans-serif'; so.innerHTML = '<div class="spinner" style="margin:0 auto 16px"></div>Signing out...'; document.body.appendChild(so); setTimeout(function () { try { so.remove(); } catch (e0) {} }, 1600);
+    signingOut = true; const so = document.createElement('div'); 
+so.style.cssText = 'position:fixed;inset:0;background:#0d0e12;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#a2a3ad;font-size:16px;font-weight:800;font-family:system-ui,sans-serif'; 
+so.innerHTML = '<div style="width:34px;height:34px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite;margin-bottom:18px;"></div><div>Signing out...</div>'; document.body.appendChild(so);
     try {
       toast('Saving your projects\u2026');
 if (typeof __flushProjects === 'function') await __flushProjects();
@@ -441,11 +479,12 @@ if ($('gateContent')) $('gateContent').style.display = 'none';
 window.__gateNameVal = '';
 await auth.signOut();
       toast('Signed out');
-    } catch (e) {
-      toast('Could not sign out. Try again.', 'error');
-    }
-    signingOut = false;
-  };
+      } catch (e) {
+    toast('Could not sign out. Try again.', 'error');
+  }
+  signingOut = false;
+  try { so.remove(); } catch (e0) {}
+};
 
   // ---------- start ----------
   injectCss();

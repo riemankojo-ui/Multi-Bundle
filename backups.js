@@ -210,9 +210,10 @@ actionCard +
       throw e;
     }
     driveTok = res.credential && res.credential.accessToken;
-    if (!driveTok) throw new Error('Google did not give Drive access');
-    driveTokExp = Date.now() + 50 * 60 * 1000;
-    return driveTok;
+if (!driveTok) throw new Error('Google did not give Drive access');
+driveTokExp = Date.now() + 50 * 60 * 1000;
+try { localStorage.setItem('mb_drive_connected', 'true'); } catch(e) {}
+return driveTok;
   }
 
   async function runDrive(p) {
@@ -895,9 +896,12 @@ if(btn.dataset.dir && !state.selecting){
     var pg = dvPage(); if (!pg) return;
     var head = '<section class="card"><label class="eyebrow">GOOGLE DRIVE</label><h1>Your <span>Drive</span></h1><p>Files and folders Multi Bundle saved to your Google Drive. Rename, move or delete them here.</p></section>';
     if (!dvHasToken()) {
-      pg.innerHTML = head + '<section class="card"><button class="btn primary" id="dvConnect" style="width:100%">Connect Google Drive</button></section>';
-      return;
-    }
+  var hasConnected = localStorage.getItem('mb_drive_connected') === 'true';
+  var btnText = hasConnected ? 'Reconnect Google Drive' : 'Connect Google Drive';
+  var hint = hasConnected ? '<p class="note" style="text-align:center;margin-top:8px;font-size:11px;color:#a2a3ad;">Google sessions expire for security. Tap to quickly reconnect.</p>' : '';
+  pg.innerHTML = head + '<section class="card"><button class="btn primary" id="dvConnect" style="width:100%">' + btnText + '</button>' + hint + '</section>';
+  return;
+}
     var crumbs = dv.trail.map(function (t, i) {
       return '<button class="dv-crumb" data-i="' + i + '">' + esc(t.name) + '</button>';
     }).join('<span class="dv-sep">\u203a</span>');

@@ -214,20 +214,21 @@ async function googleLogin() {
   showAuthLoader();
   const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
-    try {
-      await auth.signInWithPopup(provider);
-    } catch (e) {
-      if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment' || e.code === 'auth/cancelled-popup-request') {
-  try { 
-    // Save a flag so we know we are in the middle of a redirect
-    sessionStorage.setItem('mb_logging_in', 'true');
-    await auth.signInWithRedirect(provider); 
-    return; 
-  } catch (e2) { setMsg(friendly(e2)); hideAuthLoader(); }
-} else if (!quiet(e)) { setMsg(friendly(e)); hideAuthLoader(); } else { hideAuthLoader(); }
+      try {
+    await auth.signInWithPopup(provider);
+  } catch (e) {
+    if (e.code === 'auth/popup-blocked') {
+      setMsg('Please allow popups for this site to sign in.');
+      hideAuthLoader();
+    } else if (!quiet(e)) { 
+      setMsg(friendly(e)); 
+      hideAuthLoader(); 
+    } else { 
+      hideAuthLoader(); 
     }
-    setBusy(false);
   }
+  setBusy(false);
+}
 
   async function githubLogin() {
   if (busy) return;
@@ -327,15 +328,9 @@ if (mode === 'signup') {
   }
 
   // Redirect sign-in comes back here (popup blocked). Catch errors and the GitHub token.
-  auth.getRedirectResult().then(async function (res) {
+
+auth.getRedirectResult().then(async function (res) {
   if (res && res.credential && res.credential.providerId === 'github.com') await afterGithub(res);
-  
-  // If we just came back from a Google redirect, hide the loading screen immediately
-  if (res && res.user) {
-     setBusy(false);
-     if (loginGate) loginGate.style.display = "none";
-     if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
-  }
 }).catch(function (error) {
   if (error.code !== 'auth/redirect-cancelled-by-user') setMsg(friendly(error));
   setBusy(false);

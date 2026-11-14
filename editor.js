@@ -817,6 +817,17 @@ function selectMatch(){
 }
 searchInput.addEventListener('input',runSearch);
 (function(){
+  // 1. INSTANT PASTE: Check the actual text instantly to bypass search lag
+  searchInput.addEventListener('paste', function(e) {
+    var r = $('editorReplaceInput');
+    if (!r) return;
+    var pasted = e.clipboardData ? e.clipboardData.getData('text') : '';
+    // Only jump if the pasted text actually exists in the editor
+    if (pasted && ta.value.indexOf(pasted) > -1 && !/^:\d+$/.test(pasted)) {
+      r.focus();
+    }
+  });
+
   var n=0, pv='';
   searchInput.addEventListener('input', function(e){
     n++;
@@ -824,24 +835,16 @@ searchInput.addEventListener('input',runSearch);
     var jump = v.length - pv.length;
     pv = v;
     
-    // Auto-jump if it's a paste, a large jump, OR if the typed query is getting long (3+ chars)
-    var pasted = e && (
-      /^insertFromPaste/.test(e.inputType||'') || 
-      jump >= 3 || 
-      (e.data && e.data.length >= 3) || 
-      v.length >= 3
-    );
-    
-    if(!pasted) return;
+    if (v.length < 3 && jump < 3) return;
     
     var k = n;
     setTimeout(function(){
-  var r = $('editorReplaceInput');
-  // Removed the matches.length check so it jumps even during a file switch
-  if(k === n && r && !/^:\d+$/.test(searchInput.value)) {
-    r.focus();
-  }
-}, 10);  
+      var r = $('editorReplaceInput');
+      // 2. TYPING: Ensure there are matches before jumping
+      if(k === n && r && matches.length > 0 && !/^:\d+$/.test(v)) {
+        r.focus();
+      }
+    }, 10); 
   });
 })();
 var __esInputs=[searchInput,$('editorReplaceInput')];

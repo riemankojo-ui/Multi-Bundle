@@ -434,8 +434,10 @@ if (previousUid && previousUid !== user.uid) resetScreen();
       if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
   }
   
-  // Hide the loading screen that was triggered by the Login buttons
-  hideAuthLoader();
+  // Give the app time to fetch the live address and render everything before hiding
+  setTimeout(function() {
+      hideAuthLoader();
+  }, 1500);
 });
 
   // ---------- sign out, in steps ----------
@@ -483,7 +485,10 @@ await auth.signOut();
     toast('Could not sign out. Try again.', 'error');
   }
   signingOut = false;
-  try { so.remove(); } catch (e0) {}
+  // Keep the spinner on screen for a moment so the login gate can load underneath it
+  setTimeout(function() {
+    try { so.remove(); } catch (e0) {}
+  }, 500);
 };
 
   // ---------- start ----------

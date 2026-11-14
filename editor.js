@@ -836,12 +836,12 @@ searchInput.addEventListener('input',runSearch);
     
     var k = n;
     setTimeout(function(){
-      var r = $('editorReplaceInput');
-      // Only focus if they stopped typing (k===n), there are matches, and it's not a line number search
-      if(k === n && r && matches.length && !/^:\d+$/.test(searchInput.value)) {
-        r.focus();
-      }
-    }, 80); // <--- Made the jump much faster (80ms)
+  var r = $('editorReplaceInput');
+  // Removed the matches.length check so it jumps even during a file switch
+  if(k === n && r && !/^:\d+$/.test(searchInput.value)) {
+    r.focus();
+  }
+}, 10);  
   });
 })();
 var __esInputs=[searchInput,$('editorReplaceInput')];
@@ -887,7 +887,19 @@ function refreshFileList(){
 }
 function loadFile(path){
   const f=files.find(function(x){return x.path===path});if(!f||f.text==null)return;
-  if(path!==currentPath&&searchBar.classList.contains('open')){setTimeout(function(){var q=searchInput.value;if(q&&!/^:\d+$/.test(q))runSearch();else{matches=[];matchLens=[];matchIndex=-1;updateSearchCount();paintMatches()}},0)}
+  if(path!==currentPath&&searchBar.classList.contains('open')){
+  var q=searchInput.value;
+  if(q&&!/^:\d+$/.test(q)){
+    runSearch();
+    // Auto jump to replace when switching files with an active search query
+    if(q.length >= 3){
+      var r=$('editorReplaceInput');
+      if(r) r.focus();
+    }
+  }else{
+    matches=[];matchLens=[];matchIndex=-1;updateSearchCount();paintMatches();
+  }
+}
   currentPath=path;
   
   let savedText = f.text;

@@ -542,9 +542,9 @@ function doCreateTxt() {
     if (bk) close();
     sel = {}; view = 'main';
     bk = document.createElement('div');
-    bk.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
-    c = document.createElement('div');
-     c.style.cssText = 'width:100%;max-width:560px;height:97vh;display:flex;flex-direction:column;background:#15161a;border:1px solid #2a2b32;border-radius:18px 18px 0 0;padding:12px 14px 14px;box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff';
+    bk.style.cssText = 'position:fixed;inset:0;z-index:10002;background:#15161a;display:flex;align-items:stretch;justify-content:center';
+c = document.createElement('div');
+c.style.cssText = 'width:100%;height:100dvh;display:flex;flex-direction:column;background:#15161a;border:none;border-radius:0;padding:calc(env(safe-area-inset-top, 0px) + 12px) 14px calc(env(safe-area-inset-bottom, 0px) + 14px);box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff';
     bk.appendChild(c); document.body.appendChild(bk);
     bk.onclick = function (e) { if (e.target === bk) close(); };
     c.addEventListener('click', onTap);

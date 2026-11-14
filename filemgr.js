@@ -486,7 +486,16 @@ function doCreateTxt() {
     var a = t.closest('[data-act]');
     if (a) {
       var act = a.getAttribute('data-act');
-      if (act === 'close') close();
+      if (act === 'close') {
+  var o = document.createElement('div');
+  o.style.cssText = 'position:fixed;inset:0;z-index:10002;background:#0d0e12;display:flex;align-items:center;justify-content:center';
+  o.innerHTML = '<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';
+  document.body.appendChild(o);
+  setTimeout(function(){
+    close();
+    o.remove();
+  }, 350);
+}
       else if (act === 'txt') doCreateTxt(); else if (act === 'more' || act === 'menu') openMore(a); else if (act === 'file') doCreateFile();
       else if (act === 'folder') doCreateFolder();
       else if (act === 'del') doDelete();

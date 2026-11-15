@@ -277,7 +277,13 @@ body:not(.kb-open) #editorPage:not([hidden]) .editor-shell:not(.fullscreen){heig
 .et-file-row{position:relative}
 .et-file-row #editorThemeBtn{height:34px;min-width:34px;flex-shrink:0;border-radius:8px}
 .editor-theme-card{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:170px;padding:6px;background:#17181c;border:1px solid #2c2d34;border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
-.editor-theme-card.open{display:block}
+.editor-theme-card.open{display:flex;flex-direction:column}
+.eth-opt[data-th="sb"]{order:1}
+.eth-opt[data-th="lb"]{order:2}
+.eth-opt[data-th="pb"]{order:3}
+.eth-opt[data-th="vw"]{order:4}
+.eth-opt[data-th="pw"]{order:5}
+.eth-opt[data-th="sw"]{order:5}
 .eth-opt{display:flex;align-items:center;gap:10px;width:100%;padding:9px 8px;background:transparent;border:0;border-radius:8px;color:#e6e6e8;font-size:12px;font-weight:700;text-align:left;cursor:pointer;font-family:inherit}
 .eth-opt i{width:18px;height:18px;border-radius:5px;border:1px solid #55565f;flex-shrink:0}
 .eth-opt:active,.eth-opt.on{background:#25262d}
@@ -285,10 +291,16 @@ body:not(.kb-open) #editorPage:not([hidden]) .editor-shell:not(.fullscreen){heig
 .editor-shell.th-lb .editor-pane{background:#1c1d22}
 .editor-shell.th-lb .editor-gutter{background:#17181c;color:#666;border-right-color:#2a2b31}
 .editor-shell.th-sb .editor-pane{background:#000000}
+.editor-shell.th-pb .editor-pane{background:#2b2c33}
+.editor-shell.th-pb .editor-gutter{background:#25262c;color:#7a7b85;border-right-color:#34353d}
 .editor-shell.th-sb .editor-gutter{background:#000000;color:#555;border-right-color:#1a1a1a}
 .editor-shell.th-pw .editor-pane{background:#f5f5f3}
 .editor-shell.th-pw .editor-gutter{background:#ebebe8;color:#999;border-right-color:#dcdcd8}
 .editor-shell.th-sw .editor-pane{background:#ffffff}
+.editor-shell.th-vw .editor-pane{background:#e4e4e1}
+.editor-shell.th-vw .editor-gutter{background:#dbdbd8;color:#8e8e8a;border-right-color:#cdcdc9}
+.editor-shell.th-vw .editor-hl{color:#2a2a2a}
+.editor-shell.th-vw{--kw:#c2185b;--str:#2e7d32;--num:#d84315;--cmt:#8a8a92;--fn:#1565c0;--tag:#c2185b;--attr:#b26a00}
 .editor-shell.th-sw .editor-gutter{background:#f4f4f4;color:#999;border-right-color:#e2e2e2}
 .editor-shell.th-pw .editor-hl,.editor-shell.th-sw .editor-hl{color:#1a1a1a}
 .editor-shell.th-pw,.editor-shell.th-sw{--kw:#c2185b;--str:#2e7d32;--num:#d84315;--cmt:#8a8a92;--fn:#1565c0;--tag:#c2185b;--attr:#b26a00}

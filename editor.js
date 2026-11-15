@@ -1200,7 +1200,7 @@ if(editorPage){
 })();
 const themeBtn=$('editorThemeBtn'),themeCard=$('editorThemeCard');
 function applyEdTheme(t){
-  ['lb','pw','sb','sw'].forEach(function(k){shell.classList.remove('th-'+k)});
+  ['lb','pw','sb','sw','pb','vw'].forEach(function(k){shell.classList.remove('th-'+k)});
   if(t)shell.classList.add('th-'+t);
   if(themeCard)themeCard.querySelectorAll('[data-th]').forEach(function(b){b.classList.toggle('on',b.dataset.th===t)});
   try{localStorage.setItem('mb_edtheme',t||'')}catch(e){}

@@ -1,6 +1,8 @@
 /* ========== Base ========== */
-html,body{overscroll-behavior-y:none}
-*{overscroll-behavior-y:contain}
+/* pull to refresh allowed on pages */
+/* inner lists */
+html:has(#editorPage:not([hidden])),body:has(#editorPage:not([hidden])){overscroll-behavior-y:none}
+#editorPage,#editorPage *{overscroll-behavior:contain}
 #mbFileSheet,#mbFileSheetBd{overscroll-behavior:contain}
 .topbar{display:none!important}
 .auth-loading header, .auth-loading main, .auth-loading .bottom { display: none !important; }

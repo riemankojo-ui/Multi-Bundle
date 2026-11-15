@@ -193,6 +193,9 @@
       var b = document.createElement('button'); b.type = 'button'; b.className = 'mbf-search-btn mbfp-menu-btn'; b.setAttribute('aria-label', 'List settings'); b.innerHTML = IC_MENU;
       b.onclick = function (e) { e.stopPropagation(); ringGo(openMenu, 300); };
       bar.insertBefore(b, sb.nextSibling);
+      var bk = document.createElement('button'); bk.type = 'button'; bk.className = 'mbf-search-btn mbfp-menu-btn'; bk.setAttribute('aria-label', 'Back'); bk.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg>';
+      bk.onclick = function (e) { e.stopPropagation(); ringGo(function () { bd.dispatchEvent(new MouseEvent('click', { bubbles: true })); }, 300); };
+      bar.insertBefore(bk, b.nextSibling);
     }
     function line(label, sub, on, kind, fn) {
       var b = document.createElement('button'); b.type = 'button'; b.className = 'fp-line' + (on ? ' on' : '');

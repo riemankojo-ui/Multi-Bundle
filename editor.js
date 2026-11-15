@@ -916,7 +916,14 @@ updateBtns();
     var q2=searchInput.value;
     if(q2&&!/^:\d+$/.test(q2)){
       runSearch();
-      if(matches.length){var r2=$('editorReplaceInput');if(r2)r2.focus()}
+      if(matches.length){
+        var r2=$('editorReplaceInput'),tries=0;
+        var iv2=setInterval(function(){
+          tries++;
+          if(!r2||document.activeElement===r2||tries>40){clearInterval(iv2);return}
+          r2.focus({preventScroll:true});
+        },100);
+      }
     }
   }
   try{localStorage.setItem('mb_file',JSON.stringify({pid:(typeof currentProjectId!=='undefined'?currentProjectId:''),path:path}))}catch(e){}

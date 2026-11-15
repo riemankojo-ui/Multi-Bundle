@@ -1,4 +1,7 @@
 /* ========== Base ========== */
+html,body{overscroll-behavior-y:none}
+*{overscroll-behavior-y:contain}
+#mbFileSheet,#mbFileSheetBd{overscroll-behavior:contain}
 .topbar{display:none!important}
 .auth-loading header, .auth-loading main, .auth-loading .bottom { display: none !important; }
 :root{

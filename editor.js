@@ -816,6 +816,7 @@ function selectMatch(){
   updateSearchCount();
 }
 searchInput.addEventListener('input',runSearch);
+try{(function(){var pv='';window.__srchMode=null;searchInput.addEventListener('input',function(e){var v=searchInput.value,it=(e&&e.inputType)||'';if(!v){pv='';window.__srchMode=null;return}var bulkOp=/^insertFrom(Paste|Drop)/.test(it);if(pv===''||(bulkOp&&v.indexOf(pv)<0)){var m=(v.length>=2)?'bulk':'hand';window.__srchMode=m;pv=v;if(m==='bulk'){setTimeout(function(){var r=$('editorReplaceInput');if(r&&matches.length>0&&!/^:\d+$/.test(searchInput.value))r.focus()},60)}return}pv=v})})()}catch(e){}
 (function(){
   // 1. INSTANT PASTE: Check the actual text instantly to bypass search lag
 
@@ -827,7 +828,7 @@ searchInput.addEventListener('input',runSearch);
     pv = v;
     
     if (v.length < 3 && jump < 3) return;
-    if (e && /^insertFrom(Paste|Drop)/.test(e.inputType || '')) {
+    if (false) {
       setTimeout(function(){
         var r = $('editorReplaceInput');
         if (r && matches.length > 0 && !/^:\d+$/.test(searchInput.value)) r.focus();
@@ -923,7 +924,7 @@ updateBtns();
     if(q2&&!/^:\d+$/.test(q2)){
       runSearch();
       if(matches.length){
-        var r2=$('editorReplaceInput'),tries=0;
+        var r2=(window.__srchMode==='bulk')?$('editorReplaceInput'):null,tries=0;
         var iv2=setInterval(function(){
           tries++;
           if(!r2||document.activeElement===r2||tries>40){clearInterval(iv2);return}

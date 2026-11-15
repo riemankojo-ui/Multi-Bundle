@@ -681,7 +681,7 @@ function injectCss(){
     '.pb-done{text-align:center;padding:10px 0}',
     '.pb-card:has(.pb-done){background:transparent;border:0;box-shadow:none}',
     '.pb-back:has(.pb-done){background:rgba(0,0,0,.88)}',
-    '.pb-done .pb-go{width:auto;min-width:150px;margin:16px auto 0;padding:11px 30px;background:#1c1d22;border:1px solid #303139;color:#e6e6e8;font-size:13px}',
+    '.pb-done .pb-go{width:auto;margin:14px auto 0;padding:14px 48px;background:transparent;border:0;border-radius:0;color:#e6e6e8;font-size:26px;font-weight:800;letter-spacing:.5px}',
     '.pb-check{width:48px;height:48px;border-radius:50%;background:#16331f;color:#3ddc84;display:grid;place-items:center;font-size:24px;margin:0 auto 10px}',
     '.pb-link{display:inline-block;margin:12px 0 4px;color:#cfe0ff;font-size:13px;font-weight:700;text-decoration:none}',
     '.pb-live{margin-top:14px;padding-top:12px;border-top:1px solid #25262c}',

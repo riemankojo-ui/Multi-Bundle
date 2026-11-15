@@ -818,15 +818,6 @@ function selectMatch(){
 searchInput.addEventListener('input',runSearch);
 (function(){
   // 1. INSTANT PASTE: Check the actual text instantly to bypass search lag
-  searchInput.addEventListener('paste', function(e) {
-    var r = $('editorReplaceInput');
-    if (!r) return;
-    var pasted = e.clipboardData ? e.clipboardData.getData('text') : '';
-    // Only jump if the pasted text actually exists in the editor
-    if (pasted && ta.value.indexOf(pasted) > -1 && !/^:\d+$/.test(pasted)) {
-      r.focus();
-    }
-  });
 
   var n=0, pv='';
   searchInput.addEventListener('input', function(e){
@@ -836,12 +827,13 @@ searchInput.addEventListener('input',runSearch);
     pv = v;
     
     if (v.length < 3 && jump < 3) return;
+    if (e && /^insertFrom(Paste|Drop)/.test(e.inputType || '')) return;
     
     var k = n;
     setTimeout(function(){
       var r = $('editorReplaceInput');
       // 2. TYPING: Ensure there are matches before jumping
-      if(k === n && r && matches.length > 0 && !/^:\d+$/.test(v)) {
+      if(false) {
         r.focus();
       }
     }, 10); 
@@ -895,7 +887,7 @@ function loadFile(path){
   if(q&&!/^:\d+$/.test(q)){
     runSearch();
     // Auto jump to replace when switching files with an active search query
-    if(q.length >= 3){
+    if(false){
       var r=$('editorReplaceInput');
       if(r) r.focus();
     }
@@ -920,6 +912,13 @@ redoStack = fileHistories[path].redo.slice();
 updateBtns();
   updateGutter();updateCursor();refreshHighlight();
   status.textContent=path;fileSelect.value=path;
+  if(searchBar.classList.contains('open')){
+    var q2=searchInput.value;
+    if(q2&&!/^:\d+$/.test(q2)){
+      runSearch();
+      if(matches.length){var r2=$('editorReplaceInput');if(r2)r2.focus()}
+    }
+  }
   try{localStorage.setItem('mb_file',JSON.stringify({pid:(typeof currentProjectId!=='undefined'?currentProjectId:''),path:path}))}catch(e){}
   renderPreview();
 }

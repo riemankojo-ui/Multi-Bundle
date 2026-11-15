@@ -72,7 +72,20 @@
     function allPaths() { var o = []; for (var i = 0; i < sel.options.length; i++) { var v = sel.options[i].value; if (v) o.push(v); } return o; }
     function isLogosMode() { var b = sh.querySelectorAll('.mbf-bar button'); return !!(b[1] && /\bon\b/.test(b[1].className)); }
     function closeSheet() { bd.classList.remove('open'); var a = document.getElementById('mbSelArr'); if (a) a.style.transform = 'rotate(0deg)'; }
-    function pick(path) {
+    /* same spinner the picker always showed while a file or folder opens */
+    function ringGo(fn, ms) {
+      var ov = document.getElementById('mbRing');
+      if (!ov) {
+        ov = document.createElement('div'); ov.id = 'mbRing';
+        ov.style.cssText = 'position:fixed;left:0;right:0;z-index:10001;background:#17181c;display:none;align-items:center;justify-content:center';
+        ov.innerHTML = '<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';
+        document.body.appendChild(ov);
+      }
+      ov.style.top = '0'; ov.style.bottom = '0'; ov.style.zIndex = '10003'; ov.style.display = 'flex';
+      requestAnimationFrame(function () { requestAnimationFrame(function () { fn(); requestAnimationFrame(function () { setTimeout(function () { ov.style.display = 'none'; }, ms || 350); }); }); });
+    }
+    function pick(path) { ringGo(function () { pick0(path); }, 450); }
+    function pick0(path) {
       closeSheet(); window.__edSkipRestore = Date.now() + 1500;
       setTimeout(function () { if (sel.value !== path) { sel.value = path; sel.dispatchEvent(new Event('change', { bubbles: true })); } }, 0);
     }
@@ -130,14 +143,14 @@
         if (lastQ !== null && lastQ === '' && q !== '') curDir = '';   /* a new search starts from the top */
         var qChanged = (lastQ !== q); lastQ = q;
         if (curDir) {
-          var bk = mkRow(icBack(S.icon) + '<span class="mbfp-name"></span>', '', function () { curDir = curDir.split('/').slice(0, -1).join('/'); render2(true); });
+          var bk = mkRow(icBack(S.icon) + '<span class="mbfp-name"></span>', '', function () { ringGo(function () { curDir = curDir.split('/').slice(0, -1).join('/'); render2(true); }, 200); });
           bk.querySelector('.mbfp-name').textContent = curDir; list.appendChild(bk);
         }
         var items = sortItems(buildItems(q)), cur = sel.value, curEl = null;
         items.forEach(function (it) {
           if (it.type === 'folder') {
             var cnt = q ? it.match : it.total;
-            var r = mkRow(icFolder(S.icon) + '<span class="mbfp-name"></span>' + (S.counts ? '<span class="mbfp-cnt">' + cnt + '</span>' : ''), (q && !it.match) ? 'dim' : '', function () { curDir = it.path; render2(true); });
+            var r = mkRow(icFolder(S.icon) + '<span class="mbfp-name"></span>' + (S.counts ? '<span class="mbfp-cnt">' + cnt + '</span>' : ''), (q && !it.match) ? 'dim' : '', function () { ringGo(function () { curDir = it.path; render2(true); }, 200); });
             r.querySelector('.mbfp-name').textContent = it.name; list.appendChild(r);
           } else {
             var on = (!q && it.path === cur);

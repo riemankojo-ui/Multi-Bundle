@@ -43,6 +43,14 @@
 
   /* ---------- selection ---------- */
   var sel = {}, selMode = false, openF = {}, destMode = 'move', lpDone = false, fmDir = '';
+  var FSKEY = 'mb_fm_set', FS = { sort: 'folders', font: 14, icon: 20, editFirst: false };
+  try { var fsv = JSON.parse(localStorage.getItem(FSKEY) || 'null'); if (fsv) for (var fk in FS) if (fsv[fk] !== undefined) FS[fk] = fsv[fk]; } catch (e) {}
+  FS.font = Math.max(12, Math.min(24, +FS.font || 14)); FS.icon = Math.max(14, Math.min(40, +FS.icon || 20));
+  function fsSave() { try { localStorage.setItem(FSKEY, JSON.stringify(FS)); } catch (e) {} }
+  function eKey() { return 'mb_fm_e_' + pid(); }
+  function eGet() { try { return JSON.parse(localStorage.getItem(eKey()) || '{}') || {}; } catch (e) { return {}; } }
+  var eTm;
+  if (ta) ta.addEventListener('input', function () { clearTimeout(eTm); eTm = setTimeout(function () { var p = curPath(); if (!p) return; var t = eGet(); t[p] = Date.now(); try { localStorage.setItem(eKey(), JSON.stringify(t)); } catch (e) {} }, 600); });
   function cmpIt(a, b) {
     var x = a.path.split('/'), y = b.path.split('/'), i = 0;
     while (i < x.length && i < y.length && x[i] === y[i]) i++;
@@ -59,7 +67,7 @@
   function repaint() { var l = $('fmList'), st = l ? l.scrollTop : 0; paintAll(); l = $('fmList'); if (l) l.scrollTop = st; }
   function backRow() {
     if (!fmDir) return '';
-    return '<div data-back="1" style="display:flex;align-items:center;gap:10px;padding:13px 12px;border-bottom:1px solid #1d1e24;cursor:pointer">' + ic('<polyline points="15 18 9 12 15 6"/>', '#ffffff') + '<span style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;font-weight:700;color:#fff">' + esc(fmDir) + '</span></div>';
+    return '<div data-back="1" style="display:flex;align-items:center;gap:10px;padding:13px 12px;border-bottom:1px solid #1d1e24;cursor:pointer">' + ic('<polyline points="15 18 9 12 15 6"/>', '#c8c9d0') + '<span style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;font-weight:700;color:#fff">' + esc(fmDir) + '</span></div>';
   }
   function ringThen(ms, fn, hold) {
     if (!bk || !c) return;
@@ -371,13 +379,47 @@ function openMore(btn) {
     ['copy', 'Copy', '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', '#7dd68e'],
     ['del', 'Delete', '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>', '#ff6b75']
   ].concat(items);
-  if (menu) { card.style.right = 'auto'; card.style.left = '12px'; }
+  if (btn.getAttribute('data-act') === 'fmset') {
+    var pg = document.createElement('div'); pg.id = 'fmMore';
+    pg.style.cssText = 'position:fixed;inset:0;z-index:50;overflow-y:auto;background:#17181c;font-family:system-ui,sans-serif;color:#fff;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))';
+    var MA = { folder: doCreateFolder, move: function () { goDest('move'); }, copy: function () { goDest('copy'); }, del: doDelete };
+    pg.innerHTML = '<div style="position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:12px;background:#17181c;border-bottom:1px solid #2c2d34"><button data-back="1" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:#20222a;border:1px solid #303139;border-radius:10px;color:#e6e6e8;cursor:pointer;padding:0">' + ic('<polyline points="15 18 9 12 15 6"/>', '#a2a3ad') + '</button><b style="font-size:16px;color:#fff">File list settings</b></div>' +
+      '<div style="margin:14px 12px 0;background:#20222a;border:1px solid #303139;border-radius:14px;overflow:hidden"><div style="padding:12px 14px 8px;font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#8b8c96">' + (selN ? 'Selected files' : 'Actions') + '</div>' +
+      items.map(function (it) { return '<button data-m="' + it[0] + '" style="display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;padding:14px;border:0;border-top:1px solid #2c2d34;background:transparent;color:#e6e6e8;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left">' + ic(it[2], it[3]) + '<span>' + it[1] + '</span></button>'; }).join('') + '</div>';
+    pg.querySelector('[data-back]').onclick = function () { ringThen(250, function () { pg.remove(); }); };
+    var fsCard = document.createElement('div');
+    fsCard.style.cssText = 'margin:14px 12px 0;background:#20222a;border:1px solid #303139;border-radius:14px;overflow:hidden';
+    function fsDraw() {
+      var lb = 'padding:12px 14px 8px;font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#8b8c96';
+      var ln = 'display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;box-sizing:border-box;padding:14px;border:0;border-top:1px solid #2c2d34;background:transparent;font-size:14px;font-weight:600;font-family:inherit;text-align:left;cursor:pointer;color:';
+      var sb = 'width:38px;height:38px;border-radius:10px;border:1px solid #303139;background:#17181c;color:#fff;font-size:20px;font-weight:700;cursor:pointer;font-family:inherit;padding:0';
+      var h = '<div style="' + lb + '">Sort by</div>';
+      [['folders', 'Folders first'], ['az', 'A - Z'], ['za', 'Z - A']].forEach(function (o) {
+        h += '<button data-s="' + o[0] + '" style="' + ln + (FS.sort === o[0] ? '#f5d76e' : '#e6e6e8') + '"><span>' + o[1] + '</span>' + (FS.sort === o[0] ? '<span>&#10003;</span>' : '') + '</button>';
+      });
+      h += '<div style="' + lb + ';border-top:1px solid #2c2d34">Edited files</div>';
+      h += '<button data-ef="1" style="' + ln + (FS.editFirst ? '#f5d76e' : '#e6e6e8') + '"><span>Edited file goes first<small style="display:block;margin-top:3px;font-size:11px;font-weight:500;color:#8b8c96">The file you edit moves to the top of the list</small></span><span style="flex:none;position:relative;width:46px;height:26px;border-radius:999px;background:' + (FS.editFirst ? 'var(--red,#f01424)' : '#3a3c46') + '"><span style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transform:translateX(' + (FS.editFirst ? 20 : 0) + 'px)"></span></span></button>';
+      h += '<div style="' + lb + ';border-top:1px solid #2c2d34">Size</div>';
+      [['font', 'File font size'], ['icon', 'File icon size']].forEach(function (o) {
+        h += '<div style="' + ln + '#e6e6e8;cursor:default"><span>' + o[1] + '</span><span style="display:flex;align-items:center;gap:6px"><button data-d="-1" data-z="' + o[0] + '" style="' + sb + '">&minus;</button><span style="min-width:34px;text-align:center;font-weight:800;color:#fff">' + FS[o[0]] + '</span><button data-d="1" data-z="' + o[0] + '" style="' + sb + '">+</button></span></div>';
+      });
+      fsCard.innerHTML = h;
+      var ef = fsCard.querySelector('[data-ef]'); if (ef) ef.onclick = function () { FS.editFirst = !FS.editFirst; fsSave(); fsDraw(); repaint(); };
+      fsCard.querySelectorAll('[data-s]').forEach(function (b) { b.onclick = function () { FS.sort = b.getAttribute('data-s'); fsSave(); fsDraw(); repaint(); }; });
+      fsCard.querySelectorAll('[data-z]').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-z'), lim = k === 'font' ? [12, 24] : [14, 40]; FS[k] = Math.max(lim[0], Math.min(lim[1], FS[k] + (+b.getAttribute('data-d')))); fsSave(); fsDraw(); repaint(); }; });
+    }
+    if (pg.children[1]) pg.children[1].remove(); fsDraw(); pg.appendChild(fsCard);
+    pg.querySelectorAll('[data-m]').forEach(function (b) { b.onclick = function () { pg.remove(); MA[b.getAttribute('data-m')](); }; });
+    ringThen(250, function () { (bk || document.body).appendChild(pg); });
+    return;
+  }
+  if (menu) items.push(['fmset', 'Settings', '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>', '#a2a3ad']);
   card.innerHTML = items.map(function (it) {
     return '<button data-m="' + it[0] + '" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 10px;border:0;border-radius:10px;background:transparent;color:#f0f0f2;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;text-align:left">' + ic(it[2], it[3]) + '<span>' + it[1] + '</span></button>';
   }).join('') + '<div style="padding:6px 10px 4px;font-size:11px;color:#8f919b">Uses selected files, or all if none selected.</div>';
   ov.appendChild(card); (bk || document.body).appendChild(ov);
   mArr(!menu); ov.onclick = function (e) { if (e.target === ov) { ov.remove(); mArr(false); } };
-  var ACT = { txt: doCreateTxt, zip: doZip, list: doCopyList, dup: doDuplicate, folder: doCreateFolder, move: function () { goDest('move'); }, copy: function () { goDest('copy'); }, del: doDelete };
+  var ACT = { fmset: function () { openMore({ getAttribute: function () { return 'fmset'; }, getBoundingClientRect: function () { return { bottom: 0 }; } }); }, txt: doCreateTxt, zip: doZip, list: doCopyList, dup: doDuplicate, folder: doCreateFolder, move: function () { goDest('move'); }, copy: function () { goDest('copy'); }, del: doDelete };
   card.querySelectorAll('[data-m]').forEach(function (b) {
     b.onclick = function () { ov.remove(); mArr(false); ACT[b.getAttribute('data-m')](); };
   });
@@ -421,9 +463,9 @@ function doCreateTxt() {
   function rowHtml(it) {
     var on = !!sel[it.key], d = 0, nm = base(it.path), isO = false;
     var box = selMode ? '<span style="width:20px;height:20px;border-radius:6px;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;border:1.5px solid ' + (on ? '#f01424' : '#3a3b44') + ';background:' + (on ? '#f01424' : 'transparent') + ';color:#fff">' + (on ? '✓' : '') + '</span>' : '';
-    var icon = it.dir ? ic(IC_DIR, '#ffffff') : ic(IC_FIL, '#a2a3ad');
-    var chev = it.dir ? '<span data-exp="1" style="flex:none;display:flex;padding:6px;transition:transform .2s ease;transform:rotate(' + (isO ? 90 : 0) + 'deg)">' + ic('<polyline points="9 6 15 12 9 18"/>', '#a2a3ad') + '</span>' : '';
-    return '<div data-k="' + esc(it.key) + '" style="display:flex;align-items:center;gap:10px;padding:11px 12px 11px ' + (12 + d * 18) + 'px;border-bottom:1px solid #1d1e24;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;' + (on ? 'background:#1c1d22;' : '') + '">' + box + icon + '<span style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px;color:#fff">' + esc(nm) + '</span>' + chev + '</div>';
+    var icon = it.dir ? ic(IC_DIR, '#c8c9d0') : ic(IC_FIL, '#a2a3ad');
+    var chev = it.dir ? '<span data-exp="1" style="flex:none;display:flex;padding:6px;margin:-6px 0;transition:transform .2s ease;transform:rotate(' + (isO ? 90 : 0) + 'deg)">' + ic('<polyline points="9 6 15 12 9 18"/>', '#a2a3ad') + '</span>' : '';
+    return '<div data-k="' + esc(it.key) + '" style="display:flex;align-items:center;gap:10px;padding:11px 12px 11px ' + (12 + d * 18) + 'px;border-bottom:1px solid #1d1e24;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;' + (on ? 'background:#1c1d22;' : '') + '">' + box + icon.replace('width="20" height="20"', 'width="' + FS.icon + '" height="' + FS.icon + '"') + '<span style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:' + FS.font + 'px;color:#fff">' + esc(nm) + '</span>' + chev + '</div>';
   }
   function rowHtmlOld(it) {
     var on = !!sel[it.key], d = it.path.split('/').length - 1, nm = base(it.path);
@@ -436,6 +478,8 @@ function doCreateTxt() {
   function paintList() {
     var l = $('fmList'), n = $('fmCount'); if (!l) return;
     var list = items().filter(function (it) { var pre = fmDir ? fmDir + '/' : ''; return it.path.indexOf(pre) === 0 && it.path.slice(pre.length).indexOf('/') < 0 && it.path !== fmDir; });
+    if (FS.sort !== 'folders') list.sort(function (a, b) { var r = base(a.path).toLowerCase().localeCompare(base(b.path).toLowerCase(), undefined, { numeric: true }); return FS.sort === 'za' ? -r : r; });
+    if (FS.editFirst) { var et = eGet(); list = list.map(function (x, i) { return { x: x, i: i }; }).sort(function (a, b) { var ta2 = a.x.dir ? 0 : (et[a.x.path] || 0), tb2 = b.x.dir ? 0 : (et[b.x.path] || 0); return (tb2 - ta2) || (a.i - b.i); }).map(function (o) { return o.x; }); }
     l.innerHTML = backRow() + (list.length ? list.map(rowHtml).join('') : '<div style="padding:22px;text-align:center;font-size:13px;color:#a2a3ad">No files yet</div>');
     var k = Object.keys(sel).filter(function (x) { return sel[x]; }).length;
     if (n) n.textContent = selMode ? k + ' selected' : 'Long press for select';

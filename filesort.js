@@ -14,7 +14,7 @@
 
     /* ---------- settings ---------- */
     var SKEY = 'mb_fp_set';
-    var S = { sort: 'folders', counts: false, hideNoMatch: true, font: 15, icon: 22 };
+    var S = { sort: 'folders', counts: false, hideNoMatch: true, font: 15, icon: 22, editFirst: false };
     try { var sv = JSON.parse(localStorage.getItem(SKEY) || 'null'); if (sv) for (var k in S) if (sv[k] !== undefined) S[k] = sv[k]; } catch (e) {}
     function save() { try { localStorage.setItem(SKEY, JSON.stringify(S)); } catch (e) {} }
     function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
@@ -26,6 +26,10 @@
     function stamp(p) { if (!p) return; var t = times(); t[p] = Date.now(); try { localStorage.setItem(tkey(), JSON.stringify(t)); } catch (e) {} }
     sel.addEventListener('change', function () { stamp(sel.value); });
     var ta = document.getElementById('editorTextarea');
+    function ekey() { var id = ''; try { id = (typeof currentProjectId !== 'undefined' && currentProjectId) || ''; } catch (e) {} return 'mb_fp_e_' + id; }
+    function etimes() { try { return JSON.parse(localStorage.getItem(ekey()) || '{}') || {}; } catch (e) { return {}; } }
+    var etm;
+    if (ta) ta.addEventListener('input', function () { clearTimeout(etm); etm = setTimeout(function () { var p = sel.value; if (!p) return; var t = etimes(); t[p] = Date.now(); try { localStorage.setItem(ekey(), JSON.stringify(t)); } catch (e) {} }, 600); });
     if (ta) { var tm; ta.addEventListener('input', function () { clearTimeout(tm); tm = setTimeout(function () { stamp(sel.value); }, 800); }); }
 
     /* ---------- styles ---------- */
@@ -37,6 +41,10 @@
       '#mbFileSheet button.mbfp-row .mbfp-cnt{flex:none;font-size:12px;font-weight:700;color:#a2a3ad;background:#20222a;border:1px solid #303139;border-radius:999px;padding:2px 9px}' +
       '#mbFileSheet button.mbfp-row.dim{opacity:.45}' +
       '.mbfp-menu-btn{margin-left:auto!important}.mbfp-menu-btn+.mbf-search-btn{margin-left:0!important}' +
+      '#mbFileSheet .mbf-bar{gap:2px!important;padding:0 12px!important;align-items:stretch!important}' +
+      '#mbFileSheet .mbf-bar button:not(.mbf-search-btn){background:transparent!important;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;padding:14px 12px 12px!important;color:#8b8c96!important;font-size:14px!important;font-weight:700!important}' +
+      '#mbFileSheet .mbf-bar button.on:not(.mbf-search-btn){color:#f5d76e!important;border-bottom-color:#f5d76e!important;background:transparent!important}' +
+'#mbFileSheet .mbf-bar button.mbf-search-btn{background:transparent!important;border:0!important;color:#a2a3ad!important;padding:8px!important}' +
       '#mbFpMenu{display:none;position:absolute;left:0;right:0;top:0;bottom:0;z-index:6;overflow-y:auto;background:#17181c;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain}' +
       '#mbFpMenu.open{display:block}' +
       '#mbFpMenu .fp-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:12px;background:#17181c;border-bottom:1px solid #2c2d34}' +
@@ -59,9 +67,9 @@
     document.head.appendChild(st);
 
     /* ---------- icons ---------- */
-    function icFolder(z) { return '<svg viewBox="0 0 24 24" width="' + z + '" height="' + z + '" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>'; }
+    function icFolder(z) { return '<svg viewBox="0 0 24 24" width="' + z + '" height="' + z + '" fill="none" stroke="#a2a3ad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>'; }
     function icFile(z) { return '<svg viewBox="0 0 24 24" width="' + z + '" height="' + z + '" fill="none" stroke="#a2a3ad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>'; }
-    function icBack(z) { return '<svg viewBox="0 0 24 24" width="' + z + '" height="' + z + '" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><polyline points="15 18 9 12 15 6"/></svg>'; }
+    function icBack(z) { return '<svg viewBox="0 0 24 24" width="' + z + '" height="' + z + '" fill="none" stroke="#a2a3ad" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><polyline points="15 18 9 12 15 6"/></svg>'; }
     var IC_MENU = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>';
     var IC_CHK = '<svg class="fp-chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 
@@ -108,6 +116,11 @@
       return { folders: fl, files: files };
     }
     function sortItems(d) {
+      var r = sortItems0(d); if (!S.editFirst) return r;
+      var et = etimes();
+      return r.map(function (x, i) { return { x: x, i: i }; }).sort(function (a, b) { var ta2 = a.x.type === 'folder' ? 0 : (et[a.x.path] || 0), tb2 = b.x.type === 'folder' ? 0 : (et[b.x.path] || 0); return (tb2 - ta2) || (a.i - b.i); }).map(function (o) { return o.x; });
+    }
+    function sortItems0(d) {
       var byName = function (a, b) { return nameCmp(a.name, b.name); };
       if (S.sort === 'folders') return d.folders.sort(byName).concat(d.files.sort(byName));
       var all = d.folders.concat(d.files);
@@ -173,7 +186,7 @@
       var bar = sh.querySelector('.mbf-bar'); if (!bar || bar.querySelector('.mbfp-menu-btn')) return;
       var sb = bar.querySelector('.mbf-search-btn'); if (!sb) return;
       var b = document.createElement('button'); b.type = 'button'; b.className = 'mbf-search-btn mbfp-menu-btn'; b.setAttribute('aria-label', 'List settings'); b.innerHTML = IC_MENU;
-      b.onclick = function (e) { e.stopPropagation(); openMenu(); };
+      b.onclick = function (e) { e.stopPropagation(); ringGo(openMenu, 300); };
       bar.insertBefore(b, sb);
     }
     function line(label, sub, on, kind, fn) {
@@ -194,7 +207,7 @@
       if (!menu) { menu = document.createElement('div'); menu.id = 'mbFpMenu'; bd.appendChild(menu); }
       menu.innerHTML = '';
       var head = document.createElement('div'); head.className = 'fp-head';
-      var back = document.createElement('button'); back.type = 'button'; back.innerHTML = icBack(20); back.onclick = closeMenu;
+      var back = document.createElement('button'); back.type = 'button'; back.innerHTML = icBack(20); back.onclick = function () { ringGo(closeMenu, 300); };
       var ttl = document.createElement('b'); ttl.textContent = 'File list settings';
       head.appendChild(back); head.appendChild(ttl); menu.appendChild(head);
 
@@ -209,6 +222,9 @@
       c2.appendChild(line('Hide folders with no match', 'While searching, only folders that have a match', S.hideNoMatch, 'sw', function () { S.hideNoMatch = !S.hideNoMatch; save(); buildMenu(); render(); }));
       menu.appendChild(c2);
 
+      var c4 = card('Edited files');
+      c4.appendChild(line('Edited file goes first', 'The file you edit moves to the top of the list', S.editFirst, 'sw', function () { S.editFirst = !S.editFirst; save(); buildMenu(); render(); }));
+      menu.appendChild(c4);
       var c3 = card('Size');
       c3.appendChild(stepper('File font size', 'font', 12, 24));
       c3.appendChild(stepper('File icon size', 'icon', 14, 40));

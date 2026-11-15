@@ -29,7 +29,7 @@
     function ekey() { var id = ''; try { id = (typeof currentProjectId !== 'undefined' && currentProjectId) || ''; } catch (e) {} return 'mb_fp_e_' + id; }
     function etimes() { try { return JSON.parse(localStorage.getItem(ekey()) || '{}') || {}; } catch (e) { return {}; } }
     var etm;
-    if (ta) ta.addEventListener('input', function () { clearTimeout(etm); etm = setTimeout(function () { var p = sel.value; if (!p) return; var t = etimes(); t[p] = Date.now(); try { localStorage.setItem(ekey(), JSON.stringify(t)); } catch (e) {} }, 600); });
+    document.addEventListener('input', function (ev) { if (!ev.target || ev.target.id !== 'editorTextarea') return; clearTimeout(etm); etm = setTimeout(function () { var p = sel.value; if (!p) return; var t = etimes(); t[p] = Date.now(); try { localStorage.setItem(ekey(), JSON.stringify(t)); } catch (e) {} }, 100); }, true);
     if (ta) { var tm; ta.addEventListener('input', function () { clearTimeout(tm); tm = setTimeout(function () { stamp(sel.value); }, 800); }); }
 
     /* ---------- styles ---------- */

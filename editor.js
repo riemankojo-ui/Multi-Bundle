@@ -873,6 +873,8 @@ try{(function(){var pv='';window.__srchMode=null;searchInput.addEventListener('i
     }, 10); 
   });
 })();
+(function(){var pl=0,tk=0;searchInput.addEventListener('input',function(){var v=searchInput.value,jump=v.length-pl;pl=v.length;if(!v||/^:\d+$/.test(v)||jump<3)return;var my=++tk,tries=0,r=$('editorReplaceInput');var iv=setInterval(function(){tries++;if(my!==tk||!r||tries>30){clearInterval(iv);return}if(matches.length>0){clearInterval(iv);if(document.activeElement!==r)r.focus()}},50)})})();
+[searchInput,$('editorReplaceInput')].forEach(function(el){if(!el)return;function top0(){el.scrollTop=0}el.addEventListener('blur',function(){top0();setTimeout(top0,50)})});
 var __esInputs=[searchInput,$('editorReplaceInput')];
 function __esMark(el){__esInputs.forEach(function(i){if(i)i.classList.toggle('es-active',i===el)})}
 __esInputs.forEach(function(i){if(i)i.addEventListener('focus',function(){__esMark(i)})});

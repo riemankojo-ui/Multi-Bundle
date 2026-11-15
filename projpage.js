@@ -30,12 +30,11 @@
   function norm(s) { return String(s || '').trim().replace(/\/+$/, '').replace(/\.git$/i, '').replace(/^https?:\/\/(www\.)?github\.com\//i, '').toLowerCase(); }
   function match(p, v) { return p.githubRepo ? norm(v) === p.githubRepo.toLowerCase() : String(v || '').trim() === (p.name || ''); }
 
-  function iconHtml(p) {
+    function iconHtml(p) {
     try {
-      if (p.logo && p.files) {
-        var lf = p.files.find(function (f) { return f.path === p.logo; });
-        if (lf) { var u = URL.createObjectURL(fileBlob(lf)); if (typeof urls !== 'undefined') urls.push(u); return '<div class="pp-ico"><img src="' + u + '" alt=""></div>'; }
-      }
+      var lf = (p.logo && p.files) ? p.files.find(function (f) { return f.path === p.logo; }) : null;
+      var u = window.mbLogo ? window.mbLogo.src(p, lf) : null;
+      if (u) return '<div class="pp-ico"><img src="' + u + '" alt=""></div>';
     } catch (e) {}
     return '<div class="pp-ico">' + h((p.name || '?').slice(0, 2).toUpperCase()) + '</div>';
   }

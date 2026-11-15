@@ -827,7 +827,13 @@ searchInput.addEventListener('input',runSearch);
     pv = v;
     
     if (v.length < 3 && jump < 3) return;
-    if (e && /^insertFrom(Paste|Drop)/.test(e.inputType || '')) return;
+    if (e && /^insertFrom(Paste|Drop)/.test(e.inputType || '')) {
+      setTimeout(function(){
+        var r = $('editorReplaceInput');
+        if (r && matches.length > 0 && !/^:\d+$/.test(searchInput.value)) r.focus();
+      }, 60);
+      return;
+    }
     
     var k = n;
     setTimeout(function(){

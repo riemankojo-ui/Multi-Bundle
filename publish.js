@@ -567,11 +567,8 @@ function logoBox(p){
   try{
     var lp=p.logo||((typeof detectProjectLogo==='function')?detectProjectLogo(curFiles()):null);
     var lf=lp?curFiles().find(function(f){return f.path===lp}):null;
-    if(lf&&typeof fileBlob==='function'){
-      if(window.__pbLogoUrl){try{URL.revokeObjectURL(window.__pbLogoUrl)}catch(e1){}}
-      var u=URL.createObjectURL(fileBlob(lf));window.__pbLogoUrl=u;
-      return '<img src="'+u+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
-    }
+    var u=window.mbLogo?window.mbLogo.src({id:pid(),logo:lp},lf):null;
+    if(u)return '<img src="'+u+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
   }catch(e){}
   return esc((p.name||'?').slice(0,2).toUpperCase());
 }

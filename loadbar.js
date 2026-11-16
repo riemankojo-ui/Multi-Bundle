@@ -51,6 +51,7 @@ document.head.appendChild(fs);
     }, 270);
   }
   window.mbBar = { start: start, done: done, run: run, finish: finish };
+window.mbBar.end = function () { if (busy) return; clearTimeout(t1); clearTimeout(t2); el.style.transition = 'width .2s ease,opacity .3s ease .15s'; el.style.width = '100%'; t1 = setTimeout(function () { el.style.opacity = '0'; }, 200); t2 = setTimeout(function () { el.style.width = '0'; }, 600); };
   window.mbBar.set = function (p) {
     p = Math.max(0, Math.min(99, p));
     el.style.opacity = '1';

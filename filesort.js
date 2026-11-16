@@ -14,10 +14,15 @@
 
     /* ---------- settings ---------- */
     var SKEY = 'mb_fp_set';
-    var S = { sort: 'folders', counts: false, hideNoMatch: true, font: 15, icon: 22, editFirst: false };
+    var S = { sort: 'folders', counts: false, hideNoMatch: true, font: 15, icon: 22, editFirst: false, showHidden: false };
     try { var sv = JSON.parse(localStorage.getItem(SKEY) || 'null'); if (sv) for (var k in S) if (sv[k] !== undefined) S[k] = sv[k]; } catch (e) {}
     function save() { try { localStorage.setItem(SKEY, JSON.stringify(S)); } catch (e) {} }
     function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+    var selMode = false, selSet = {}, lpAt = 0;
+    function hkey() { var id = ''; try { id = (typeof currentProjectId !== 'undefined' && currentProjectId) || ''; } catch (e) {} return 'mb_fp_h_' + id; }
+    function hidGet() { try { return JSON.parse(localStorage.getItem(hkey()) || '[]') || []; } catch (e) { return []; } }
+    function hidSet(a) { try { localStorage.setItem(hkey(), JSON.stringify(a)); } catch (e) {} }
+    function isHid(p) { return hidGet().indexOf(p) > -1; }
     S.font = clamp(+S.font || 15, 12, 24); S.icon = clamp(+S.icon || 22, 14, 40);
 
     /* ---------- "newest" = most recently opened or edited (the app keeps no file dates) ---------- */
@@ -70,7 +75,33 @@
       '#mbFpMenu .fp-line.on .fp-sw::after{transform:translateX(20px)}' +
       '#mbFpMenu .fp-step{flex:none;display:flex;align-items:center;gap:6px}' +
       '#mbFpMenu .fp-step button{width:38px;height:38px;border-radius:10px;border:1px solid #303139;background:#17181c;color:#fff;font-size:20px;font-weight:700;cursor:pointer;font-family:inherit;padding:0}' +
-      '#mbFpMenu .fp-step span{min-width:34px;text-align:center;font-size:14px;font-weight:800;color:#fff}';
+      '#mbFpMenu .fp-step span{min-width:34px;text-align:center;font-size:14px;font-weight:800;color:#fff}' +
+      '#modalRoot{z-index:10010!important}' +
+      '#mbFpRest{display:none;position:absolute;left:0;right:0;top:0;bottom:0;z-index:7;overflow-y:auto;background:#17181c;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}' +
+      '#mbFpRest.open{display:block}' +
+      '#mbFpRest .rs-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 8px;background:#1e2026;border-bottom:3px solid #3a3c46}' +
+      '#mbFpRest .rs-head button{display:flex;align-items:center;justify-content:center;height:44px;padding:0 12px;background:transparent;border:0;color:#a9abb5;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}' +
+      '#mbFpRest .rs-row{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;text-align:left;font-weight:600;color:#e6e6e8;background:transparent;border:0;border-bottom:1px solid #25262c;font-family:inherit;cursor:pointer}' +
+      '#mbFpRest .rs-row .rs-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '#mbFpRest .rs-row small{display:block;font-size:11px;font-weight:500;color:#8b8c96;margin-top:2px}' +
+      '#mbFpRest .rs-row .rs-go{flex:none;font-size:12px;font-weight:700;color:#a9abb5;border:1px solid #303139;border-radius:999px;padding:4px 10px}' +
+      '#mbFpRest .rs-empty{padding:28px 16px;text-align:center;font-size:14px;color:#8b8c96}' +
+      '#mbFileSheet .mbf-bar,#mbFileSheet .mbfp-selbar,#mbFileSheet .mbf-search-wrap.open{height:60px!important;min-height:60px!important;box-sizing:border-box!important}' +
+      '#mbFileSheet .mbf-bar{align-items:stretch!important}' +
+      '#mbFileSheet .mbf-bar button:not(.mbf-search-btn){display:flex!important;align-items:center!important;padding-top:0!important;padding-bottom:0!important}' +
+      '#mbFileSheet .mbf-bar button.mbf-search-btn{height:auto!important;align-self:center!important;padding:10px!important}' +
+      '#mbFileSheet .mbf-search-wrap.open{padding:0 12px!important;align-items:center!important}' +
+      '#mbFileSheet .mbfp-selbar{align-items:center!important}' +
+      '#mbFileSheet .mbfp-selbar{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:4px;padding:6px 8px;background:#1e2026;border-bottom:3px solid #3a3c46}' +
+      '#mbFileSheet.mbsel .mbf-bar{display:none!important}' +
+      '#mbFileSheet .mbfp-selbar .mbfp-ib{display:flex!important;align-items:center;justify-content:center;width:46px!important;height:46px;padding:0!important;border:0!important;border-radius:12px!important;background:transparent!important;color:#a9abb5!important}' +
+      '#mbFileSheet .mbfp-selbar .mbfp-ib:active{background:#2a2c34!important}' +
+      '#mbFileSheet .mbfp-selbar .mbfp-ib.del{color:#a9abb5!important}' +
+      '#mbFileSheet .mbfp-selbar .mbfp-cnt2{flex:1;text-align:center;font-size:14px;font-weight:800;color:#f5d76e}' +
+      '#mbFileSheet .mbfp-ck{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid #4a4c56;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:800}' +
+      '#mbFileSheet .mbfp-ck.on{background:transparent;border-color:#a9abb5;color:#e6e6e8}' +
+      '#mbFileSheet .mbfp-selbar .mbfp-ib.del{order:1}' +
+      '#mbFileSheet .mbfp-selbar .mbfp-ib.hd{order:2}';
     document.head.appendChild(st);
 
     /* ---------- icons ---------- */
@@ -112,7 +143,7 @@
         var p = paths[i];
         if (prefix && p.indexOf(prefix) !== 0) continue;
         var rel = p.slice(prefix.length), hit = !q || p.toLowerCase().indexOf(q) > -1, t = tt[p] || 0, j = rel.indexOf('/');
-        if (j < 0) { if (hit) files.push({ type: 'file', name: rel, path: p, ts: t }); }
+        if (j < 0) { if (hit && (S.showHidden || !isHid(p))) files.push({ type: 'file', name: rel, path: p, ts: t }); }
         else {
           var fn = rel.slice(0, j), f = folders[fn] || (folders[fn] = { type: 'folder', name: fn, path: prefix + fn, total: 0, match: 0, ts: 0 });
           f.total++; if (hit) f.match++; if (t > f.ts) f.ts = t;
@@ -142,11 +173,74 @@
     }
     function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
+    var viewFiles = [];
+    function selPaths() { return Object.keys(selSet).filter(function (k) { return selSet[k]; }); }
+    function selFilePaths() { var out = {}, all = allPaths(); selPaths().forEach(function (k) { if (k.slice(-1) === '/') all.forEach(function (p) { if (p.indexOf(k) === 0) out[p] = 1; }); else out[k] = 1; }); return Object.keys(out); }
+    function sToast(m, t) { if (window.showToast) window.showToast(m, t); }
+    function exitSel() { selMode = false; selSet = {}; render(); }
+    function toggleSel(p) { if (selSet[p]) delete selSet[p]; else selSet[p] = true; if (!selPaths().length) selMode = false; render(); }
+    function attachLP(el, path) {
+      var t = null, x = 0, y = 0;
+      el.addEventListener('touchstart', function (e) {
+        var p = e.touches[0]; x = p.clientX; y = p.clientY; clearTimeout(t);
+        t = setTimeout(function () {
+          lpAt = Date.now();
+          if (!selMode) { selMode = true; selSet = {}; }
+          selSet[path] = true;
+          try { if (navigator.vibrate) navigator.vibrate(30); } catch (_) {}
+          render();
+        }, 450);
+      }, { passive: true });
+      el.addEventListener('touchmove', function (e) { var p = e.touches[0]; if (Math.abs(p.clientX - x) > 10 || Math.abs(p.clientY - y) > 10) clearTimeout(t); }, { passive: true });
+      ['touchend', 'touchcancel'].forEach(function (n) { el.addEventListener(n, function () { clearTimeout(t); }); });
+      el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    }
+    function icBtn(svg, label, cls, fn) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'mbfp-ib' + (cls ? ' ' + cls : '');
+      b.setAttribute('aria-label', label); b.innerHTML = svg;
+      b.onclick = function (e) { e.stopPropagation(); fn(); }; return b;
+    }
+    function doSelAll() {
+      var all = viewFiles.length && viewFiles.every(function (p) { return selSet[p]; });
+      viewFiles.forEach(function (p) { if (all) delete selSet[p]; else selSet[p] = true; });
+      if (!selPaths().length) selMode = false;
+      render();
+    }
+    function doHide() {
+      var ps = selFilePaths(), h = hidGet(), allH = ps.every(function (p) { return h.indexOf(p) > -1; });
+      if (allH) h = h.filter(function (p) { return ps.indexOf(p) < 0; });
+      else ps.forEach(function (p) { if (h.indexOf(p) < 0) h.push(p); });
+      hidSet(h);
+      sToast((allH ? 'Unhid ' : 'Hid ') + ps.length + ' file' + (ps.length === 1 ? '' : 's'), 'success');
+      exitSel();
+    }
+    async function doDel() {
+      var ps = selFilePaths(); if (!ps.length) return;
+      if (!window.__edDeletePaths) { sToast('Delete is not ready', 'error'); return; }
+      var ok = window.showConfirm ? await window.showConfirm('Delete ' + ps.length + ' file' + (ps.length === 1 ? '' : 's') + '? A backup snapshot is saved first.', { title: 'Delete files', confirmText: 'Delete', cancelText: 'Cancel' }) : true;
+      if (!ok) return;
+      await window.__edDeletePaths(ps);
+      sToast('Deleted ' + ps.length, 'success');
+      exitSel();
+    }
+    function buildSelBar() {
+      var d = document.createElement('div'); d.className = 'mbfp-selbar';
+      var S1 = 'width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
+      var allOn = viewFiles.length && viewFiles.every(function (p) { return selSet[p]; });
+      d.appendChild(icBtn('<svg ' + S1 + '><rect x="3" y="3" width="18" height="18" rx="3"/><polyline points="8 12 11 15 16 9"' + (allOn ? '' : ' opacity=".45"') + '/></svg>', 'Select all', '', doSelAll));
+      var c = document.createElement('div'); c.className = 'mbfp-cnt2'; d.appendChild(c);
+      var h = hidGet(), ps = selFilePaths(), allH = ps.length && ps.every(function (p) { return h.indexOf(p) > -1; });
+      d.appendChild(icBtn(allH
+        ? '<svg ' + S1 + '><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
+        : '<svg ' + S1 + '><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>', allH ? 'Unhide' : 'Hide', 'hd', doHide));
+      d.appendChild(icBtn('<svg ' + S1 + '><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>', 'Delete', 'del', doDel));
+      return d;
+    }
     function render() {
       if (!bd.classList.contains('open')) return;
       busy = true; mo.disconnect();
       try {
-        var fresh = !wasOpen; wasOpen = true;
+        var fresh = !wasOpen; wasOpen = true; var keepTop = sh.scrollTop;
         var list = document.getElementById('mbfpList');
         if (isLogosMode()) { if (list) list.remove(); return; }
         ensureMenuBtn();
@@ -167,14 +261,31 @@
           bk.querySelector('.mbfp-name').textContent = curDir; list.appendChild(bk);
         }
         var items = sortItems(buildItems(q)), cur = sel.value, curEl = null;
+        viewFiles = items.map(function (i) { return i.type === 'folder' ? i.path + '/' : i.path; });
+        sh.classList.toggle('mbsel', selMode);
+        if (selMode) sh.insertBefore(buildSelBar(), sh.firstChild);
         items.forEach(function (it) {
           if (it.type === 'folder') {
             var cnt = q ? it.match : it.total;
-            var r = mkRow(icFolder(S.icon) + '<span class="mbfp-name"></span>' + (S.counts ? '<span class="mbfp-cnt">' + cnt + '</span>' : ''), (q && !it.match) ? 'dim' : '', function () { ringGo(function () { curDir = it.path; render2(true); }, 200); });
+            var fk = it.path + '/';
+            var fchk = selMode ? '<span class="mbfp-ck' + (selSet[fk] ? ' on' : '') + '">' + (selSet[fk] ? '&#10003;' : '') + '</span>' : '';
+            var r = mkRow(fchk + icFolder(S.icon) + '<span class="mbfp-name"></span>' + (S.counts ? '<span class="mbfp-cnt">' + cnt + '</span>' : ''), (q && !it.match) ? 'dim' : '', function () {
+              if (Date.now() - lpAt < 700) return;
+              if (selMode) { toggleSel(fk); return; }
+              ringGo(function () { curDir = it.path; render2(true); }, 200);
+            });
+            attachLP(r, fk);
             r.querySelector('.mbfp-name').textContent = it.name; list.appendChild(r);
           } else {
-            var on = (!q && it.path === cur);
-            var r2 = mkRow(icFile(S.icon) + '<span class="mbfp-name"></span>', on ? 'on' : '', function () { pick(it.path); });
+            var on = (!selMode && !q && it.path === cur);
+            var chk = selMode ? '<span class="mbfp-ck' + (selSet[it.path] ? ' on' : '') + '">' + (selSet[it.path] ? '&#10003;' : '') + '</span>' : '';
+            var r2 = mkRow(chk + icFile(S.icon) + '<span class="mbfp-name"></span>', (on ? 'on' : '') + (isHid(it.path) ? ' dim' : ''), function () {
+              if (Date.now() - lpAt < 700) return;
+              if (selMode) { toggleSel(it.path); return; }
+              if (isHid(it.path)) { sToast('Hidden file. Restore it to edit.'); return; }
+              pick(it.path);
+            });
+            attachLP(r2, it.path);
             r2.querySelector('.mbfp-name').textContent = it.name; list.appendChild(r2); if (on) curEl = r2;
           }
         });
@@ -182,6 +293,7 @@
         sh.appendChild(list);
         if (fresh && curEl) sh.scrollTop = curEl.offsetTop - sh.clientHeight / 2 + curEl.offsetHeight / 2;
         else if (qChanged) sh.scrollTop = 0;
+        else sh.scrollTop = keepTop;
       } catch (e) { /* never break the picker */ }
       finally { mo.observe(sh, { childList: true }); busy = false; }
     }
@@ -213,6 +325,36 @@
       });
       return l;
     }
+    function openRestore() {
+      var pg = document.getElementById('mbFpRest');
+      if (!pg) { pg = document.createElement('div'); pg.id = 'mbFpRest'; bd.appendChild(pg); }
+      function draw() {
+        var have = allPaths(), list = hidGet().filter(function (p) { return have.indexOf(p) > -1; }).sort(nameCmp);
+        pg.innerHTML = '';
+        var head = document.createElement('div'); head.className = 'rs-head';
+        var back = document.createElement('button'); back.type = 'button'; back.innerHTML = icBack(22);
+        back.onclick = function () { ringGo(function () { pg.classList.remove('open'); render(); }, 300); };
+        head.appendChild(back);
+        if (list.length > 1) {
+          var all = document.createElement('button'); all.type = 'button'; all.textContent = 'Restore all';
+          all.onclick = function () { hidSet(hidGet().filter(function (p) { return list.indexOf(p) < 0; })); draw(); };
+          head.appendChild(all);
+        }
+        pg.appendChild(head);
+        if (!list.length) { var em = document.createElement('div'); em.className = 'rs-empty'; em.textContent = 'No hidden files'; pg.appendChild(em); return; }
+        list.forEach(function (p) {
+          var i = p.lastIndexOf('/'), nm = p.slice(i + 1), dir = i > -1 ? p.slice(0, i) : '';
+          var b = document.createElement('button'); b.type = 'button'; b.className = 'rs-row';
+          b.style.fontSize = S.font + 'px'; b.style.padding = rowPad() + 'px 16px';
+          b.innerHTML = icFile(S.icon) + '<span class="rs-nm"></span><span class="rs-go">Restore</span>';
+          var s = b.querySelector('.rs-nm'); s.textContent = nm;
+          if (dir) { var sm = document.createElement('small'); sm.textContent = dir; s.appendChild(sm); }
+          b.onclick = function () { hidSet(hidGet().filter(function (x) { return x !== p; })); draw(); };
+          pg.appendChild(b);
+        });
+      }
+      draw(); pg.classList.add('open'); pg.scrollTop = 0;
+    }
     function buildMenu() {
       if (!menu) { menu = document.createElement('div'); menu.id = 'mbFpMenu'; bd.appendChild(menu); }
       menu.innerHTML = '';
@@ -239,14 +381,20 @@
       c3.appendChild(stepper('File font size', 'font', 12, 24));
       c3.appendChild(stepper('File icon size', 'icon', 14, 40));
       menu.appendChild(c3);
+      var c5 = card('Hidden files'); c5.appendChild(line('Show hidden files', 'Hidden files appear faded in the list', S.showHidden, 'sw', function () { S.showHidden = !S.showHidden; save(); buildMenu(); render(); })); var have6 = allPaths(), n6 = hidGet().filter(function (p) { return have6.indexOf(p) > -1; }).length;
+      var rb = line('Restore files', n6 + ' hidden file' + (n6 === 1 ? '' : 's'), false, 'chk', function () { ringGo(openRestore, 300); });
+      rb.removeChild(rb.lastChild);
+      var ch6 = document.createElement('span'); ch6.innerHTML = '&#8250;'; ch6.style.cssText = 'font-size:26px;color:#8b8c96;flex:none'; rb.appendChild(ch6);
+      c5.appendChild(rb);
+      menu.appendChild(c5);
     }
     function openMenu() { buildMenu(); menu.classList.add('open'); menu.scrollTop = 0; }
-    function closeMenu() { if (menu) menu.classList.remove('open'); }
+    function closeMenu() { if (menu) menu.classList.remove('open'); var rp = document.getElementById('mbFpRest'); if (rp) rp.classList.remove('open'); }
 
     /* ---------- watch the picker ---------- */
     var mo = new MutationObserver(schedule);
     mo.observe(sh, { childList: true });
-    new MutationObserver(function () { if (!bd.classList.contains('open')) { wasOpen = false; lastQ = null; closeMenu(); } }).observe(bd, { attributes: true, attributeFilter: ['class'] });
+    new MutationObserver(function () { if (!bd.classList.contains('open')) { wasOpen = false; lastQ = null; closeMenu(); selMode = false; selSet = {}; sh.classList.remove('mbsel'); } }).observe(bd, { attributes: true, attributeFilter: ['class'] });
     if (bd.classList.contains('open')) schedule();
   } catch (e) { /* do nothing: the normal picker keeps working */ }
 })();

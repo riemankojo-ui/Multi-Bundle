@@ -1076,6 +1076,13 @@ if(ui){ui.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();opn(ui.va
 rf.onclick=function(){if(mode==='ext'&&cur)ext(cur);else if(mode==='local'&&loaded){syncQ(true).then(rl)}else renderPreview()};
 $('editorPreviewClose').addEventListener('click',function(){mode='local';loaded=false;synced=false;cur='';tok++;previewFrame.removeAttribute('src');show()});
 setInterval(function(){var z=$('editorPreviewPane');if(z&&z.classList.contains('open'))show()},700);
+var lastSig='',pd=pvDraw;
+function sig(){var n=files.length;return (typeof currentProjectId!=='undefined'?currentProjectId:'')+'|'+n+'|'+(n?files[0].path+'|'+files[n-1].path:'')}
+function fresh(){var s=sig();if(s!==lastSig){lastSig=s;synced=false;loaded=false;tok++;if(!files.some(function(f){return f.path===pvPath}))pvPath=currentPath}}
+pvDraw=function(){fresh();return pd()};
+var r0=rf.onclick;rf.onclick=function(){fresh();return r0.apply(this,arguments)};
+function rs0(){mode='local';loaded=false;synced=false;cur='';tok++;previewFrame.removeAttribute('src');show()}
+try{var pn=$('editorPreviewPane');new MutationObserver(function(){if(!pn.classList.contains('open')&&(loaded||synced||mode!=='local'))rs0()}).observe(pn,{attributes:true,attributeFilter:['class']})}catch(e){}
 })();
 window.__pvOn=function(){var ep=document.getElementById('editorPage');return !!document.querySelector('#editorPreviewPane.open,#mbFileSheetBd.open,#mbProjSheetBd.open,#drawer.open')||!!(ep&&ep.hidden)};
 (function(){

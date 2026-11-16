@@ -1083,7 +1083,11 @@ pvDraw=function(){fresh();return pd()};
 var r0=rf.onclick;rf.onclick=function(){fresh();return r0.apply(this,arguments)};
 function rs0(){mode='local';loaded=false;synced=false;cur='';tok++;previewFrame.removeAttribute('src');show()}
 var lastPage='';
-function track(){if(mode!=='local'||!loaded)return;try{var l=previewFrame.contentWindow.location;if(l.protocol!=='about:'&&l.pathname.indexOf(P)===0)lastPage=decodeURIComponent(l.pathname.slice(P.length))}catch(e){}}
+var quiet=0,bgBusy=0,pd2=pvDraw;
+pvDraw=function(){if(quiet)return;return pd2()};
+function rp(p){if(!p||/\/$/.test(p))p=(p||'')+'index.html';var c=[p,p+'.html',p+'/index.html'];for(var i=0;i<c.length;i++){var x=c[i];if(files.some(function(f){return f.path===x}))return x}return ''}
+function bg(p){if(!p||p===currentPath)return;if(bgBusy){setTimeout(function(){if(p===lastPage)bg(p)},350);return}var f=files.find(function(x){return x.path===p});if(!f||f.text==null||typeof loadFile!=='function')return;bgBusy=1;setTimeout(function(){if(p!==lastPage||mode!=='local'){bgBusy=0;return}try{quiet=1;loadFile(p)}catch(e){}quiet=0;if(mode==='local')previewFrame.onload=onl;try{if(previewFrame.contentDocument.readyState==='complete')setLd(false)}catch(e){}bgBusy=0},300)}
+function track(){if(mode!=='local'||!loaded)return;try{var l=previewFrame.contentWindow.location;if(l.protocol!=='about:'&&l.pathname.indexOf(P)===0){var np=rp(decodeURIComponent(l.pathname.slice(P.length)));if(np&&np!==lastPage){lastPage=np;bg(np)}}}catch(e){}}
 var onl0=onl;onl=function(){onl0.apply(this,arguments);track()};
 setInterval(function(){var z=$('editorPreviewPane');if(z&&z.classList.contains('open'))track()},300);
 function spin(){var r={left:0,top:44,width:innerWidth,height:innerHeight-104};try{var b=(ta.parentElement||ta).getBoundingClientRect();if(b.height>80)r=b}catch(e){}var o=document.createElement('div');o.style.cssText='position:fixed;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;height:'+r.height+'px;z-index:10001;background:#0d0e12;display:flex;align-items:center;justify-content:center;opacity:1;transition:opacity .35s ease';o.innerHTML='<div style="width:26px;height:26px;border:3px solid #2a2c34;border-top-color:#CD853F;border-radius:50%;animation:mb-spin .8s linear infinite"></div>';document.body.appendChild(o);return o}

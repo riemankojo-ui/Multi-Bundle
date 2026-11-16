@@ -7,7 +7,7 @@ self.addEventListener('fetch',function(e){
   if(r.method!=='GET'&&r.method!=='HEAD')return;
   var u=new URL(r.url);
   if(u.origin!==location.origin)return;
-  e.respondWith(serve(r,u));
+  if(u.pathname.indexOf(P)!==0){if((r.referrer||'').indexOf(location.origin+P)===0)e.respondWith(Response.redirect(location.origin+P+u.pathname.slice(1)+u.search,302));return}e.respondWith(serve(r,u));
 });
 async function find(c,p){
   var list=[p];
@@ -21,7 +21,7 @@ async function serve(r,u){
   if(p.indexOf(P)!==0)p=P+p.replace(/^\//,'');
   var hit=await find(c,p);
   if(!hit&&r.mode==='navigate'&&!/\.[a-z0-9]+$/i.test(p))hit=await find(c,P+'index.html');
-  if(!hit)return new Response('404 Not found: '+p.slice(P.length-1),{status:404,headers:{'Content-Type':'text/plain'}});
+  if(!hit&&r.mode!=='navigate'){var bm=await c.match('/__live-base');if(bm){var base=(await bm.text()).replace(/\/$/,'');try{return await fetch(base+'/'+p.slice(P.length),{mode:r.mode==='cors'?'cors':'no-cors'})}catch(err){}}} if(!hit)return new Response('404 Not found: '+p.slice(P.length-1),{status:404,headers:{'Content-Type':'text/plain'}});
   var rg=r.headers.get('range'),m=rg&&/bytes=(\d*)-(\d*)/.exec(rg);
   if(m){
     var b=await hit.blob(),s,en;

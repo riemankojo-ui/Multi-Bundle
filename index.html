@@ -1228,7 +1228,7 @@ async function openApkPage(){
 <script>
   if('serviceWorker' in navigator){ 
     navigator.serviceWorker.getRegistrations().then(function(regs){
-      for(let reg of regs){ reg.unregister(); }
+      for(let reg of regs){ if(reg.scope.indexOf('/__live/')===-1) reg.unregister(); }
     }); 
   }
 </script>

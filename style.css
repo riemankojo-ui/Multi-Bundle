@@ -431,7 +431,8 @@ html.mb-noln #editorShell .editor-gutter{display:none}
 }
 .editor-preview-wrap{position:relative;flex:1;background:#0d0e12;display:flex;min-height:0}
 .editor-preview-wrap #editorPreviewFrame{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:0;background:#0d0e12}
-.editor-preview-wrap .preview-loader{border-radius:0}
+.editor-preview-wrap .preview-loader{border-radius:0;background:transparent!important;pointer-events:none;transition:none!important}
+.editor-preview-wrap .preview-loader .spinner{width:34px;height:34px;border:3px solid transparent!important;border-top-color:#26272d!important;border-radius:50%;filter:drop-shadow(0 0 2px rgba(255,255,255,.55));animation:mb-spin .75s linear infinite}
 .editor-preview-pane.pvfull .editor-preview-bar{display:none}
 .editor-preview-bar .editor-btn{background:transparent!important;border:0!important;box-shadow:none!important;color:#c4c4cb!important;width:44px;height:40px;min-width:0;padding:0!important;font-size:24px!important;font-weight:400!important}
 .editor-preview-bar .editor-btn svg{width:22px!important;height:22px!important}

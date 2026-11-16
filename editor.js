@@ -1082,7 +1082,13 @@ function fresh(){var s=sig();if(s!==lastSig){lastSig=s;synced=false;loaded=false
 pvDraw=function(){fresh();return pd()};
 var r0=rf.onclick;rf.onclick=function(){fresh();return r0.apply(this,arguments)};
 function rs0(){mode='local';loaded=false;synced=false;cur='';tok++;previewFrame.removeAttribute('src');show()}
-try{var pn=$('editorPreviewPane');new MutationObserver(function(){if(!pn.classList.contains('open')&&(loaded||synced||mode!=='local'))rs0()}).observe(pn,{attributes:true,attributeFilter:['class']})}catch(e){}
+var lastPage='';
+function track(){if(mode!=='local'||!loaded)return;try{var l=previewFrame.contentWindow.location;if(l.protocol!=='about:'&&l.pathname.indexOf(P)===0)lastPage=decodeURIComponent(l.pathname.slice(P.length))}catch(e){}}
+var onl0=onl;onl=function(){onl0.apply(this,arguments);track()};
+setInterval(function(){var z=$('editorPreviewPane');if(z&&z.classList.contains('open'))track()},300);
+function spin(){var r={left:0,top:44,width:innerWidth,height:innerHeight-104};try{var b=(ta.parentElement||ta).getBoundingClientRect();if(b.height>80)r=b}catch(e){}var o=document.createElement('div');o.style.cssText='position:fixed;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;height:'+r.height+'px;z-index:10001;background:#0d0e12;display:flex;align-items:center;justify-content:center;opacity:1;transition:opacity .35s ease';o.innerHTML='<div style="width:26px;height:26px;border:3px solid #2a2c34;border-top-color:#CD853F;border-radius:50%;animation:mb-spin .8s linear infinite"></div>';document.body.appendChild(o);return o}
+function unspin(o){setTimeout(function(){o.style.opacity='0';setTimeout(function(){o.remove()},380)},450)}
+try{var pn=$('editorPreviewPane');new MutationObserver(function(){if(!pn.classList.contains('open')&&(loaded||synced||mode!=='local')){var lp=lastPage;lastPage='';rs0();var f=lp&&files.find(function(x){return x.path===lp});if(f&&f.text!=null&&lp!==currentPath&&typeof loadFile==='function'){var o=spin();setTimeout(function(){loadFile(lp);unspin(o)},50)}}}).observe(pn,{attributes:true,attributeFilter:['class']})}catch(e){}
 })();
 window.__pvOn=function(){var ep=document.getElementById('editorPage');return !!document.querySelector('#editorPreviewPane.open,#mbFileSheetBd.open,#mbProjSheetBd.open,#drawer.open')||!!(ep&&ep.hidden)};
 (function(){

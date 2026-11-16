@@ -194,16 +194,19 @@
   function quiet(e) { return e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request'); }
 
   function showAuthLoader() {
+  try { localStorage.setItem('mb_loading', '1'); } catch (e) {}
+  window.__ldNote = function (t) { var n = document.getElementById('authLoaderNote'); if (n) n.textContent = t || ''; };
   var ld = document.getElementById('authLoader');
   if(!ld) {
       ld = document.createElement('div');
       ld.id = 'authLoader';
       ld.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0d0e12;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#a2a3ad;font-family:system-ui,sans-serif;font-weight:bold;';
-      ld.innerHTML = '<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div><div>Loading workspace...</div>';
+      ld.innerHTML = '<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div><div>Loading workspace...</div><div id="authLoaderNote" style="font-size:12px;color:#777;font-weight:600;min-height:16px"></div>';
       document.body.appendChild(ld);
   }
 }
 function hideAuthLoader() {
+  try { localStorage.removeItem('mb_loading'); } catch (e) {}
   var ld = document.getElementById('authLoader');
   if (ld) ld.remove();
 }
@@ -425,7 +428,26 @@ if (previousUid && previousUid !== user.uid) resetScreen();
       if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
   if (user && typeof window.__cloudSweep === "function") window.__cloudSweep();
   if (user && typeof window.__restoreFromCloud === "function") {
-      await window.__restoreFromCloud();
+      if (!localStorage.getItem('mb_restored_' + user.uid) || localStorage.getItem('mb_loading') === '1') showAuthLoader();
+      window.__restoreSkip = false;
+      var skipT = setTimeout(function () {
+        var ld = document.getElementById('authLoader');
+        if (ld && !document.getElementById('authSkip')) {
+          var b = document.createElement('button'); b.id = 'authSkip'; b.textContent = 'Open anyway';
+          b.style.cssText = 'margin-top:10px;background:#2a2c34;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-weight:700;font-size:14px';
+          b.onclick = function () { window.__restoreSkip = true; };
+          ld.appendChild(b);
+        }
+      }, 60000);
+      var tries = 0;
+      while (!window.__restoreSkip && auth.currentUser) {
+        await window.__restoreFromCloud();
+        if (window.__cloudRestoreDone) break;
+        tries++;
+        if (window.__ldNote) window.__ldNote('Still loading your projects… (try ' + (tries + 1) + ')');
+        await new Promise(function (r) { setTimeout(r, Math.min(1500 + tries * 1000, 6000)); });
+      }
+      clearTimeout(skipT);
       if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
   }
   
@@ -500,6 +522,7 @@ await auth.signOut();
   injectCss();
   wireGate();
   // Show the last signed-in profile at once, so the account card does not blink on refresh
+  try { if (localStorage.getItem('mb_loading') === '1') showAuthLoader(); } catch (e) {}
   const cp = cachedProfile();
   if (rememberedUid && cp) showProfile(cp);
 })();

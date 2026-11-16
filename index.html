@@ -783,7 +783,9 @@
       var u=await who();if(!u)return[];
       var db=firebase.firestore(),out=[];
       var ps=await db.collection('users/'+u.uid+'/projects').get();
-      for(var d of ps.docs){
+      var __docs=ps.docs.slice(),__di=0,__dn=0;
+      var __one=async function(di){
+        var d=__docs[di];
         var m=d.data(),files=[];
         var snap=await d.ref.collection('files').get();
         snap.forEach(function(x){var f=x.data();if(!m.paths||m.paths.indexOf(f.path)>=0)files.push({path:f.path,name:f.name,size:f.size,type:f.type,text:f.text})});
@@ -800,7 +802,9 @@
         }
         out.push({id:m.id,name:m.name,savedAt:m.savedAt,createdAt:m.createdAt,source:m.source||undefined,githubRepo:m.githubRepo||undefined,githubBranch:m.githubBranch||undefined,files:files,history:[]});
       }
-      ps.docs.forEach(function(d,i){var m=d.data();if(out[i]){if(m.logo)out[i].logo=m.logo;if(m.githubShas)out[i].githubShas=m.githubShas}});
+      ;await Promise.all([0,1,2,3,4].map(async function(){while(__di<__docs.length){await __one(__di++);__dn++;try{window.__ldNote&&window.__ldNote('Loading projects '+__dn+'/'+__docs.length)}catch(e){}}}));
+var __ord={};__docs.forEach(function(d,i){__ord[d.data().id]=i});out.sort(function(a,b){return __ord[a.id]-__ord[b.id]});
+ps.docs.forEach(function(d,i){var m=d.data();if(out[i]){if(m.logo)out[i].logo=m.logo;if(m.githubShas)out[i].githubShas=m.githubShas}});
       ps.docs.forEach(function(d,i){if(out[i]&&d.data().deleted)out[i].deleted=true});window.__cloudLoadOK=true;
       
       return out;

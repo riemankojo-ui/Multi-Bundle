@@ -132,11 +132,11 @@ async function __restoreFromCloud(){
     const cu=firebase.auth().currentUser;if(!cu||!window.cloudProj)return false;
     const fk='mb_restored_'+cu.uid;
     const all=await dbGetAll();
-    if(localStorage.getItem(fk)&&all.length)return false;
+    if(localStorage.getItem(fk)&&all.length){window.__cloudRestoreDone=true;return false}window.__cloudRestoreDone=false;
     window.__cloudLoadOK=false;
     const dead=__tombs();
     const cloud=(await window.cloudProj.load()).filter(function(p){return !p.deleted&&dead.indexOf(p.id)<0});
-    if(!window.__cloudLoadOK){if(!window.__restoreRetry){window.__restoreRetry=true;setTimeout(function(){window.__restoreRetry=false;__restoreFromCloud()},10000)}return false}
+    if(!window.__cloudLoadOK)return false;
     let changed=false;
     for(const cp of cloud){
       const lp=all.find(function(x){return x.id===cp.id});
@@ -152,7 +152,7 @@ async function __restoreFromCloud(){
       if(cp.githubShas&&!lp.githubShas){lp.githubShas=cp.githubShas;changed=true}
       if(cp.githubRepo&&!lp.githubRepo){lp.githubRepo=cp.githubRepo;lp.githubBranch=cp.githubBranch;changed=true}
     }
-    localStorage.setItem(fk,String(Date.now()));
+    localStorage.setItem(fk,String(Date.now()));window.__cloudRestoreDone=true;
     if(changed){await dbSetAll(all);await __flushProjects();if(typeof window.__refreshProjects==='function')window.__refreshProjects()}
     return changed;
   }catch(e){return false}

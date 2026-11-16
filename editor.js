@@ -981,6 +981,7 @@ async function saveFile(){
   }
 
   f.text=ta.value;f.blob=null;dirty=false;
+  try{var __ep=(typeof currentProjectId!=='undefined'&&currentProjectId)||'',__en=Date.now();['mb_fp_e_','mb_fm_e_'].forEach(function(k){var o={};try{o=JSON.parse(localStorage.getItem(k+__ep)||'{}')||{}}catch(e0){}o[currentPath]=__en;localStorage.setItem(k+__ep,JSON.stringify(o))})}catch(e){}
   if(f.uri&&window.FolderAccess&&FolderAccess.available){try{await FolderAccess.saveFile(f,f.text);toast('Saved to phone file','success')}catch(err){toast('Could not save to phone file: '+String(err&&err.message||err),'error')}}
 originalText=ta.value;
 

@@ -679,8 +679,6 @@ function injectCss(){
     '.pb-go{display:block;width:100%;margin-top:10px;padding:13px;border:0;border-radius:12px;background:var(--red);color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:transform .14s ease,opacity .14s ease}',
     '.pb-go:disabled{opacity:.4;cursor:not-allowed}',
     '.pb-done{text-align:center;padding:10px 0}',
-    '.pb-card:has(.pb-done){background:transparent;border:0;box-shadow:none}',
-    '.pb-back:has(.pb-done){background:rgba(0,0,0,.88)}',
     '.pb-done .pb-go{width:auto;margin:14px auto 0;padding:14px 48px;background:transparent;border:0;border-radius:0;color:#e6e6e8;font-size:26px;font-weight:800;letter-spacing:.5px}',
     '.pb-check{width:48px;height:48px;border-radius:50%;background:#16331f;color:#3ddc84;display:grid;place-items:center;font-size:24px;margin:0 auto 10px}',
     '.pb-link{display:inline-block;margin:12px 0 4px;color:#cfe0ff;font-size:13px;font-weight:700;text-decoration:none}',

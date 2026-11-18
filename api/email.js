@@ -46,4 +46,23 @@ async function handle(req, res) {
     return res.status(429).json({ error: 'Daily limit reached (' + DAILY_LIMIT + ' emails). Try again tomorrow.' });
   }
 
-  const r = await fetch('https://api
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + process.env.RESEND_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM,
+      to: list,
+      subject: String(subject).slice(0, 200),
+      html: html ? String(html) : undefined,
+      text: text ? String(text) : undefined,
+    }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    return res.status(502).json({ error: data.message || 'The email provider refused the request' });
+  }
+  return res.status(200).json({ ok: true, id: data.id, sentToday: used, dailyLimit: DAILY_LIMIT });
+}

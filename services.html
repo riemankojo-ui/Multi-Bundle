@@ -222,7 +222,17 @@
     margin-top: 6px;
     cursor: pointer;
   }
-  a.menu-btn { text-decoration: none; margin-left: 10px; }
+  .top-back {
+    margin-left: auto;
+    padding-left: 14px;
+    border-left: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .top-back:active { color: var(--text); }
   .back-link { border-bottom: 1px solid var(--border); margin-bottom: 8px; }
 </style>
 </head>
@@ -235,12 +245,8 @@
         <path d="M4 7h16M4 12h16M4 17h16"></path>
       </svg>
     </button>
-    <a href="/" class="menu-btn" aria-label="Back to Multi Bundle">
-      <svg viewBox="0 0 24 24" fill="none">
-        <path d="M15 5l-7 7 7 7"></path>
-      </svg>
-    </a>
     <h1>Multi Bundle</h1>
+    <a href="/" class="top-back">Back to app</a>
   </header>
 
   <!-- Main Content is now empty -->
@@ -257,6 +263,7 @@
       <div class="card">
         <h3>API keys</h3>
         <p>Each key has an API key and a secret. The secret is shown only once.</p>
+        <button class="try-btn" id="signInBtn" style="display:none">Sign in with Google</button>
         <input class="key-input" id="keyName" placeholder="Key name (e.g. My app)">
         <button class="try-btn" id="createKey">Create key</button>
         <div class="result" id="newKeyBox"></div>
@@ -392,16 +399,39 @@
       }
     });
 
-    loadKeys();
+    const signInBtn = document.getElementById('signInBtn');
+
+    firebase.auth().onAuthStateChanged(u => {
+      signInBtn.style.display = u ? 'none' : 'inline-block';
+      if (u) loadKeys();
+    });
+
+    signInBtn.addEventListener('click', async () => {
+      try {
+        await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+      } catch (e) {
+        alert(e.message);
+      }
+    });
 
     // Menu logic
     const openBtn = document.getElementById('openMenu');
     const overlay = document.getElementById('overlay');
     const drawer = document.getElementById('drawer');
 
-    function closeMenu() {
+    let pendingPage = null;
+
+    // clear a leftover menu step if the page was reopened with one
+    if (history.state && history.state.menu) history.replaceState(null, '');
+
+    function closeMenuUI() {
       drawer.classList.remove('active');
       overlay.classList.remove('active');
+    }
+
+    function closeMenu() {
+      if (history.state && history.state.menu) history.back();
+      else closeMenuUI();
     }
 
     openBtn.addEventListener('click', () => {
@@ -410,10 +440,7 @@
       history.pushState({ menu: true }, '');
     });
 
-    overlay.addEventListener('click', () => {
-      if (history.state && history.state.menu) history.back();
-      else closeMenu();
-    });
+    overlay.addEventListener('click', closeMenu);
 
     // Close menu when a link is clicked
     function showPage(name) {
@@ -430,20 +457,34 @@
       link.addEventListener('click', (e) => {
         e.preventDefault();
         const name = link.dataset.page;
-        closeMenu();
         if (history.state && history.state.menu) {
+          pendingPage = name;
+          history.back();
+        } else {
           history.replaceState(null, '', '#' + name);
-        } else if (location.hash !== '#' + name) {
-          history.pushState(null, '', '#' + name);
+          showPage(name);
         }
-        showPage(name);
       });
     });
 
     // Android Back button: close the menu first, then go to the previous section
     window.addEventListener('popstate', () => {
-      closeMenu();
-      showPage(location.hash.slice(1) || 'services');
+      closeMenuUI();
+      if (pendingPage) {
+        const n = pendingPage;
+        pendingPage = null;
+        history.replaceState(null, '', '#' + n);
+        showPage(n);
+      } else {
+        showPage(location.hash.slice(1) || 'services');
+      }
+    });
+
+    document.querySelectorAll('.back-link, .top-back').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        location.replace('/');
+      });
     });
 
     showPage(location.hash.slice(1) || 'services');

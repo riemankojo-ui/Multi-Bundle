@@ -4,6 +4,10 @@ const { requireAuth } = require('./_auth');
 const DAILY_LIMIT = 20;
 
 module.exports = async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key, x-api-secret');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  if (req.method === 'OPTIONS') return res.status(204).end();
   try {
     await handle(req, res);
   } catch (e) {

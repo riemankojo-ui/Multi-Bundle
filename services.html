@@ -251,7 +251,7 @@
 
   <!-- Main Content is now empty -->
   <main>
-    <section class="page active" id="page-services">
+    <section class="page" id="page-services">
       <style>
         .sv-small{font-size:12px;color:#666;line-height:1.5;margin:6px 0 0}
         .sv-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
@@ -293,8 +293,8 @@
       <div id="svList"></div>
     </section>
 
-    <section class="page" id="page-marketing">
-      <div class="card"><h3>Marketing</h3><p>Coming soon.</p></div>
+    <section class="page active" id="page-marketing">
+      <div class="card"><h3>Home</h3><p>Coming soon.</p></div>
     </section>
 
     <section class="page" id="page-apis">
@@ -359,8 +359,8 @@
       </div>
     </div>
     <a href="/" class="drawer-link back-link">← Back to Multi Bundle</a>
-    <a href="#" class="drawer-link active" data-page="services">Services</a>
-    <a href="#" class="drawer-link" data-page="marketing">Marketing</a>
+    <a href="#" class="drawer-link active" data-page="marketing">Home</a>
+    <a href="#" class="drawer-link" data-page="services">Services</a>
     <a href="#" class="drawer-link" data-page="apis">APIs</a>
   </nav>
 
@@ -652,7 +652,7 @@
 
     // Close menu when a link is clicked
     function showPage(name) {
-      if (!document.getElementById('page-' + name)) name = 'services';
+      if (!document.getElementById('page-' + name)) name = 'marketing';
       document.querySelectorAll('.drawer-link').forEach(l => {
         l.classList.toggle('active', l.dataset.page === name);
       });
@@ -687,7 +687,7 @@
         history.replaceState(null, '', '#' + n);
         showPage(n);
       } else {
-        showPage(location.hash.slice(1) || 'services');
+        showPage(location.hash.slice(1) || 'marketing');
       }
     });
 
@@ -699,7 +699,7 @@
       });
     });
 
-    showPage(location.hash.slice(1) || 'services');
+    showPage(location.hash.slice(1) || 'marketing');
   </script>
 
 </body>

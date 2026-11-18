@@ -1,11 +1,14 @@
 const admin = require('firebase-admin');
 
+let svc = null;
+try { svc = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || 'null'); } catch (e) {}
+
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert({
+    credential: admin.credential.cert(svc || {
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+      privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n'),
     }),
   });
 }

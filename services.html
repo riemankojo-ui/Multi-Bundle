@@ -263,7 +263,7 @@
       <div class="card">
         <h3>API keys</h3>
         <p>Each key has an API key and a secret. The secret is shown only once.</p>
-        <button class="try-btn" id="signInBtn" style="display:none">Sign in with Google</button>
+        <p id="signedOutMsg" style="display:none">Sign in to Multi Bundle first, then open this page again.</p>
         <input class="key-input" id="keyName" placeholder="Key name (e.g. My app)">
         <button class="try-btn" id="createKey">Create key</button>
         <div class="result" id="newKeyBox"></div>
@@ -399,19 +399,11 @@
       }
     });
 
-    const signInBtn = document.getElementById('signInBtn');
+    const signedOutMsg = document.getElementById('signedOutMsg');
 
     firebase.auth().onAuthStateChanged(u => {
-      signInBtn.style.display = u ? 'none' : 'inline-block';
+      signedOutMsg.style.display = u ? 'none' : 'block';
       if (u) loadKeys();
-    });
-
-    signInBtn.addEventListener('click', async () => {
-      try {
-        await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
-      } catch (e) {
-        alert(e.message);
-      }
     });
 
     // Menu logic

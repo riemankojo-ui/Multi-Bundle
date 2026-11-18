@@ -174,6 +174,54 @@
     border-radius: 6px;
     padding: 2px 8px;
   }
+  .try-btn {
+    margin-top: 12px;
+    background: var(--text);
+    color: #fff;
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .result {
+    margin-top: 12px;
+    background: #f0efe9;
+    border-radius: 10px;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 220px;
+    overflow: auto;
+    display: none;
+  }
+  .key-input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 14px;
+    margin-top: 10px;
+    background: #fff;
+  }
+  .key-row {
+    border-top: 1px solid var(--border);
+    padding: 10px 0;
+    font-size: 13px;
+  }
+  .key-row code { font-family: monospace; word-break: break-all; }
+  .del-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 12px;
+    margin-top: 6px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -200,9 +248,19 @@
 
     <section class="page" id="page-apis">
       <div class="card">
-        <span class="badge">Planned</span>
+        <h3>API keys</h3>
+        <p>Each key has an API key and a secret. The secret is shown only once.</p>
+        <input class="key-input" id="keyName" placeholder="Key name (e.g. My app)">
+        <button class="try-btn" id="createKey">Create key</button>
+        <div class="result" id="newKeyBox"></div>
+        <div id="keyList"></div>
+      </div>
+      <div class="card">
+        <span class="badge">Live</span>
         <div><span class="method">POST</span><span class="path">/api/bundle</span></div>
         <p>Send project files, get a bundled export back.</p>
+        <button class="try-btn" id="tryBundle">Try it</button>
+        <div class="result" id="bundleResult"></div>
       </div>
       <div class="card">
         <span class="badge">Planned</span>
@@ -217,6 +275,9 @@
     </section>
   </main>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
   <!-- Slide-out Menu -->
   <div class="overlay" id="overlay"></div>
   <nav class="drawer" id="drawer">
@@ -227,6 +288,104 @@
   </nav>
 
   <script>
+    // Firebase sign-in (same site as the app, so you are already signed in)
+    firebase.initializeApp({
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      appId: "YOUR_APP_ID"
+    });
+
+    function waitForUser() {
+      return new Promise(resolve => {
+        const off = firebase.auth().onAuthStateChanged(u => { off(); resolve(u); });
+      });
+    }
+
+    document.getElementById('tryBundle').addEventListener('click', async () => {
+      const box = document.getElementById('bundleResult');
+      box.style.display = 'block';
+      box.textContent = 'Calling /api/bundle...';
+      try {
+        const user = await waitForUser();
+        if (!user) { box.textContent = 'You are not signed in on this site.'; return; }
+        const token = await user.getIdToken();
+        const r = await fetch('/api/bundle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
+            name: 'Test',
+            files: [{ path: 'hello.txt', content: 'Hello from the API' }]
+          })
+        });
+        const data = await r.json();
+        box.textContent = r.status + '\n' + JSON.stringify(data, null, 2);
+      } catch (e) {
+        box.textContent = 'Error: ' + e.message;
+      }
+    });
+
+    // API keys
+    async function authFetch(url, opts) {
+      opts = opts || {};
+      const user = await waitForUser();
+      if (!user) throw new Error('You are not signed in on this site.');
+      const token = await user.getIdToken();
+      opts.headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+      return fetch(url, opts);
+    }
+
+    async function loadKeys() {
+      const list = document.getElementById('keyList');
+      try {
+        const r = await authFetch('/api/keys');
+        const data = await r.json();
+        list.innerHTML = '';
+        (data.keys || []).forEach(k => {
+          const row = document.createElement('div');
+          row.className = 'key-row';
+          const title = document.createElement('div');
+          title.textContent = k.name;
+          const code = document.createElement('code');
+          code.textContent = k.key;
+          const del = document.createElement('button');
+          del.className = 'del-btn';
+          del.textContent = 'Delete';
+          del.onclick = async () => {
+            if (!confirm('Delete this key? Apps using it will stop working.')) return;
+            await authFetch('/api/keys', { method: 'DELETE', body: JSON.stringify({ key: k.key }) });
+            loadKeys();
+          };
+          row.appendChild(title);
+          row.appendChild(code);
+          row.appendChild(document.createElement('br'));
+          row.appendChild(del);
+          list.appendChild(row);
+        });
+      } catch (e) {
+        list.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    document.getElementById('createKey').addEventListener('click', async () => {
+      const box = document.getElementById('newKeyBox');
+      box.style.display = 'block';
+      box.textContent = 'Creating...';
+      try {
+        const name = document.getElementById('keyName').value || 'My key';
+        const r = await authFetch('/api/keys', { method: 'POST', body: JSON.stringify({ name }) });
+        const data = await r.json();
+        if (!r.ok) { box.textContent = data.error || 'Failed'; return; }
+        box.textContent = 'COPY THE SECRET NOW. It will not be shown again.\n\nAPI key:\n' + data.key + '\n\nSecret:\n' + data.secret;
+        document.getElementById('keyName').value = '';
+        loadKeys();
+      } catch (e) {
+        box.textContent = 'Error: ' + e.message;
+      }
+    });
+
+    loadKeys();
+
     // Menu logic
     const openBtn = document.getElementById('openMenu');
     const overlay = document.getElementById('overlay');

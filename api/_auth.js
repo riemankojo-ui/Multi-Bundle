@@ -27,4 +27,34 @@ async function requireUser(req, res) {
   }
 }
 
-module.exports = { requireUser };
+const crypto = require('crypto');
+const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
+
+// Accepts API key + secret headers, or a Firebase sign-in token
+async function requireAuth(req, res) {
+  const key = req.headers['x-api-key'];
+  const secret = req.headers['x-api-secret'];
+  if (key || secret) {
+    if (!key || !secret || !String(key).startsWith('wkml_')) {
+      res.status(401).json({ error: 'Invalid API key or secret' });
+      return null;
+    }
+    const ref = admin.firestore().collection('apiKeys').doc(String(key));
+    const doc = await ref.get();
+    if (!doc.exists) {
+      res.status(401).json({ error: 'Invalid API key or secret' });
+      return null;
+    }
+    const a = Buffer.from(doc.data().secretHash);
+    const b = Buffer.from(sha(String(secret)));
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      res.status(401).json({ error: 'Invalid API key or secret' });
+      return null;
+    }
+    ref.update({ lastUsed: Date.now() }).catch(() => {});
+    return doc.data().uid;
+  }
+  return requireUser(req, res);
+}
+
+module.exports = { requireUser, requireAuth, sha };

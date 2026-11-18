@@ -1,11 +1,11 @@
-const { requireUser } = require('./_auth');
+const { requireAuth } = require('./_auth');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Use POST' });
   }
 
-  const uid = await requireUser(req, res);
+  const uid = await requireAuth(req, res);
   if (!uid) return;
 
   const { name, files } = req.body || {};

@@ -107,6 +107,6 @@ window.mbBar.end = function () { if (busy) return; clearTimeout(t1); clearTimeou
     e.stopPropagation(); e.preventDefault();
     if (b.__mbWait) return;
     b.__mbWait = true;
-    run(400, function () { b.__mbWait = false; b.__mbGo = true; b.click(); });
+    var ov=document.getElementById('mbRing');if(!ov){ov=document.createElement('div');ov.id='mbRing';ov.style.cssText='position:fixed;left:0;right:0;z-index:10001;background:#17181c;display:none;align-items:center;justify-content:center';ov.innerHTML='<div style="width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red);border-radius:50%;animation:mb-spin .8s linear infinite"></div>';document.body.appendChild(ov)}ov.style.top='0';ov.style.bottom='0';ov.style.zIndex='10003';ov.style.display='flex';requestAnimationFrame(function(){requestAnimationFrame(function(){b.__mbWait=false;b.__mbGo=true;b.click();setTimeout(function(){ov.style.display='none'},450)})});
   }, true);
 })();

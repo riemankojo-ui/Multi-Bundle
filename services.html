@@ -352,6 +352,61 @@
       return fetch(url, opts);
     }
 
+    const kvStyle = document.createElement('style');
+    kvStyle.textContent = '.kv{margin-top:12px}.kv-label{font-size:12px;font-weight:600;margin-bottom:6px;color:#555}.kv-row{display:flex;align-items:center;gap:4px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:4px 4px 4px 12px}.kv-val{flex:1;min-width:0;font-family:monospace;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kv-btn{flex:none;width:36px;height:36px;border:0;background:none;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#111}.kv-note{font-size:12px;font-weight:600;color:#b00020}';
+    document.head.appendChild(kvStyle);
+
+    function makeField(label, value, hidden) {
+      const svg = (p) => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
+      const EYE = svg('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>');
+      const EYE_OFF = svg('<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>');
+      const COPY = svg('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>');
+      const CHECK = svg('<polyline points="20 6 9 17 4 12"/>');
+      const wrap = document.createElement('div');
+      wrap.className = 'kv';
+      const lab = document.createElement('div');
+      lab.className = 'kv-label';
+      lab.textContent = label;
+      const row = document.createElement('div');
+      row.className = 'kv-row';
+      const val = document.createElement('div');
+      val.className = 'kv-val';
+      const eye = document.createElement('button');
+      eye.className = 'kv-btn';
+      const cp = document.createElement('button');
+      cp.className = 'kv-btn';
+      cp.innerHTML = COPY;
+      let shown = true;
+      const paint = () => { val.textContent = shown ? value : '\u2022'.repeat(20); eye.innerHTML = shown ? EYE_OFF : EYE; };
+      eye.onclick = () => { shown = !shown; paint(); };
+      cp.onclick = async () => {
+        try { await navigator.clipboard.writeText(value); } catch (e) {
+          const t = document.createElement('textarea'); t.value = value; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+        }
+        cp.innerHTML = CHECK;
+        setTimeout(() => { cp.innerHTML = COPY; }, 1200);
+      };
+      paint();
+      row.appendChild(val);
+      row.appendChild(eye);
+      row.appendChild(cp);
+      wrap.appendChild(lab);
+      wrap.appendChild(row);
+      return wrap;
+    }
+
+    function showNewKey(box, data) {
+      box.textContent = '';
+      box.style.whiteSpace = 'normal';
+      box.style.maxHeight = 'none';
+      const note = document.createElement('div');
+      note.className = 'kv-note';
+      note.textContent = 'Copy the secret now. It will not be shown again.';
+      box.appendChild(note);
+      box.appendChild(makeField('API key', data.key, true));
+      box.appendChild(makeField('Secret', data.secret, true));
+    }
+
     async function loadKeys() {
       const list = document.getElementById('keyList');
       try {
@@ -374,7 +429,7 @@
             loadKeys();
           };
           row.appendChild(title);
-          row.appendChild(code);
+          row.appendChild(makeField('API key', k.key, true));
           row.appendChild(document.createElement('br'));
           row.appendChild(del);
           list.appendChild(row);
@@ -393,7 +448,7 @@
         const r = await authFetch('/api/keys', { method: 'POST', body: JSON.stringify({ name }) });
         const data = await r.json();
         if (!r.ok) { box.textContent = data.error || 'Failed'; return; }
-        box.textContent = 'COPY THE SECRET NOW. It will not be shown again.\n\nAPI key:\n' + data.key + '\n\nSecret:\n' + data.secret;
+        showNewKey(box, data);
         document.getElementById('keyName').value = '';
         loadKeys();
       } catch (e) {

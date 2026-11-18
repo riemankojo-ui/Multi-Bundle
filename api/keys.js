@@ -20,6 +20,8 @@ async function handle(req, res) {
     const keys = snap.docs.map(d => ({
       key: d.id,
       name: d.data().name,
+      site: d.data().site || '',
+      description: d.data().description || '',
       createdAt: d.data().createdAt,
       lastUsed: d.data().lastUsed || null,
     }));
@@ -32,12 +34,16 @@ async function handle(req, res) {
       return res.status(400).json({ error: 'Limit is 5 keys. Delete one first.' });
     }
     const name = String((req.body && req.body.name) || 'My key').slice(0, 40);
+    const site = String((req.body && req.body.site) || '').slice(0, 200);
+    const description = String((req.body && req.body.description) || '').slice(0, 500);
     const key = 'wkml_' + crypto.randomBytes(12).toString('hex');
     const secret = 'mlsecret_' + crypto.randomBytes(24).toString('hex');
     await col.doc(key).set({
       uid,
       name,
       secretHash: sha(secret),
+      site,
+      description,
       createdAt: Date.now(),
     });
     return res.status(200).json({ key, secret, name });

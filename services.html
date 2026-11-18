@@ -252,7 +252,45 @@
   <!-- Main Content is now empty -->
   <main>
     <section class="page active" id="page-services">
-      <div class="card"><h3>Services</h3><p>Coming soon.</p></div>
+      <style>
+        .sv-small{font-size:12px;color:#666;line-height:1.5;margin:6px 0 0}
+        .sv-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+        .sv-chip{font-size:11px;border:1px solid var(--border);border-radius:999px;padding:3px 9px;color:#444;background:#fff}
+        .sv-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+        .sv-type{font-size:11px;font-family:monospace;border:1px solid var(--border);border-radius:6px;padding:2px 7px;color:#444}
+        .sv-fields{font-size:11px;color:#888;margin-top:8px}
+        .sv-code{font-family:monospace;font-size:11px;background:#f0efeb;border-radius:10px;padding:10px;margin-top:10px;overflow-x:auto;white-space:pre;color:#222}
+        .sv-steps{font-size:12px;color:#555;line-height:1.7;margin:8px 0 0;padding-left:18px}
+      </style>
+      <div class="card">
+        <span class="badge">Live</span>
+        <h3>Transactional email</h3>
+        <p class="sv-small">Send automatic emails from your app: welcome messages, login codes, receipts and alerts. One request, one API key, no mail server to run.</p>
+        <div class="sv-chips">
+          <span class="sv-chip">REST API</span>
+          <span class="sv-chip">Key + secret auth</span>
+          <span class="sv-chip">HTML or plain text</span>
+          <span class="sv-chip">Up to 5 recipients</span>
+          <span class="sv-chip">20 emails/day free</span>
+          <span class="sv-chip">Usage limits per account</span>
+        </div>
+        <div><span class="method">POST</span><span class="path">/api/email</span></div>
+      </div>
+      <div class="card">
+        <h3>How it works</h3>
+        <ol class="sv-steps">
+          <li>Create an API key on the APIs page.</li>
+          <li>Send a POST request with your key and secret in the headers.</li>
+          <li>Pick an email type, or send your own subject and message.</li>
+          <li>The email is delivered and counted against your daily limit.</li>
+        </ol>
+        <div class="sv-code">curl -X POST https://multibundle.vercel.app/api/email \
+ -H "x-api-key: YOUR_KEY" \
+ -H "x-api-secret: YOUR_SECRET" \
+ -H "Content-Type: application/json" \
+ -d '{"to":"user@mail.com","subject":"Hello","html":"&lt;p&gt;Hi!&lt;/p&gt;"}'</div>
+      </div>
+      <div id="svList"></div>
     </section>
 
     <section class="page" id="page-marketing">
@@ -264,8 +302,11 @@
         <h3>API keys</h3>
         <p>Each key has an API key and a secret. The secret is shown only once.</p>
         <p id="signedOutMsg" style="display:none">Sign in to Multi Bundle first, then open this page again.</p>
-        <input class="key-input" id="keyName" placeholder="Key name (e.g. My app)">
-        <button class="try-btn" id="createKey">Create key</button>
+        <input class="key-input" id="keyName" placeholder="App name">
+        <input class="key-input" id="keySite" placeholder="Site address (e.g. https://myapp.com)">
+        <textarea class="key-input" id="keyDesc" rows="3" placeholder="Description"></textarea>
+        <button class="try-btn" id="saveApp">Save</button>
+        <button class="try-btn" id="createKey" style="opacity:.35;pointer-events:none">Create key</button>
         <div class="result" id="newKeyBox"></div>
         <div id="keyList"></div>
       </div>
@@ -287,6 +328,19 @@
         <p>Publish a project to GitHub.</p>
       </div>
     </section>
+    <section class="page" id="page-account">
+      <div class="card">
+        <h3>Account</h3>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+          <img id="accPhoto" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;background:#ddd;display:none">
+          <div style="min-width:0">
+            <div id="accName" style="font-weight:600;font-size:16px">Not signed in</div>
+            <div id="accEmail" style="font-size:13px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+          </div>
+        </div>
+        <button class="try-btn" id="signOutBtn">Sign out</button>
+      </div>
+    </section>
   </main>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -295,7 +349,15 @@
   <!-- Slide-out Menu -->
   <div class="overlay" id="overlay"></div>
   <nav class="drawer" id="drawer">
-    <div class="drawer-header">Navigation</div>
+    <div class="drawer-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
+      <span>Navigation</span>
+      <button id="dAccBtn" onclick="var p=document.getElementById('dAccPanel');p.style.display=p.style.display==='block'?'none':'block'" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:#eee center/cover no-repeat;font-size:16px;font-weight:700;color:#111;padding:0;display:flex;align-items:center;justify-content:center">?</button>
+      <div id="dAccPanel" style="display:none;width:100%;margin-top:16px;text-transform:none;letter-spacing:0;font-weight:400">
+        <div id="dAccName" style="font-weight:600;font-size:15px;color:#111">Not signed in</div>
+        <div id="dAccEmail" style="font-size:13px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        <button id="dSignOut" class="del-btn" style="margin-top:10px">Sign out</button>
+      </div>
+    </div>
     <a href="/" class="drawer-link back-link">← Back to Multi Bundle</a>
     <a href="#" class="drawer-link active" data-page="services">Services</a>
     <a href="#" class="drawer-link" data-page="marketing">Marketing</a>
@@ -407,6 +469,65 @@
       box.appendChild(makeField('Secret', data.secret, true));
     }
 
+    const EMAIL_TYPES = [
+      ['welcome', 'Welcome email', 'Greet new users the moment they sign up.', 'Welcome to My App', '<h2>Welcome!</h2><p>Thanks for joining. Your account is ready.</p>'],
+      ['verify-code', 'Verification code', 'Send a one-time code to confirm an email or a login.', 'Your code is 482913', '<p>Your verification code is <b>482913</b>. It expires in 10 minutes.</p>'],
+      ['password-reset', 'Password reset', 'Let users reset a forgotten password safely.', 'Reset your password', '<p>Tap the link to choose a new password.</p><p><a href="https://myapp.com/reset">Reset password</a></p>'],
+      ['receipt', 'Order receipt', 'Confirm a purchase with the items and the total.', 'Your receipt #1042', '<h3>Thanks for your order</h3><p>Order #1042: 2 items, total $24.00</p>'],
+      ['invoice', 'Invoice', 'Send a bill with an amount and a due date.', 'Invoice #77 is ready', '<p>Invoice #77 for $120.00 is due on Dec 1.</p>'],
+      ['shipping', 'Shipping update', 'Tell customers their order is on the way.', 'Your order has shipped', '<p>Your order is on its way. Tracking: TRK12345.</p>'],
+      ['security-alert', 'Security alert', 'Warn about a new login or a changed password.', 'New sign-in to your account', '<p>We noticed a sign-in from a new device. If this was not you, change your password.</p>'],
+      ['renewal', 'Subscription renewal', 'Remind users before a plan renews or expires.', 'Your plan renews soon', '<p>Your plan renews on Dec 1. No action is needed.</p>'],
+      ['reminder', 'Event reminder', 'Remind someone about a booking or an event.', 'Reminder: tomorrow at 10:00', '<p>This is a reminder about your booking tomorrow at 10:00.</p>'],
+      ['invite', 'Team invite', 'Invite a person to join a team or a project.', 'You have been invited', '<p>You were invited to join a project. <a href="https://myapp.com/join">Accept invite</a></p>'],
+      ['feedback', 'Feedback request', 'Ask customers how it went after a purchase or a support chat.', 'How did we do?', '<p>We would love your feedback. It takes one minute.</p>'],
+      ['newsletter-confirm', 'Newsletter confirmation', 'Confirm a signup to your mailing list.', 'Confirm your subscription', '<p>Tap to confirm you want to receive our updates.</p>']
+    ];
+
+    (function renderServices() {
+      const list = document.getElementById('svList');
+      EMAIL_TYPES.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const head = document.createElement('div');
+        head.className = 'sv-head';
+        const h = document.createElement('h3');
+        h.textContent = t[1];
+        const tag = document.createElement('span');
+        tag.className = 'sv-type';
+        tag.textContent = t[0];
+        head.appendChild(h);
+        head.appendChild(tag);
+        const p = document.createElement('p');
+        p.className = 'sv-small';
+        p.textContent = t[2];
+        const f = document.createElement('div');
+        f.className = 'sv-fields';
+        f.textContent = 'Fields: to, subject, html (or text)';
+        const code = document.createElement('div');
+        code.className = 'sv-code';
+        code.style.display = 'none';
+        code.textContent = JSON.stringify({ to: 'user@mail.com', subject: t[3], html: t[4] }, null, 2);
+        const btn = document.createElement('button');
+        btn.className = 'del-btn';
+        btn.style.margin = '10px 6px 0 0';
+        btn.textContent = 'View example';
+        btn.onclick = () => { const o = code.style.display === 'none'; code.style.display = o ? 'block' : 'none'; btn.textContent = o ? 'Hide example' : 'View example'; };
+        const cp = document.createElement('button');
+        cp.className = 'del-btn';
+        cp.style.marginTop = '10px';
+        cp.textContent = 'Copy';
+        cp.onclick = async () => { try { await navigator.clipboard.writeText(code.textContent); cp.textContent = 'Copied'; setTimeout(() => { cp.textContent = 'Copy'; }, 1200); } catch (e) { cp.textContent = 'Failed'; } };
+        card.appendChild(head);
+        card.appendChild(p);
+        card.appendChild(f);
+        card.appendChild(btn);
+        card.appendChild(cp);
+        card.appendChild(code);
+        list.appendChild(card);
+      });
+    })();
+
     async function loadKeys() {
       const list = document.getElementById('keyList');
       try {
@@ -429,7 +550,17 @@
             loadKeys();
           };
           row.appendChild(title);
-          row.appendChild(makeField('API key', k.key, true));
+          const det = document.createElement('div');
+          det.style.display = 'none';
+          if (k.site) { const s = document.createElement('div'); s.className = 'kv-label'; s.style.marginTop = '10px'; s.textContent = 'Site: ' + k.site; det.appendChild(s); }
+          if (k.description) { const d = document.createElement('div'); d.style.cssText = 'font-size:13px;margin-top:6px;color:#555'; d.textContent = k.description; det.appendChild(d); }
+          det.appendChild(makeField('API key', k.key, false));
+          const more = document.createElement('button');
+          more.className = 'del-btn';
+          more.textContent = 'Details';
+          more.onclick = () => { const open = det.style.display === 'none'; det.style.display = open ? 'block' : 'none'; more.textContent = open ? 'Hide' : 'Details'; };
+          row.appendChild(more);
+          row.appendChild(det);
           row.appendChild(document.createElement('br'));
           row.appendChild(del);
           list.appendChild(row);
@@ -439,17 +570,33 @@
       }
     }
 
+    document.getElementById('saveApp').addEventListener('click', () => {
+      const box = document.getElementById('newKeyBox');
+      if (!document.getElementById('keyName').value.trim()) {
+        box.style.display = 'block';
+        box.textContent = 'Enter an app name first.';
+        return;
+      }
+      box.style.display = 'none';
+      document.getElementById('createKey').style.opacity = '1';
+      document.getElementById('createKey').style.pointerEvents = 'auto';
+    });
+
     document.getElementById('createKey').addEventListener('click', async () => {
       const box = document.getElementById('newKeyBox');
       box.style.display = 'block';
       box.textContent = 'Creating...';
       try {
         const name = document.getElementById('keyName').value || 'My key';
-        const r = await authFetch('/api/keys', { method: 'POST', body: JSON.stringify({ name }) });
+        const r = await authFetch('/api/keys', { method: 'POST', body: JSON.stringify({ name, site: document.getElementById('keySite').value.trim(), description: document.getElementById('keyDesc').value.trim() }) });
         const data = await r.json();
         if (!r.ok) { box.textContent = data.error || 'Failed'; return; }
         showNewKey(box, data);
         document.getElementById('keyName').value = '';
+        document.getElementById('keySite').value = '';
+        document.getElementById('keyDesc').value = '';
+        document.getElementById('createKey').style.opacity = '.35';
+        document.getElementById('createKey').style.pointerEvents = 'none';
         loadKeys();
       } catch (e) {
         box.textContent = 'Error: ' + e.message;
@@ -460,6 +607,17 @@
 
     firebase.auth().onAuthStateChanged(u => {
       signedOutMsg.style.display = u ? 'none' : 'block';
+      const dBtn = document.getElementById('dAccBtn');
+      dBtn.style.backgroundImage = (u && u.photoURL) ? 'url("' + u.photoURL + '")' : 'none';
+      dBtn.textContent = (u && u.photoURL) ? '' : (u ? (u.displayName || u.email || '?').charAt(0).toUpperCase() : '?');
+      document.getElementById('dAccName').textContent = u ? (u.displayName || 'Signed in') : 'Not signed in';
+      document.getElementById('dAccEmail').textContent = u ? (u.email || '') : '';
+      document.getElementById('dSignOut').onclick = async () => { await firebase.auth().signOut(); location.href = '/'; };
+      document.getElementById('accName').textContent = u ? (u.displayName || 'Signed in') : 'Not signed in';
+      document.getElementById('accEmail').textContent = u ? (u.email || '') : '';
+      const ph = document.getElementById('accPhoto');
+      if (u && u.photoURL) { ph.src = u.photoURL; ph.style.display = 'block'; } else { ph.style.display = 'none'; }
+      document.getElementById('signOutBtn').onclick = async () => { await firebase.auth().signOut(); location.href = '/'; };
       if (u) loadKeys();
     });
 

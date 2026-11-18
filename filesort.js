@@ -253,7 +253,7 @@
         list.innerHTML = '';
         var inp = document.getElementById('mbFileSearch');
         var q = ((inp && inp.value) || '').toLowerCase().trim();
-        if (fresh) curDir = '';
+ if (curDir && !allPaths().some(function (p) { return p.indexOf(curDir + '/') === 0; })) curDir = '';
         if (lastQ !== null && lastQ === '' && q !== '') curDir = '';   /* a new search starts from the top */
         var qChanged = (lastQ !== q); lastQ = q;
         if (curDir) {
@@ -269,7 +269,7 @@
             var cnt = q ? it.match : it.total;
             var fk = it.path + '/';
             var fchk = selMode ? '<span class="mbfp-ck' + (selSet[fk] ? ' on' : '') + '">' + (selSet[fk] ? '&#10003;' : '') + '</span>' : '';
-            var r = mkRow(fchk + icFolder(S.icon) + '<span class="mbfp-name"></span>' + (S.counts ? '<span class="mbfp-cnt">' + cnt + '</span>' : ''), (q && !it.match) ? 'dim' : '', function () {
+var r = mkRow(fchk + icFolder(S.icon) + '<span class="mbfp-name"></span>' + (S.counts ? '<span class="mbfp-cnt">' + cnt + '</span>' : ''), ((q && !it.match) ? 'dim' : '') + ((!selMode && !q && cur && cur.indexOf(fk) === 0) ? ' on' : ''), function () {
               if (Date.now() - lpAt < 700) return;
               if (selMode) { toggleSel(fk); return; }
               ringGo(function () { curDir = it.path; render2(true); }, 200);
@@ -291,7 +291,7 @@
         });
         if (!items.length) { var em = document.createElement('div'); em.className = 'mbf-empty'; em.textContent = q ? 'No files match "' + q + '"' : 'No files'; list.appendChild(em); }
         sh.appendChild(list);
-        if (fresh && curEl) sh.scrollTop = curEl.offsetTop - sh.clientHeight / 2 + curEl.offsetHeight / 2;
+        if (fresh && S.editFirst) sh.scrollTop = 0; else if (fresh && curEl) sh.scrollTop = curEl.offsetTop - sh.clientHeight / 2 + curEl.offsetHeight / 2;
         else if (qChanged) sh.scrollTop = 0;
         else sh.scrollTop = keepTop;
       } catch (e) { /* never break the picker */ }

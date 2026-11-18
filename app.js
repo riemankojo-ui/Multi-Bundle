@@ -958,6 +958,7 @@ function bundlePick(id,all){
 };
 }
 function showTab(name){window.scrollTo(0,0);try{document.documentElement.scrollTop=0;document.body.scrollTop=0}catch(e){}
+  if(name==='services'){location.href='services.html';return}
   if(name==='preview'&&$('editorPreviewBtn')){showTab('editor');setTimeout(function(){var pb=$('editorPreviewBtn');if(pb)pb.click()},60);return}
   if(name!=='editor'&&document.body.classList.contains('editor-full')&&$('editorFullBtn'))$('editorFullBtn').click();
   ['home','projects','bundle','preview','editor','backups','github','updates'].forEach(function(p){

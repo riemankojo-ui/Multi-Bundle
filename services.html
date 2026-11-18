@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi Bundle</title>
+<style>
+  :root {
+    --bg: #f4f3ef;
+    --text: #1a1a1a;
+    --muted: #6b6b6b;
+    --border: #e5e4df;
+    --white: #ffffff;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* --- TOP HEADER --- */
+  header {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    background-color: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .menu-btn {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    flex-shrink: 0;
+  }
+
+  .menu-btn svg {
+    width: 22px;
+    height: 22px;
+    stroke: var(--text);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-left: 16px;
+  }
+
+  /* --- MAIN CONTENT --- */
+  main {
+    padding: 10px 20px 40px;
+    max-width: 600px;
+    margin: 0 auto;
+    /* Empty main content area */
+  }
+
+  /* --- SLIDE OUT MENU --- */
+  .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease;
+    z-index: 99;
+  }
+
+  .overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .drawer {
+    position: fixed;
+    top: 0;
+    left: -300px;
+    width: 280px;
+    height: 100%;
+    background: var(--white);
+    z-index: 100;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.1);
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .drawer.active {
+    transform: translateX(300px);
+  }
+
+  .drawer-header {
+    padding: 0 24px 24px;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+
+  .drawer-link {
+    display: flex;
+    align-items: center;
+    padding: 16px 24px;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+
+  .drawer-link:active, .drawer-link:hover {
+    background: #f9f9f9;
+  }
+
+  .drawer-link.active {
+    font-weight: 700;
+    color: var(--text);
+    background: #f0f0f0;
+    border-right: 4px solid var(--text);
+  }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card h3 { font-size: 16px; margin-bottom: 4px; }
+  .card p { font-size: 14px; color: var(--muted); }
+  .method {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #1a1a1a;
+    color: #fff;
+    margin-right: 8px;
+  }
+  .path { font-family: monospace; font-size: 14px; }
+  .badge {
+    float: right;
+    font-size: 11px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px 8px;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Header with 3-line menu -->
+  <header>
+    <button class="menu-btn" id="openMenu" aria-label="Open menu">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M4 7h16M4 12h16M4 17h16"></path>
+      </svg>
+    </button>
+    <h1>Multi Bundle</h1>
+  </header>
+
+  <!-- Main Content is now empty -->
+  <main>
+    <section class="page active" id="page-services">
+      <div class="card"><h3>Services</h3><p>Coming soon.</p></div>
+    </section>
+
+    <section class="page" id="page-marketing">
+      <div class="card"><h3>Marketing</h3><p>Coming soon.</p></div>
+    </section>
+
+    <section class="page" id="page-apis">
+      <div class="card">
+        <span class="badge">Planned</span>
+        <div><span class="method">POST</span><span class="path">/api/bundle</span></div>
+        <p>Send project files, get a bundled export back.</p>
+      </div>
+      <div class="card">
+        <span class="badge">Planned</span>
+        <div><span class="method">POST</span><span class="path">/api/compress</span></div>
+        <p>Lower the size of a project.</p>
+      </div>
+      <div class="card">
+        <span class="badge">Planned</span>
+        <div><span class="method">POST</span><span class="path">/api/publish</span></div>
+        <p>Publish a project to GitHub.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Slide-out Menu -->
+  <div class="overlay" id="overlay"></div>
+  <nav class="drawer" id="drawer">
+    <div class="drawer-header">Navigation</div>
+    <a href="#" class="drawer-link active" data-page="services">Services</a>
+    <a href="#" class="drawer-link" data-page="marketing">Marketing</a>
+    <a href="#" class="drawer-link" data-page="apis">APIs</a>
+  </nav>
+
+  <script>
+    // Menu logic
+    const openBtn = document.getElementById('openMenu');
+    const overlay = document.getElementById('overlay');
+    const drawer = document.getElementById('drawer');
+
+    function toggleMenu() {
+      drawer.classList.toggle('active');
+      overlay.classList.toggle('active');
+    }
+
+    openBtn.addEventListener('click', toggleMenu);
+    overlay.addEventListener('click', toggleMenu);
+
+    // Close menu when a link is clicked
+    document.querySelectorAll('.drawer-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.drawer-link').forEach(l => l.classList.remove('active'));
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        link.classList.add('active');
+        document.getElementById('page-' + link.dataset.page).classList.add('active');
+        toggleMenu();
+      });
+    });
+  </script>
+
+</body>
+</html>

@@ -5,6 +5,7 @@ document.addEventListener('click',function(e){
   if(!el)return;
   const name=el.dataset.tab;window.scrollTo(0,0);
   if(!name)return;
+  if(name==='services'){location.href='services.html';return}
   ['home','projects','bundle','preview','editor','backups','github','updates'].forEach(function(p){
     const page=document.getElementById(p+'Page');
     if(page)page.hidden=(p!==name);
@@ -972,6 +973,12 @@ function showTab(name){window.scrollTo(0,0);try{document.documentElement.scrollT
   if(name==='updates'&&typeof setUpdatesTab==='function')setUpdatesTab(window.__updatesMode||'github');
 }
 window.showTab=showTab;
+window.addEventListener('pageshow',function(e){
+  if(e.persisted){
+    var sel=document.querySelector('.bottom span.selected');
+    if(sel&&sel.dataset.tab==='services')showTab('home');
+  }
+});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 
 window.__updatesMode='github';
@@ -1450,7 +1457,7 @@ restoreLastProject().then(() => {
   // Stay on the last tab after refresh
   try {
     var nav = JSON.parse(localStorage.getItem('mb_nav') || 'null');
-    if (nav && nav.tab && typeof showTab === 'function') {
+    if (nav && nav.tab && nav.tab !== 'services' && typeof showTab === 'function') {
       showTab(nav.tab);
       if (nav.tab === 'preview' && currentPagePath && typeof openPage === 'function') openPage(currentPagePath);
       if (nav.tab === 'editor' && typeof window.__restoreEditor === 'function') window.__restoreEditor();

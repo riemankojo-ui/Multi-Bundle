@@ -3,6 +3,14 @@ const admin = require('firebase-admin');
 const { requireUser, sha } = require('./_auth');
 
 module.exports = async (req, res) => {
+  try {
+    await handle(req, res);
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) });
+  }
+};
+
+async function handle(req, res) {
   const uid = await requireUser(req, res);
   if (!uid) return;
   const col = admin.firestore().collection('apiKeys');
@@ -47,4 +55,4 @@ module.exports = async (req, res) => {
   }
 
   res.status(405).json({ error: 'Use GET, POST or DELETE' });
-};
+}

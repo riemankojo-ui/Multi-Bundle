@@ -420,6 +420,7 @@
     const drawer = document.getElementById('drawer');
 
     let pendingPage = null;
+    const inFrame = window.self !== window.top;
 
     // clear a leftover menu step if the page was reopened with one
     if (history.state && history.state.menu) history.replaceState(null, '');
@@ -430,14 +431,14 @@
     }
 
     function closeMenu() {
-      if (history.state && history.state.menu) history.back();
+      if (!inFrame && history.state && history.state.menu) history.back();
       else closeMenuUI();
     }
 
     openBtn.addEventListener('click', () => {
       drawer.classList.add('active');
       overlay.classList.add('active');
-      history.pushState({ menu: true }, '');
+      if (!inFrame) history.pushState({ menu: true }, '');
     });
 
     overlay.addEventListener('click', closeMenu);
@@ -457,7 +458,10 @@
       link.addEventListener('click', (e) => {
         e.preventDefault();
         const name = link.dataset.page;
-        if (history.state && history.state.menu) {
+        if (inFrame) {
+          closeMenuUI();
+          showPage(name);
+        } else if (history.state && history.state.menu) {
           pendingPage = name;
           history.back();
         } else {
@@ -483,7 +487,8 @@
     document.querySelectorAll('.back-link, .top-back').forEach(el => {
       el.addEventListener('click', (e) => {
         e.preventDefault();
-        location.replace('/');
+        if (inFrame) parent.postMessage({ type: 'mb-go-home' }, '*');
+        else location.replace('/');
       });
     });
 

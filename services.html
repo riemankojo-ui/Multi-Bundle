@@ -222,6 +222,8 @@
     margin-top: 6px;
     cursor: pointer;
   }
+  a.menu-btn { text-decoration: none; margin-left: 10px; }
+  .back-link { border-bottom: 1px solid var(--border); margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -233,6 +235,11 @@
         <path d="M4 7h16M4 12h16M4 17h16"></path>
       </svg>
     </button>
+    <a href="/" class="menu-btn" aria-label="Back to Multi Bundle">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M15 5l-7 7 7 7"></path>
+      </svg>
+    </a>
     <h1>Multi Bundle</h1>
   </header>
 
@@ -282,6 +289,7 @@
   <div class="overlay" id="overlay"></div>
   <nav class="drawer" id="drawer">
     <div class="drawer-header">Navigation</div>
+    <a href="/" class="drawer-link back-link">← Back to Multi Bundle</a>
     <a href="#" class="drawer-link active" data-page="services">Services</a>
     <a href="#" class="drawer-link" data-page="marketing">Marketing</a>
     <a href="#" class="drawer-link" data-page="apis">APIs</a>
@@ -391,25 +399,54 @@
     const overlay = document.getElementById('overlay');
     const drawer = document.getElementById('drawer');
 
-    function toggleMenu() {
-      drawer.classList.toggle('active');
-      overlay.classList.toggle('active');
+    function closeMenu() {
+      drawer.classList.remove('active');
+      overlay.classList.remove('active');
     }
 
-    openBtn.addEventListener('click', toggleMenu);
-    overlay.addEventListener('click', toggleMenu);
+    openBtn.addEventListener('click', () => {
+      drawer.classList.add('active');
+      overlay.classList.add('active');
+      history.pushState({ menu: true }, '');
+    });
+
+    overlay.addEventListener('click', () => {
+      if (history.state && history.state.menu) history.back();
+      else closeMenu();
+    });
 
     // Close menu when a link is clicked
-    document.querySelectorAll('.drawer-link').forEach(link => {
+    function showPage(name) {
+      if (!document.getElementById('page-' + name)) name = 'services';
+      document.querySelectorAll('.drawer-link').forEach(l => {
+        l.classList.toggle('active', l.dataset.page === name);
+      });
+      document.querySelectorAll('.page').forEach(p => {
+        p.classList.toggle('active', p.id === 'page-' + name);
+      });
+    }
+
+    document.querySelectorAll('.drawer-link[data-page]').forEach(link => {
       link.addEventListener('click', (e) => {
         e.preventDefault();
-        document.querySelectorAll('.drawer-link').forEach(l => l.classList.remove('active'));
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        link.classList.add('active');
-        document.getElementById('page-' + link.dataset.page).classList.add('active');
-        toggleMenu();
+        const name = link.dataset.page;
+        closeMenu();
+        if (history.state && history.state.menu) {
+          history.replaceState(null, '', '#' + name);
+        } else if (location.hash !== '#' + name) {
+          history.pushState(null, '', '#' + name);
+        }
+        showPage(name);
       });
     });
+
+    // Android Back button: close the menu first, then go to the previous section
+    window.addEventListener('popstate', () => {
+      closeMenu();
+      showPage(location.hash.slice(1) || 'services');
+    });
+
+    showPage(location.hash.slice(1) || 'services');
   </script>
 
 </body>

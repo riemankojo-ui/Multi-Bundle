@@ -8,7 +8,7 @@ if (!admin.apps.length) {
     credential: admin.credential.cert(svc || {
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n'),
+      privateKey: (function (k) { var b = String(k || '').replace(/-----[^-]+-----/g, '').replace(/\\n|\s|"|'|,/g, ''); return '-----BEGIN PRIVATE KEY-----\n' + (b.match(/.{1,64}/g) || []).join('\n') + '\n-----END PRIVATE KEY-----\n'; })(process.env.FIREBASE_PRIVATE_KEY),
     }),
   });
 }

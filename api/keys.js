@@ -36,6 +36,9 @@ async function handle(req, res) {
     const name = String((req.body && req.body.name) || 'My key').slice(0, 40);
     const site = String((req.body && req.body.site) || '').slice(0, 200);
     const description = String((req.body && req.body.description) || '').slice(0, 500);
+    const p = (req.body && req.body.permissions) || {};
+    const permissions = { publish: p.publish === true, workflow: p.workflow === true };
+    const repos = (Array.isArray(req.body && req.body.repos) ? req.body.repos : []).map(r => String(r).trim()).filter(r => /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(r)).slice(0, 20);
     const key = 'wkml_' + crypto.randomBytes(12).toString('hex');
     const secret = 'mlsecret_' + crypto.randomBytes(24).toString('hex');
     await col.doc(key).set({

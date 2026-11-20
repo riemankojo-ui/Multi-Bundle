@@ -294,7 +294,8 @@
     </section>
 
     <section class="page active" id="page-marketing">
-      <div class="card"><h3>Home</h3><p>Coming soon.</p></div>
+      <div class="card"><h3>Home</h3><p class="sv-small">Everything you can do with your Multi Bundle key. Tap a service to open it.</p></div>
+      <div id="homeCards"></div>
     </section>
 
     <section class="page" id="page-apis">
@@ -528,6 +529,44 @@
         card.appendChild(cp);
         card.appendChild(code);
         list.appendChild(card);
+      });
+    })();
+
+    (function renderHome() {
+      const wrap = document.getElementById('homeCards');
+      const items = [
+        ['Email API', 'Send welcome emails, login codes and receipts with one request.', 'POST /api/email', 'services'],
+        ['Bundle', 'Send project files and get one bundled export back.', 'POST /api/bundle', 'apis'],
+        ['Projects', 'List and export the projects saved in your account.', 'POST /api/projects', 'apis'],
+        ['Publish', 'Push files to a GitHub repo without sending a GitHub token.', 'POST /api/publish', 'apis'],
+        ['Workflow', 'Create an APK build workflow in a repo and start a build.', 'POST /api/workflow', 'apis']
+      ];
+      items.forEach(it => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.cursor = 'pointer';
+        const head = document.createElement('div');
+        head.className = 'sv-head';
+        const h = document.createElement('h3');
+        h.textContent = it[0];
+        const b = document.createElement('span');
+        b.className = 'badge';
+        b.textContent = 'Live';
+        head.appendChild(h);
+        head.appendChild(b);
+        const p = document.createElement('p');
+        p.className = 'sv-small';
+        p.textContent = it[1];
+        const ep = document.createElement('div');
+        ep.className = 'sv-type';
+        ep.style.display = 'inline-block';
+        ep.style.marginTop = '10px';
+        ep.textContent = it[2];
+        card.appendChild(head);
+        card.appendChild(p);
+        card.appendChild(ep);
+        card.onclick = () => { const l = document.querySelector('[data-page="' + it[3] + '"]'); if (l) l.click(); };
+        wrap.appendChild(card);
       });
     })();
 

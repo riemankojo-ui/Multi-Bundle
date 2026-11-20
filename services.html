@@ -305,6 +305,9 @@
         <input class="key-input" id="keyName" placeholder="App name">
         <input class="key-input" id="keySite" placeholder="Site address (e.g. https://myapp.com)">
         <textarea class="key-input" id="keyDesc" rows="3" placeholder="Description"></textarea>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px"><input type="checkbox" id="permPublish"> Can publish files to GitHub</label>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px"><input type="checkbox" id="permWorkflow"> Can create build workflows</label>
+        <input class="key-input" id="keyRepos" placeholder="Allowed repos, comma separated (owner/name)">
         <button class="try-btn" id="saveApp">Save</button>
         <button class="try-btn" id="createKey" style="opacity:.35;pointer-events:none">Create key</button>
         <div class="result" id="newKeyBox"></div>
@@ -555,6 +558,13 @@
           if (k.site) { const s = document.createElement('div'); s.className = 'kv-label'; s.style.marginTop = '10px'; s.textContent = 'Site: ' + k.site; det.appendChild(s); }
           if (k.description) { const d = document.createElement('div'); d.style.cssText = 'font-size:13px;margin-top:6px;color:#555'; d.textContent = k.description; det.appendChild(d); }
           det.appendChild(makeField('API key', k.key, false));
+          const perm = document.createElement('div');
+          perm.className = 'sv-small';
+          const pl = [];
+          if (k.permissions && k.permissions.publish) pl.push('publish');
+          if (k.permissions && k.permissions.workflow) pl.push('workflow');
+          perm.textContent = 'Can: ' + (pl.length ? pl.join(', ') : 'no GitHub access') + (k.repos && k.repos.length ? ' | Repos: ' + k.repos.join(', ') : '');
+          det.appendChild(perm);
           const more = document.createElement('button');
           more.className = 'del-btn';
           more.textContent = 'Details';
@@ -588,13 +598,16 @@
       box.textContent = 'Creating...';
       try {
         const name = document.getElementById('keyName').value || 'My key';
-        const r = await authFetch('/api/keys', { method: 'POST', body: JSON.stringify({ name, site: document.getElementById('keySite').value.trim(), description: document.getElementById('keyDesc').value.trim() }) });
+        const r = await authFetch('/api/keys', { method: 'POST', body: JSON.stringify({ name, site: document.getElementById('keySite').value.trim(), description: document.getElementById('keyDesc').value.trim(), permissions: { publish: document.getElementById('permPublish').checked, workflow: document.getElementById('permWorkflow').checked }, repos: document.getElementById('keyRepos').value.split(',').map(s => s.trim()).filter(Boolean) }) });
         const data = await r.json();
         if (!r.ok) { box.textContent = data.error || 'Failed'; return; }
         showNewKey(box, data);
         document.getElementById('keyName').value = '';
         document.getElementById('keySite').value = '';
         document.getElementById('keyDesc').value = '';
+        document.getElementById('permPublish').checked = false;
+        document.getElementById('permWorkflow').checked = false;
+        document.getElementById('keyRepos').value = '';
         document.getElementById('createKey').style.opacity = '.35';
         document.getElementById('createKey').style.pointerEvents = 'none';
         loadKeys();

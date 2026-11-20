@@ -22,6 +22,8 @@ async function handle(req, res) {
       name: d.data().name,
       site: d.data().site || '',
       description: d.data().description || '',
+      permissions: d.data().permissions || {},
+      repos: d.data().repos || [],
       createdAt: d.data().createdAt,
       lastUsed: d.data().lastUsed || null,
     }));
@@ -47,6 +49,8 @@ async function handle(req, res) {
       secretHash: sha(secret),
       site,
       description,
+      permissions,
+      repos,
       createdAt: Date.now(),
     });
     return res.status(200).json({ key, secret, name });

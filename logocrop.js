@@ -177,7 +177,8 @@
       '<div class="lc-row" id="lcLayer"><span class="lc-lab">LAYER</span></div>' +
 '<div class="lc-adj" id="lcAdj"></div>' +
 '<div class="lc-row" id="lcTools"><span class="lc-lab">TOOLS</span></div>' +
-      '<div class="lc-act"><button id="lcRep" type="button" hidden>Replace</button><button id="lcCopy" type="button" class="lc-save">Save</button></div>';
+      '<div class="lc-act"><button id="lcRep" type="button" hidden>Replace</button><button id="lcCopy" type="button" class="lc-save">Save</button></div>' +
+'<div class="lc-load" id="lcLoad"><i></i></div>';
     root.querySelector('.lc-title').textContent = f.path;
     document.body.appendChild(root);
 
@@ -540,7 +541,7 @@ buildAdj();
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
       S.orig = c; S.src = c; S.W = c.width; S.H = c.height; S.rect = { x: 0, y: 0, w: S.W, h: S.H };
       mark(); layout();
-      window.addEventListener('resize', layout);
+      window.addEventListener('resize', layout); var ld = $('lcLoad'); if (ld) ld.remove();
       if (window.ResizeObserver) { ro = new ResizeObserver(layout); ro.observe(stage); }
     };
     img.onerror = function () {

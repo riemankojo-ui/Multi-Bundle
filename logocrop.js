@@ -141,7 +141,19 @@
       '#lcRoot .lc-e.t{top:-1px;height:2px}',
       '#lcRoot .lc-e.b{bottom:-1px;height:2px}',
       '#lcRoot .lc-e.l{left:-1px;width:2px}',
-      '#lcRoot .lc-e.r{right:-1px;width:2px}'
+      '#lcRoot .lc-e.r{right:-1px;width:2px}',
+'#lcRoot .lc-adj{padding:2px 10px 4px}',
+'#lcRoot .lc-sl{display:flex;align-items:center;gap:8px;height:34px}',
+'#lcRoot .lc-sl .n{flex:0 0 58px;font-size:11px;font-weight:800;color:#a2a3ad}',
+'#lcRoot .lc-sl input[type=range]{flex:1;min-width:0;height:28px;accent-color:#CD853F;margin:0}',
+'#lcRoot .lc-sl .v{flex:0 0 42px;text-align:right;font-size:11px;font-weight:700;color:#e6e6e8}',
+'#lcRoot .lc-sl button{flex:0 0 auto;width:30px;height:30px;padding:0;font-size:16px;line-height:1}',
+'#lcRoot .lc-sw{display:flex;gap:8px;align-items:center;height:40px;overflow-x:auto;scrollbar-width:none}',
+'#lcRoot .lc-sw button{flex:0 0 auto;width:30px;height:30px;padding:0;border-radius:50%;border:2px solid #303139}',
+'#lcRoot .lc-sw button.on{border-color:#f5d76e}',
+'#lcRoot .lc-sw input[type=color]{flex:0 0 auto;width:34px;height:30px;padding:0;border:0;background:none}',
+'#lcRoot .lc-load{position:absolute;left:0;right:0;top:0;bottom:0;z-index:20;background:#0d0e12;display:flex;align-items:center;justify-content:center}',
+'#lcRoot .lc-load i{display:block;width:30px;height:30px;border:3px solid #2a2c34;border-top-color:var(--red,#f01424);border-radius:50%;animation:mb-spin .8s linear infinite}'
     ].join('\n');
     document.head.appendChild(st);
   }
@@ -151,7 +163,7 @@
     try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (x) {}
     var old = $('lcRoot'); if (old) old.remove();
     var isSvg = extOf(f.path) === 'svg';
-    var S = { src: null, orig: null, W: 0, H: 0, rect: null, shape: 'free', ratio: null, size: 0, round: false, scale: 1, drag: null, busy: false };
+    var S = { src: null, orig: null, W: 0, H: 0, rect: null, shape: 'free', ratio: null, size: 0, round: false, scale: 1, drag: null, busy: false, prev: null, prevFor: null, lay: 'logo', L: newL() };
 
     var root = document.createElement('div'); root.id = 'lcRoot'; root.className = '';
     root.innerHTML =
@@ -162,7 +174,9 @@
       '<div class="lc-info" id="lcInfo"></div>' +
       '<div class="lc-row" id="lcShape"><span class="lc-lab">SHAPE</span></div>' +
       '<div class="lc-row" id="lcSize"><span class="lc-lab">SIZE</span></div>' +
-      '<div class="lc-row" id="lcTools"><span class="lc-lab">TOOLS</span></div>' +
+      '<div class="lc-row" id="lcLayer"><span class="lc-lab">LAYER</span></div>' +
+'<div class="lc-adj" id="lcAdj"></div>' +
+'<div class="lc-row" id="lcTools"><span class="lc-lab">TOOLS</span></div>' +
       '<div class="lc-act"><button id="lcRep" type="button" hidden>Replace</button><button id="lcCopy" type="button" class="lc-save">Save</button></div>';
     root.querySelector('.lc-title').textContent = f.path;
     document.body.appendChild(root);
@@ -208,7 +222,7 @@
       var dpr = Math.min(window.devicePixelRatio || 1, 2);
       cv.width = Math.max(1, Math.round(dw * dpr)); cv.height = Math.max(1, Math.round(dh * dpr));
       var x = cv.getContext('2d'); x.imageSmoothingQuality = 'high'; x.clearRect(0, 0, cv.width, cv.height);
-      x.drawImage(S.src, 0, 0, cv.width, cv.height);
+      drawLayers(x, cv.width, cv.height, prevSrc());
       paint();
     }
     function mark() {
@@ -247,11 +261,181 @@
     });
     chip('lcTools', 'reset', 'Reset', function () {
       S.src = S.orig; S.W = S.orig.width; S.H = S.orig.height;
-      S.rect = { x: 0, y: 0, w: S.W, h: S.H }; S.shape = 'free'; S.ratio = null; S.size = 0; S.round = false;
+      S.rect = { x: 0, y: 0, w: S.W, h: S.H }; S.shape = 'free'; S.ratio = null; S.size = 0; S.round = false; S.L = newL(); buildAdj();
       mark(); layout();
     });
 
-    /* ----- touch / mouse ----- */
+    /* ----- layers ----- */
+function newL() { return { bg: '', bg2: '', ang: 45, sc: 100, ox: 0, oy: 0, op: 100, rt: 0, tint: '', tn: 100, shb: 0, shd: 0, tx: '', tf: 0, tbold: 1, tital: 0, tc: '', tsz: 20, tox: 0, toy: 0, top: 100 }; }
+function layersDefault() { return JSON.stringify(S.L) === JSON.stringify(newL()); }
+var FONTS = [['Clean', 'system-ui,Arial,sans-serif'], ['Serif', 'Georgia,serif'], ['Mono', '"Courier New",monospace'], ['Bold', 'Impact,Arial Black,sans-serif'], ['Script', '"Brush Script MT","Segoe Script",cursive'], ['Round', '"Trebuchet MS",Verdana,sans-serif']];
+function paintBg(x, w, h) {
+  var L = S.L, c1 = L.bg || L.bg2, c2 = L.bg2 || L.bg;
+  if (!c1) return;
+  if (c1 === c2) { x.fillStyle = c1; x.fillRect(0, 0, w, h); return; }
+  var a = L.ang * Math.PI / 180, dx = Math.sin(a), dy = Math.cos(a), r = (Math.abs(dx) * w + Math.abs(dy) * h) / 2;
+  var g = x.createLinearGradient(w / 2 - dx * r, h / 2 - dy * r, w / 2 + dx * r, h / 2 + dy * r);
+  g.addColorStop(0, c1); g.addColorStop(1, c2); x.fillStyle = g; x.fillRect(0, 0, w, h);
+}
+var tc = { src: null, key: '', c: null };
+function tintSrc(src) {
+  var L = S.L; if (!L.tint || !L.tn) return src;
+  var key = L.tint + '|' + L.tn;
+  if (tc.src === src && tc.key === key) return tc.c;
+  var c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+  var cx = c.getContext('2d'); cx.drawImage(src, 0, 0);
+  cx.globalCompositeOperation = 'source-atop'; cx.globalAlpha = L.tn / 100; cx.fillStyle = L.tint; cx.fillRect(0, 0, c.width, c.height);
+  tc.src = src; tc.key = key; tc.c = c; return c;
+}
+function drawText(x, w, h) {
+  var L = S.L; if (!L.tx) return;
+  var px = L.tsz / 100 * Math.min(w, h), f = FONTS[L.tf] || FONTS[0];
+  x.save(); x.globalAlpha = L.top / 100; x.fillStyle = L.tc || '#ffffff';
+  x.font = (L.tital ? 'italic ' : '') + (L.tbold ? '700 ' : '400 ') + px + 'px ' + f[1];
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(L.tx, w / 2 + L.tox / 100 * w, h / 2 + L.toy / 100 * h);
+  x.restore();
+}
+function drawLayers(x, w, h, src) {
+  var L = S.L, k = L.sc / 100;
+  x.clearRect(0, 0, w, h);
+  paintBg(x, w, h);
+  x.save();
+  x.translate(w / 2 + L.ox / 100 * w, h / 2 + L.oy / 100 * h);
+  if (L.rt) x.rotate(L.rt * Math.PI / 180);
+  x.globalAlpha = L.op / 100;
+  if (L.shb || L.shd) { x.shadowColor = 'rgba(0,0,0,.55)'; x.shadowBlur = L.shb / 100 * w * 0.1; x.shadowOffsetX = 0; x.shadowOffsetY = L.shd / 100 * w * 0.1; }
+  x.imageSmoothingQuality = 'high';
+  x.drawImage(tintSrc(src), -w * k / 2, -h * k / 2, w * k, h * k);
+  x.restore(); drawText(x, w, h);
+}
+function prevSrc() {
+  if (S.prev && S.prevFor === S.src) return S.prev;
+  var k = Math.min(1, 720 / Math.max(S.W, S.H)), c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(S.W * k)); c.height = Math.max(1, Math.round(S.H * k));
+  var cx = c.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(S.src, 0, 0, c.width, c.height);
+  S.prev = c; S.prevFor = S.src; return c;
+}
+var raf = 0;
+function redraw() {
+  if (raf) return;
+  raf = requestAnimationFrame(function () {
+    raf = 0; if (!S.src) return;
+    drawLayers(cv.getContext('2d'), cv.width, cv.height, prevSrc());
+  });
+}
+var SWATCH = ['', '#ffffff', '#000000', '#CD853F', '#B27539', '#15161a', '#f01424', '#2563eb'];
+var SLIDERS = {
+  logo: [['sc', 'Size', 10, 200, '%', 0], ['oy', 'Up/Down', -50, 50, '', 1], ['ox', 'Left/Right', -50, 50, '', 0], ['op', 'Opacity', 5, 100, '%', 0], ['rt', 'Turn', -180, 180, '', 0]],
+  shadow: [['shb', 'Blur', 0, 100, '', 0], ['shd', 'Distance', 0, 100, '', 0]]
+};
+var layBtns = {};
+function swatchRow(a, key) {
+  var sw = document.createElement('div'); sw.className = 'lc-sw';
+  SWATCH.forEach(function (c) {
+    var b = document.createElement('button'); b.type = 'button';
+    b.style.background = c || 'repeating-conic-gradient(#555 0% 25%,#2b2c33 0% 50%) 50%/10px 10px';
+    if (S.L[key] === c) b.className = 'on';
+    b.onclick = function () { S.L[key] = c; buildAdj(); redraw(); };
+    sw.appendChild(b);
+  });
+  var ci = document.createElement('input'); ci.type = 'color'; ci.value = /^#[0-9a-f]{6}$/i.test(S.L[key]) ? S.L[key] : '#cd853f';
+  ci.oninput = function () { S.L[key] = ci.value; redraw(); };
+  sw.appendChild(ci); a.appendChild(sw);
+}
+function sliderRows(a, list) {
+  list.forEach(function (d) {
+    var row = document.createElement('div'); row.className = 'lc-sl';
+    var n = document.createElement('span'); n.className = 'n'; n.textContent = d[1];
+    var r = document.createElement('input'); r.type = 'range'; r.min = d[2]; r.max = d[3]; r.step = 1;
+    var v = document.createElement('span'); v.className = 'v';
+    var mi = document.createElement('button'), pl = document.createElement('button');
+    mi.type = 'button'; pl.type = 'button'; mi.textContent = '-'; pl.textContent = '+';
+    function get() { return d[5] ? -S.L[d[0]] : S.L[d[0]]; }
+    function set(val) { val = clamp(Math.round(val), d[2], d[3]); S.L[d[0]] = d[5] ? -val : val; r.value = val; v.textContent = val + d[4]; redraw(); }
+    r.value = get(); v.textContent = get() + d[4];
+    r.oninput = function () { set(parseFloat(r.value)); };
+    mi.onclick = function () { set(get() - 1); };
+    pl.onclick = function () { set(get() + 1); };
+    row.appendChild(n); row.appendChild(mi); row.appendChild(r); row.appendChild(pl); row.appendChild(v); a.appendChild(row);
+  });
+}
+function textRows(a) {
+  var row = document.createElement('div'); row.className = 'lc-sl';
+  var t = document.createElement('input'); t.type = 'text'; t.placeholder = 'Type text'; t.value = S.L.tx; t.maxLength = 40;
+  t.style.cssText = 'flex:1;min-width:0;height:30px;background:#0f1014;color:#fff;border:1px solid #303139;border-radius:8px;padding:0 10px;font-size:16px;font-family:inherit';
+  t.oninput = function () { S.L.tx = t.value; redraw(); };
+  row.appendChild(t); a.appendChild(row);
+}
+function fontRows(a) {
+  var fr = document.createElement('div'); fr.className = 'lc-sw';
+  FONTS.forEach(function (f, i) {
+    var b = document.createElement('button'); b.type = 'button'; b.textContent = f[0];
+    b.style.cssText = 'width:auto;height:30px;border-radius:10px;padding:0 10px;font-size:12px'; b.style.fontFamily = f[1];
+    if (S.L.tf === i) b.className = 'on';
+    b.onclick = function () { S.L.tf = i; buildAdj(); redraw(); };
+    fr.appendChild(b);
+  });
+  [['B', 'tbold'], ['I', 'tital']].forEach(function (z) {
+    var b = document.createElement('button'); b.type = 'button'; b.textContent = z[0];
+    b.style.cssText = 'width:34px;height:30px;border-radius:10px;padding:0;font-size:13px;font-weight:900';
+    if (S.L[z[1]]) b.className = 'on';
+    b.onclick = function () { S.L[z[1]] = S.L[z[1]] ? 0 : 1; buildAdj(); redraw(); };
+    fr.appendChild(b);
+  });
+  a.appendChild(fr);
+}
+function buildAdj() {
+  var a = $('lcAdj'), s = S.lay; a.innerHTML = ''; a.style.maxHeight = '136px'; a.style.overflowY = 'auto';
+  Object.keys(layBtns).forEach(function (k) { layBtns[k].className = s === k ? 'on' : ''; });
+  if (s === 'bg') swatchRow(a, 'bg');
+  else if (s === 'bg2') { swatchRow(a, 'bg2'); sliderRows(a, [['ang', 'Angle', 0, 360, '\u00b0', 0]]); }
+  else if (s === 'logo') sliderRows(a, [['sc', 'Size', 10, 200, '%', 0], ['oy', 'Up/Down', -50, 50, '', 1], ['ox', 'Left/Right', -50, 50, '', 0], ['op', 'Opacity', 5, 100, '%', 0], ['rt', 'Turn', -180, 180, '', 0]]);
+  else if (s === 'tint') { swatchRow(a, 'tint'); sliderRows(a, [['tn', 'Amount', 0, 100, '%', 0]]); }
+  else if (s === 'shadow') sliderRows(a, [['shb', 'Blur', 0, 100, '', 0], ['shd', 'Distance', 0, 100, '', 0]]);
+  else if (s === 'text') { textRows(a); sliderRows(a, [['tsz', 'Size', 2, 100, '%', 0], ['toy', 'Up/Down', -50, 50, '', 1], ['tox', 'Left/Right', -50, 50, '', 0]]); }
+  else if (s === 'tstyle') { fontRows(a); swatchRow(a, 'tc'); sliderRows(a, [['top', 'Opacity', 5, 100, '%', 0]]); }
+}
+function buildAdjOld() {
+  var a = $('lcAdj'); a.innerHTML = ''; a.style.maxHeight = '104px'; a.style.overflowY = 'auto';
+  Object.keys(layBtns).forEach(function (k) { layBtns[k].className = S.lay === k ? 'on' : ''; });
+  if (S.lay === 'bg') {
+    var sw = document.createElement('div'); sw.className = 'lc-sw';
+    SWATCH.forEach(function (c) {
+      var b = document.createElement('button'); b.type = 'button';
+      b.style.background = c || 'repeating-conic-gradient(#555 0% 25%,#2b2c33 0% 50%) 50%/10px 10px';
+      if (S.L.bg === c) b.className = 'on';
+      b.onclick = function () { S.L.bg = c; buildAdj(); redraw(); };
+      sw.appendChild(b);
+    });
+    var ci = document.createElement('input'); ci.type = 'color'; ci.value = /^#[0-9a-f]{6}$/i.test(S.L.bg) ? S.L.bg : '#cd853f';
+    ci.oninput = function () { S.L.bg = ci.value; redraw(); };
+    sw.appendChild(ci); a.appendChild(sw); return;
+  }
+  SLIDERS[S.lay].forEach(function (d) {
+    var row = document.createElement('div'); row.className = 'lc-sl';
+    var n = document.createElement('span'); n.className = 'n'; n.textContent = d[1];
+    var r = document.createElement('input'); r.type = 'range'; r.min = d[2]; r.max = d[3]; r.step = 1;
+    var v = document.createElement('span'); v.className = 'v';
+    var mi = document.createElement('button'), pl = document.createElement('button');
+    mi.type = 'button'; pl.type = 'button'; mi.textContent = '-'; pl.textContent = '+';
+    function get() { return d[5] ? -S.L[d[0]] : S.L[d[0]]; }
+    function set(val) { val = clamp(Math.round(val), d[2], d[3]); S.L[d[0]] = d[5] ? -val : val; r.value = val; v.textContent = val + d[4]; redraw(); }
+    r.value = get(); v.textContent = get() + d[4];
+    r.oninput = function () { set(parseFloat(r.value)); };
+    mi.onclick = function () { set(get() - 1); };
+    pl.onclick = function () { set(get() + 1); };
+    row.appendChild(n); row.appendChild(mi); row.appendChild(r); row.appendChild(pl); row.appendChild(v); a.appendChild(row);
+  });
+}
+[['bg', 'Color 1'], ['bg2', 'Color 2'], ['logo', 'Logo'], ['tint', 'Tint'], ['shadow', 'Shadow'], ['text', 'Text'], ['tstyle', 'Font']].forEach(function (l) {
+  var b = document.createElement('button'); b.type = 'button'; b.textContent = l[1];
+  b.onclick = function () { S.lay = l[0]; buildAdj(); };
+  $('lcLayer').appendChild(b); layBtns[l[0]] = b;
+});
+buildAdj();
+
+/* ----- touch / mouse ----- */
     function onDown(e) {
       if (!S.src || S.busy) return;
       var r = imgEl.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, s = S.scale, R = S.rect;
@@ -287,7 +471,7 @@
       var o = outSize(w, h, S.size), c = document.createElement('canvas'); c.width = o.w; c.height = o.h;
       var x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
       if (S.round) { x.beginPath(); x.ellipse(o.w / 2, o.h / 2, o.w / 2, o.h / 2, 0, 0, Math.PI * 2); x.clip(); }
-      x.drawImage(S.src, sx, sy, w, h, 0, 0, o.w, o.h);
+      var full = document.createElement('canvas'); full.width = S.W; full.height = S.H; drawLayers(full.getContext('2d'), S.W, S.H, S.src); x.drawImage(full, sx, sy, w, h, 0, 0, o.w, o.h);
       var t = outType();
       c.toBlob(function (b) { cb(b); }, t, 0.92);
     }
@@ -305,7 +489,7 @@
     function close() { window.removeEventListener('resize', layout); if (ro) ro.disconnect(); root.remove(); }
     function save(replace) {
       if (S.busy) return;
-      if (S.src === S.orig && !S.round && !S.size && Math.round(S.rect.x) === 0 && Math.round(S.rect.y) === 0 && Math.round(S.rect.w) >= S.W && Math.round(S.rect.h) >= S.H) { close(); toast('No changes made', 'success'); return; }
+      if (S.src === S.orig && layersDefault() && !S.round && !S.size && Math.round(S.rect.x) === 0 && Math.round(S.rect.y) === 0 && Math.round(S.rect.w) >= S.W && Math.round(S.rect.h) >= S.H) { close(); toast('No changes made', 'success'); return; }
       S.busy = true; paint();
       exportBlob(async function (blob) {
         try {

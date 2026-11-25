@@ -40,6 +40,7 @@ main{max-width:1200px;margin:auto;padding:16px}
   flex:1;text-align:center;font-size:12px;font-weight:800;letter-spacing:.8px;color:#fff;
 }
 .head-title span{color:var(--red)}
+.head-title svg path{fill:#D8D6D1!important}
 
 /* ========== Drawer ========== */
 .drawer-backdrop{
@@ -250,7 +251,7 @@ body:not(.kb-open) #editorPage:not([hidden]) .editor-shell:not(.fullscreen){heig
 }
 .bottom span svg{display:none}
 .bottom small{font-size:14px;letter-spacing:0;font-weight:500}
-.bottom .selected{color:#fff;font-weight:600;background:none;border-bottom:2px solid #f78166}
+.bottom .selected{color:#D8D6D1;font-weight:600;background:none;border-bottom:2px solid #f78166}
 .bottom [data-tab="services"]{order:1}
 @media(max-width:380px){.bottom small{font-size:13px}}
 

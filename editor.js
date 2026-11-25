@@ -1137,11 +1137,12 @@ function pvSvgDoc(code){
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;height:100%;overflow:hidden}body{display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#e6e6ea 0% 25%,#fff 0% 50%) 50%/20px 20px}body>svg{width:100%;height:100%;max-width:100%;max-height:100%}</style></head><body>'+body+'</body></html>';
 }
 function pvPages(){return (typeof htmlPages==='function')?htmlPages():[]}
+setInterval(function(){if(pvIsHtml(currentPath))window.__lastHtmlPath=currentPath},400);
 function pvOpen(){
   pvHist=[];
   if(pvIsHtml(currentPath)||pvIsSvg(currentPath)){pvPath=currentPath;return}
   var pg=pvPages();
-  var ix=pg.find(function(f){return /(^|\/)index\.html?$/i.test(f.path)})||pg[0];
+  var lh=window.__lastHtmlPath&&pg.find(function(f){return f.path===window.__lastHtmlPath});var ix=lh||pg.find(function(f){return /(^|\/)index\.html?$/i.test(f.path)})||pg[0];
   pvPath=ix?ix.path:currentPath;
 }
 function pvFill(){

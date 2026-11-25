@@ -32,7 +32,32 @@ function load(){
   if(!Array.isArray(s.domains))s.domains=[];
   return s;
 }
-function save(s){try{localStorage.setItem(key(),JSON.stringify(s))}catch(e){}}
+function save(s){s.t=Date.now();try{localStorage.setItem(key(),JSON.stringify(s))}catch(e){}mirror(s)}
+function mirror(s){
+  var id=(typeof currentProjectId!=='undefined')?currentProjectId:null;
+  if(!id||typeof dbGetAll!=='function'||typeof dbSetAll!=='function')return;
+  dbGetAll().then(function(all){
+    var p=all.find(function(x){return x.id===id});if(!p)return;
+    var j=s?JSON.stringify(s):'null';
+    if(JSON.stringify(p.deploy||null)===j)return;
+    p.deploy=s?JSON.parse(j):null;
+    return dbSetAll(all);
+  }).catch(function(){});
+}
+function hydrate(){
+  var id=(typeof currentProjectId!=='undefined')?currentProjectId:null;
+  if(!id||typeof dbGetAll!=='function')return;
+  dbGetAll().then(function(all){
+    var p=all.find(function(x){return x.id===id});if(!p)return;
+    var raw=null;try{raw=localStorage.getItem(key())}catch(e){}
+    if(!p.deploy){if(raw){try{mirror(JSON.parse(raw))}catch(e){}}return}
+    var lt=0;try{var lo=JSON.parse(raw||'null');lt=(lo&&lo.t)||0}catch(e){}
+    if(raw&&(p.deploy.t||0)<=lt)return;
+    try{localStorage.setItem(key(),JSON.stringify(p.deploy))}catch(e){}
+    renderHome();
+    var sp=$('settingsPage');if(sp&&!sp.hidden)render();
+  }).catch(function(){});
+}
 function fullUrl(u){u=(u||'').trim();if(!u)return '';return /^https?:\/\//i.test(u)?u:'https://'+u}
 function go(u){if(u)window.open(u,'_blank','noopener')}
 function isRepo(r){return /^[\w.-]+\/[\w.-]+$/.test(r||'')}
@@ -189,7 +214,7 @@ function bind(s){
   $('stReset').onclick=function(){
     askConfirm('Clear the hosting details and domain list for this project?','Reset settings','Reset').then(function(ok){
       if(!ok)return;
-      try{localStorage.removeItem(key())}catch(e){}
+      try{localStorage.removeItem(key())}catch(e){}mirror(null);
       render();toast('Settings reset');
     });
   };
@@ -299,7 +324,7 @@ function renderHome(){
     },Promise.resolve()).then(function(){toast('Check finished')});
   };
 }
-renderHome();setTimeout(renderHome,1200);
+renderHome();setTimeout(function(){renderHome();hydrate()},1200);
 
 injectCss();
 
@@ -309,6 +334,7 @@ window.showTab=function(name){
   var sp=$('settingsPage');if(sp)sp.hidden=(name!=='settings');
   if(name==='settings')render();
   if(name==='home')renderHome();
+  if(name==='home'||name==='settings')hydrate();
 };
 document.addEventListener('click',function(e){
   var el=e.target.closest&&e.target.closest('[data-tab]');if(!el)return;

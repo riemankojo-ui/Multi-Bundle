@@ -151,6 +151,7 @@ async function __restoreFromCloud(){
       }
       if(cp.logo&&!lp.logo){lp.logo=cp.logo;changed=true}
       if(cp.githubShas&&!lp.githubShas){lp.githubShas=cp.githubShas;changed=true}
+      if(cp.deploy&&!lp.deploy){lp.deploy=cp.deploy;changed=true}
       if(cp.githubRepo&&!lp.githubRepo){lp.githubRepo=cp.githubRepo;lp.githubBranch=cp.githubBranch;changed=true}
     }
     localStorage.setItem(fk,String(Date.now()));window.__cloudRestoreDone=true;

@@ -87,7 +87,7 @@
     if (!box) return;
     if (!p) { box.innerHTML = '<p class="note">Not signed in.</p>'; return; }
     const prov = providerLabel(p);
-    box.innerHTML = '<div class="acc-row">' + avatarHtml(p, 40) +
+    box.innerHTML = '<div class="acc-row">' +
       '<div class="acc-txt"><b>' + esc(nameOf(p)) + '</b><small>' + esc(p.email) + '</small>' + (prov ? '<em class="acc-badge">' + prov + '</em>' : '') + '</div>' +
       '<button class="btn secondary acc-out" onclick="window.signOutGoogle()">Sign out</button></div>';
   }
@@ -105,7 +105,8 @@
     if (p) heroEyebrow.textContent = 'WELCOME BACK, ' + nameOf(p).split(' ')[0].toUpperCase();
     else heroEyebrow.textContent = 'YOUR LOCAL WORKSPACE';
   }
-  function showProfile(p) { renderAuthUi(p); renderDrawerAccount(p); updateGreeting(p); }
+  function headAvatar(p) { var h = document.getElementById('headAvatar'); if (!p) { if (h) h.remove(); return; } if (!h) { h = document.createElement('div'); h.id = 'headAvatar'; h.style.cssText = 'position:absolute;left:52px;top:6px;z-index:2'; var hd = document.querySelector('.app-head'); if (hd) hd.appendChild(h); } h.innerHTML = avatarHtml(p, 32); }
+  function showProfile(p) { renderAuthUi(p); renderDrawerAccount(p); updateGreeting(p); headAvatar(p); }
   window.__refreshProfile = function () { try { var u = auth.currentUser; if (u) { saveProfile(u); showProfile(profileOf(u)); } } catch (e) {} };
 
   function resetScreen() {

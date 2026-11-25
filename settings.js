@@ -202,6 +202,8 @@ function injectCss(){
     '#settingsRoot{display:flex;flex-direction:column;gap:12px}',
     '#settingsRoot .st-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}',
     '#settingsRoot .st-head h2{margin:2px 0 0;font-size:17px}',
+    '#homeDomains .st-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}',
+    '#homeDomains .st-head h2{margin:2px 0 0;font-size:17px}',
     '.st-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}',
     '.st-chip{padding:8px 13px;border-radius:999px;border:1px solid #303139;background:#1a1b20;color:#cfd0d8;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .14s ease,background .14s ease}',
     '.st-chip.on{background:#2f3a52;color:#cfe0ff;border-color:#3c4a68}',
@@ -248,6 +250,57 @@ function injectCss(){
   document.head.appendChild(st);
 }
 
+function renderHome(){
+  var page=$('homePage');if(!page)return;
+  var card=$('homeDomains');
+  if(!card){card=document.createElement('section');card.className='card';card.id='homeDomains';page.appendChild(card)}
+  var s=load(),P=PROVIDERS[s.provider]||PROVIDERS.vercel;
+  var doms=s.domains.length?s.domains.map(domRow).join(''):'<div class="st-empty">No domains yet. Add your first one above.</div>';
+  card.innerHTML='<div class="st-head"><div><label class="eyebrow">DOMAINS</label><h2>Custom domains</h2></div><span class="pill">'+s.domains.length+'</span></div>'+
+    '<div class="st-add"><input id="hdIn" placeholder="example.com" autocomplete="off" autocapitalize="off"><button class="btn primary" id="hdAdd">Add</button></div>'+
+    '<div id="hdList">'+doms+'</div>'+
+    (s.domains.length>1?'<div class="st-actions"><button class="st-mini" id="hdAll">Check all domains</button></div>':'')+
+    '<div class="st-dns"><b>Connect a domain.</b> Use an A record for the main domain (example.com) and a CNAME record for www. '+esc(P.dns)+' Copy the exact values from there, because they can differ for each project.'+
+    '<div class="st-actions"><button class="st-mini" id="hdDns">Open '+esc(P.name)+'</button></div></div>';
+
+  function add(){
+    var d=cleanDomain($('hdIn').value);
+    if(!/^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(d)){toast('Enter a domain like example.com','error');return}
+    if(s.domains.some(function(x){return x.d===d})){toast('That domain is already in the list','error');return}
+    s.domains.push({d:d,primary:!s.domains.length});
+    if(!s.url)s.url='https://'+d;
+    save(s);renderHome();toast('Added '+d,'success');
+  }
+  $('hdAdd').onclick=add;
+  $('hdIn').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();add()}});
+  $('hdDns').onclick=function(){go(dashUrl(s))};
+  $('hdList').onclick=function(e){
+    var b=e.target.closest('button[data-a]');if(!b)return;
+    var row=b.closest('.st-dom');var i=parseInt(row.dataset.i,10);var d=s.domains[i];if(!d)return;
+    var a=b.dataset.a;
+    if(a==='open')go('https://'+d.d);
+    else if(a==='copy')copyText(d.d);
+    else if(a==='check'){checkDomain(d.d,row.querySelector('.st-dot')).then(function(ok){toast(ok?d.d+' is reachable':d.d+' is not reachable yet',ok?'success':'error')})}
+    else if(a==='primary'){s.domains.forEach(function(x){x.primary=false});d.primary=true;s.url='https://'+d.d;save(s);renderHome()}
+    else if(a==='del'){
+      askConfirm('Remove '+d.d+' from this list?','Remove domain','Remove').then(function(ok){
+        if(!ok)return;
+        s.domains.splice(i,1);
+        if(s.domains.length&&!s.domains.some(function(x){return x.primary}))s.domains[0].primary=true;
+        save(s);renderHome();
+      });
+    }
+  };
+  var all=$('hdAll');
+  if(all)all.onclick=function(){
+    var rows=Array.prototype.slice.call(card.querySelectorAll('.st-dom'));
+    rows.reduce(function(p,row){
+      return p.then(function(){var d=s.domains[parseInt(row.dataset.i,10)];return d?checkDomain(d.d,row.querySelector('.st-dot')):null});
+    },Promise.resolve()).then(function(){toast('Check finished')});
+  };
+}
+renderHome();setTimeout(renderHome,1200);
+
 injectCss();
 
 var origShow=window.showTab;
@@ -255,6 +308,7 @@ window.showTab=function(name){
   if(typeof origShow==='function')origShow(name);
   var sp=$('settingsPage');if(sp)sp.hidden=(name!=='settings');
   if(name==='settings')render();
+  if(name==='home')renderHome();
 };
 document.addEventListener('click',function(e){
   var el=e.target.closest&&e.target.closest('[data-tab]');if(!el)return;

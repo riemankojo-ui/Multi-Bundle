@@ -890,7 +890,7 @@ async function renderBundleProjects(){
   var all=[];try{all=await dbGetAll()}catch(e){}
   all.sort(function(a,b){return (b.savedAt||0)-(a.savedAt||0)});
   card.innerHTML='<label class="eyebrow">PROJECTS</label><h2>Pick a project</h2><p class="note" style="margin:4px 0 12px">Tap a project to choose which files go into the TXT.</p>'+
-    (all.length?all.map(function(p){var n=(p.id===currentProjectId?files:(p.files||[])).length;return '<div class="file-row" data-bp="'+esc(p.id)+'" style="cursor:pointer"><div class="file-icon">'+esc((p.name||'?').slice(0,2).toUpperCase())+'</div><div class="file-meta"><div class="file-name">'+esc(p.name||'Untitled')+'</div><div class="file-path">'+n+' files'+(p.id===currentProjectId?' \u00b7 open now':'')+'</div></div><div class="file-size">Select</div></div>'}).join(''):'<p class="note">No saved projects yet. Import one in the Projects tab.</p>');
+    (all.length?all.map(function(p){var n=(p.id===currentProjectId?files:(p.files||[])).length;return '<div class="file-row" data-bp="'+esc(p.id)+'" style="cursor:pointer"><div class="file-meta"><div class="file-name">'+esc(p.name||'Untitled')+'</div><div class="file-path">'+n+' files'+(p.id===currentProjectId?' \u00b7 open now':'')+'</div></div><div class="file-size">Select</div></div>'}).join(''):'<p class="note">No saved projects yet. Import one in the Projects tab.</p>');
   card.querySelectorAll('[data-bp]').forEach(function(r){
   r.onclick=function(){
     var projId = r.getAttribute('data-bp');

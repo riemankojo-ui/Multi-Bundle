@@ -35,12 +35,14 @@ main{max-width:1200px;margin:auto;padding:16px}
   display:grid;place-items:center;flex-shrink:0;
 }
 .head-btn svg{width:17px;height:17px;stroke:currentColor;fill:none}
+.head-btn{border-radius:0!important}
 .head-btn:active{background:#2a2c34}
 .head-title{
   flex:1;text-align:center;font-size:12px;font-weight:800;letter-spacing:.8px;color:#fff;
 }
 .head-title span{color:var(--red)}
 .head-title svg path{fill:#D8D6D1!important}
+.head-title{flex:none!important;width:25%;height:32px;margin:0 auto;background:transparent;border:0;border-left:1px solid var(--line);border-right:1px solid var(--line);border-radius:0}
 
 /* ========== Drawer ========== */
 .drawer-backdrop{
@@ -285,6 +287,7 @@ body:not(.kb-open) #editorPage:not([hidden]) .editor-shell:not(.fullscreen){heig
 }
 .et-file-row .editor-file-select:focus{border-color:var(--red)}
 .et-file-row{position:relative}
+.et-row{background:transparent!important;border:0!important;border-bottom:1px solid #2a2b32!important;box-shadow:none!important;padding:6px 0!important}
 .et-file-row #editorThemeBtn{height:34px;min-width:34px;flex-shrink:0;border-radius:8px}
 .editor-theme-card{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:40;width:170px;padding:6px;background:#17181c;border:1px solid #2c2d34;border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
 .editor-theme-card.open{display:flex;flex-direction:column}
@@ -340,6 +343,7 @@ body:not(.kb-open) #editorPage:not([hidden]) .editor-shell:not(.fullscreen){heig
 .editor-btn:disabled{opacity:.35;cursor:not-allowed}
 .editor-btn.small{height:32px;min-width:32px;padding:0 8px;font-size:11px}
 .editor-btn.small svg{width:14px;height:14px}
+.editor-btn,.et-file-row .editor-file-select,.et-file-row #editorThemeBtn,.editor-search-input{border-radius:0!important}
 
 /* ========== Editor search bar ========== */
 .editor-searchbar{

@@ -251,6 +251,7 @@ const __origSave=saveCurrentProject;window.saveCurrentProject=async function(){a
 function openDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.add('open');if(b)b.classList.add('open')}
 function closeDrawer(){const d=$('drawer'),b=$('drawerBackdrop');if(d)d.classList.remove('open');if(b)b.classList.remove('open');setTimeout(function(){if(!d)return;d.scrollTop=0;d.querySelectorAll('*').forEach(function(x){if(x.scrollTop)x.scrollTop=0})},300)}
 if($('menuBtn'))$('menuBtn').onclick=function(){if(window.innerWidth>=850){document.body.classList.remove('menu-closed');return}openDrawer()};
+(function(){var h=document.querySelector('.head-title');if(h){h.style.cursor='pointer';h.onclick=function(){location.href='/about.html'}}})();
 if($('drawerClose'))$('drawerClose').onclick=function(){if(window.innerWidth>=850){document.body.classList.add('menu-closed');return}closeDrawer()};
 if($('drawerBackdrop'))$('drawerBackdrop').onclick=closeDrawer;
 if($('drawerNewProject'))$('drawerNewProject').onclick=function(){closeDrawer();if($('folderInput'))$('folderInput').click()};

@@ -116,7 +116,6 @@
   <div id="projectsListView">
     <section class="card">
       <label class="eyebrow">PROJECTS</label>
-      <h1>Your <span>Projects</span></h1>
       <p>Import a website folder or ZIP. Your files are saved on this device.</p>
       <div class="actions">
         <label class="btn primary">New project<input id="folderInput" type="file" webkitdirectory directory multiple hidden></label>
@@ -804,7 +803,7 @@
       }
       ;await Promise.all([0,1,2,3,4].map(async function(){while(__di<__docs.length){await __one(__di++);__dn++;try{window.__ldNote&&window.__ldNote('Loading projects '+__dn+'/'+__docs.length)}catch(e){}}}));
 var __ord={};__docs.forEach(function(d,i){__ord[d.data().id]=i});out.sort(function(a,b){return __ord[a.id]-__ord[b.id]});
-ps.docs.forEach(function(d,i){var m=d.data();if(out[i]){if(m.logo)out[i].logo=m.logo;if(m.githubShas)out[i].githubShas=m.githubShas;if(m.deploy)out[i].deploy=m.deploy}});
+ps.docs.forEach(function(d,i){var m=d.data();if(out[i]){if(m.logo)out[i].logo=m.logo;if(m.githubShas)out[i].githubShas=m.githubShas}});
       ps.docs.forEach(function(d,i){if(out[i]&&d.data().deleted)out[i].deleted=true});window.__cloudLoadOK=true;
       
       return out;

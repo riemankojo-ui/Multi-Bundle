@@ -297,6 +297,7 @@ window.__openRenameFiles=function(){
     };
   });
 };
+window.__edDeletePaths=__doDelete;
 window.__deleteCurrentFile=async function(){
   if(!currentPath){toast('Open a file first','error');return}
   const name=currentPath;

@@ -17,7 +17,7 @@ html { background-color: #0d0e12 !important; }
 body{
   margin:0;background-color:#0d0e12;color:var(--text);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-  padding-bottom:72px;
+  padding-bottom:0;
 }
 button{cursor:pointer}
 main{max-width:1200px;margin:auto;padding:16px}
@@ -26,7 +26,7 @@ main{max-width:1200px;margin:auto;padding:16px}
 .app-head{
   position:sticky;top:0;z-index:60;
   display:flex;align-items:center;gap:10px;
-  height:54px;padding:0 10px;
+  height:54px;padding:0 10px;margin-bottom:42px;
   background:#15161a;border-bottom:1px solid var(--line);
 }
 .head-btn{
@@ -105,6 +105,12 @@ main{max-width:1200px;margin:auto;padding:16px}
 
 /* ========== Cards & typography ========== */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:18px;margin-bottom:15px;min-width:0}
+#authCard{background:transparent;border:0;border-radius:0;border-bottom:1px solid var(--line);padding:0 0 16px;margin-bottom:16px}
+#homePage>.card{background:transparent;border:0;border-radius:0;border-bottom:1px solid var(--line);padding:0 0 16px;margin-bottom:16px}#homePage>.card:last-child{border-bottom:0}
+#bundlePage>.card{background:transparent;border:0;border-radius:0;border-bottom:1px solid var(--line);padding:0 0 16px!important;margin-bottom:16px}
+#projectsPage .card{background:transparent;border:0;border-radius:0;border-bottom:1px solid var(--line);padding:0 0 16px;margin-bottom:16px}
+#githubPage>.card{background:transparent;border:0;border-radius:0;border-bottom:1px solid var(--line);padding:0 0 16px;margin-bottom:16px}
+#updatesPage .card:not([style]){background:transparent;border:0;border-radius:0;border-bottom:1px solid var(--line);padding:0 0 16px;margin-bottom:16px}
 .hero{background:linear-gradient(140deg,#28171a,#191a1f 70%);padding:22px}
 .eyebrow{color:var(--red);font-size:10px;font-weight:800;letter-spacing:1.4px}
 h1{font-size:clamp(28px,6vw,42px);line-height:1.08;letter-spacing:-1px;margin:10px 0}
@@ -228,22 +234,23 @@ body:not(.kb-open) #editorPage:not([hidden]) .editor-shell:not(.fullscreen){heig
 
 /* ========== Bottom nav ========== */
 .bottom{
-  position:fixed;bottom:0;left:0;right:0;height:60px;background:#17181c;
-  border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:stretch;
-  z-index:5;padding:2px 2px calc(2px + env(safe-area-inset-bottom,0px));
+  position:fixed;top:44px;left:0;right:0;height:42px;background:#0d0e12;
+  border-bottom:1px solid var(--line);display:flex;justify-content:flex-start;align-items:stretch;overflow-x:auto;scrollbar-width:none;
+  z-index:50;padding:0 6px;
 }
 .bottom span{
-  min-width:0;flex:1;border:0;background:none;color:#858691;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  cursor:pointer;padding:6px 2px;border-radius:10px;
+  min-width:0;flex:none;border:0;background:none;color:#9198a1;
+  display:flex;flex-direction:row;align-items:center;justify-content:center;gap:4px;white-space:nowrap;
+  cursor:pointer;padding:0 12px;border-radius:0;border-bottom:2px solid transparent;
   transition:background .15s,color .15s;
   -webkit-tap-highlight-color: transparent; 
   transform: none !important; 
 }
-.bottom span svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.bottom small{font-size:9px;letter-spacing:.2px;font-weight:600}
-.bottom .selected{color:var(--red);background:rgba(205,133,63,.12)}
-@media(max-width:380px){.bottom span svg{width:20px;height:20px}.bottom small{font-size:8px}}
+.bottom span svg{display:none}
+.bottom small{font-size:14px;letter-spacing:0;font-weight:500}
+.bottom .selected{color:#fff;font-weight:600;background:none;border-bottom:2px solid #f78166}
+.bottom [data-tab="services"]{order:1}
+@media(max-width:380px){.bottom small{font-size:13px}}
 
 /* ========== Editor shell ========== */
 .editor-shell{

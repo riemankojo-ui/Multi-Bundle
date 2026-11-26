@@ -1453,7 +1453,7 @@ async function restoreLastProject() {
 // Change the startup sequence:
 render();
 renderProjectCards();
-try { var __n0 = JSON.parse(localStorage.getItem('mb_nav') || 'null'); if (__n0 && __n0.tab && __n0.tab !== 'services' && __n0.tab !== 'preview' && __n0.tab !== 'editor') showTab(__n0.tab); } catch (e) {}
+try { var __n0 = JSON.parse(localStorage.getItem('mb_nav') || 'null'); if (__n0 && __n0.tab && ['home','projects','bundle','editor','backups','github','updates'].indexOf(__n0.tab) > -1) showTab(__n0.tab); } catch (e) {}
 restoreLastProject().then(() => {
   render(); renderProjectCards();
   if (typeof window.__restoreEditor === 'function') window.__restoreEditor();

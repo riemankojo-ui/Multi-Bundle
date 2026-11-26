@@ -34,10 +34,12 @@
   }
   function nameOf(p) { return p.displayName || (p.email ? p.email.split('@')[0] : 'Signed in'); }
   function providerLabel(p) { return p.provider === 'google.com' ? 'Google' : p.provider === 'github.com' ? 'GitHub' : p.provider === 'password' ? 'Email' : ''; }
+  function cachePhoto(url) { if (window.__pc === url) return; window.__pc = url; try { fetch(url, { mode: 'cors' }).then(function (r) { return r.blob(); }).then(function (b) { return new Promise(function (res, rej) { var f = new FileReader(); f.onload = function () { res(f.result); }; f.onerror = rej; f.readAsDataURL(b); }); }).then(function (d) { if (d && d.length < 400000) localStorage.setItem('mb_photoc', JSON.stringify({ u: url, d: d })); }).catch(function () {}); } catch (e) {} }
+  function photoSrc(url) { if (!url || url.indexOf('data:') === 0) return url; try { var c = JSON.parse(localStorage.getItem('mb_photoc') || 'null'); if (c && c.u === url && c.d) return c.d; } catch (e) {} cachePhoto(url); return url; }
   function avatarHtml(p, size) {
     const letter = esc(nameOf(p).charAt(0).toUpperCase());
     return '<span class="acc-av" style="width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * 0.42) + 'px"><span>' + letter + '</span>' +
-      (p.photoURL ? '<img src="' + esc(p.photoURL) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>';
+      (p.photoURL ? '<img src="' + esc(photoSrc(p.photoURL)) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>';
   }
   function saveProfile(u) {
     try {

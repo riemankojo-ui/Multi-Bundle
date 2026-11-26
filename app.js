@@ -264,7 +264,7 @@ var __projShown=6;
 async function renderProjectCards(){
   const pg=$('projectsPage');if(pg&&pg.hidden){dbGetAll();return}
   const all=await dbGetAll();const box=$('projectCards');if(!box)return;
-  if($('projectCount'))$('projectCount').textContent=all.length+' / '+PROJECT_LIMIT;
+  if(!all.length&&!window.__authKnown&&(parseInt(localStorage.getItem('mb_pcount')||'0',10)||0)>0)return; if(window.__authKnown){try{localStorage.setItem('mb_pcount',String(all.length))}catch(e){}} if($('projectCount'))$('projectCount').textContent=all.length+' / '+PROJECT_LIMIT;
   if(!all.length){box.innerHTML='<div class="pc-empty">No saved projects yet.<br>Import a folder or ZIP to create one.</div>';return}
   box.innerHTML=all.slice(0,__projShown).map(function(p){
     const active=(p.id===currentProjectId)?' active':'';

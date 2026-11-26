@@ -379,14 +379,14 @@ auth.getRedirectResult().then(async function (res) {
   // Hide the loading spinner and show the form
 const gateLoading = document.getElementById('gateLoading');
 const gateContent = document.getElementById('gateContent');
-if (gateLoading) gateLoading.style.display = 'none';
+if (gateLoading) gateLoading.style.display = 'none'; try { var __kc = document.getElementById('mbKnownCss'); if (__kc) __kc.remove(); } catch (e) {}
 if (gateContent) gateContent.style.display = 'block';
 
 // NEW: Unhide the app now that we know the login state
 document.body.classList.remove('auth-loading'); document.documentElement.classList.add('auth-ready');
 
   const prof = profileOf(user);
-  saveProfile(user);
+  if (user || !rememberedUid) saveProfile(user);
   showProfile(prof);
 
     if (user) {

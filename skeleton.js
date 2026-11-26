@@ -17,6 +17,24 @@
   // remove any older skeleton pieces left inside the list
   try { box.querySelectorAll('.mbsk, style').forEach(function (e) { e.remove(); }); } catch (e) {}
 
+  // a redraw with exactly the same cards does nothing (no remove-and-land-again)
+  try {
+    var __d = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+    Object.defineProperty(box, 'innerHTML', {
+      configurable: true,
+      get: function () { return __d.get.call(box); },
+      set: function (v) {
+        v = String(v);
+        if (box.__mbH === v && box.firstChild) {
+          var m = box.querySelectorAll('.pc-more');
+          for (var i = 0; i < m.length; i++) m[i].remove();
+          return;
+        }
+        box.__mbH = v;
+        __d.set.call(box, v);
+      }
+    });
+  } catch (e) {}
   if (N < 1) return;           // nothing was saved before: no skeleton
   N = Math.min(N, 20);
 
@@ -104,6 +122,9 @@
   var timer = setInterval(function () {
     if (done) return;
     var now = Date.now();
+    var cur = document.getElementById('projectCards');
+    if (cur && cur !== box) { box = cur; try { mo.disconnect(); mo.observe(box, { childList: true, subtree: true }); } catch (e) {} last = now; }
+    if (cur && cur.parentNode && !document.getElementById('mbSkel')) { cur.parentNode.insertBefore(sk, cur); document.documentElement.classList.add('mbsx-on'); }
     var vis = pageVisible();
     if (vis) visMs += 120;
     var auth = (typeof window.__authKnown === 'undefined') || window.__authKnown === true;

@@ -197,6 +197,7 @@
   function quiet(e) { return e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request'); }
 
   function showAuthLoader() {
+  if (!window.__authLdOK) return;
   try { localStorage.setItem('mb_loading', '1'); } catch (e) {}
   window.__ldNote = function (t) { var n = document.getElementById('authLoaderNote'); if (n) n.textContent = t || ''; };
   var ld = document.getElementById('authLoader');
@@ -431,7 +432,7 @@ if (previousUid && previousUid !== user.uid) resetScreen();
       if (typeof window.__refreshProjects === "function") await window.__refreshProjects();
   if (user && typeof window.__cloudSweep === "function") window.__cloudSweep();
   if (user && typeof window.__restoreFromCloud === "function") {
-      if (!localStorage.getItem('mb_restored_' + user.uid) || localStorage.getItem('mb_loading') === '1') showAuthLoader();
+      window.__authLdOK = true; if (!localStorage.getItem('mb_restored_' + user.uid) || localStorage.getItem('mb_loading') === '1') { showAuthLoader(); setTimeout(hideAuthLoader, 5000); }
       window.__restoreSkip = false;
       var skipT = setTimeout(function () {
         var ld = document.getElementById('authLoader');

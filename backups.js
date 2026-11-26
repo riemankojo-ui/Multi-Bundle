@@ -731,9 +731,17 @@ if(btn.dataset.dir && !state.selecting){
     if (state.pid && currentProject()) openProject(state.pid); else showList();
   }
 
+  function skelHtml() {
+    var n = 0; try { n = parseInt(localStorage.getItem('mb_pcount') || '0', 10) || 0; } catch (e) {}
+    if (n < 1) return '';
+    n = Math.min(n, 12);
+    var row = '<div class="bks-r"><i class="bks-ic"></i><div class="bks-c"><i class="bks-a"></i><i class="bks-b"></i></div><i class="bks-ch"></i></div>';
+    var css = '.bks{display:flex;flex-direction:column;background:#101115;border:1px solid #25262c;border-top:0;border-radius:0 0 16px 16px;overflow:hidden;margin:0 0 16px 0}.bks-r{display:flex;align-items:center;gap:12px;padding:16px 14px;border-bottom:1px solid #25262c}.bks-r:last-child{border-bottom:0}.bks i{display:block;position:relative;overflow:hidden;background:#1b1c22;border-radius:8px}.bks i::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);animation:bksx 1.4s ease-in-out infinite}.bks-r:nth-child(2) i::after{animation-delay:.12s}.bks-r:nth-child(3) i::after{animation-delay:.24s}.bks-r:nth-child(4) i::after{animation-delay:.36s}@keyframes bksx{to{transform:translateX(100%)}}.bks-ic{width:42px;height:42px;border-radius:12px!important;flex:none}.bks-c{flex:1;min-width:0}.bks-a{height:13px;width:50%}.bks-r:nth-child(3n+1) .bks-a{width:62%}.bks-r:nth-child(3n+2) .bks-a{width:40%}.bks-b{height:10px;width:26%;margin-top:9px}.bks-ch{width:10px;height:14px;flex:none}';
+    return '<style>' + css + '</style><div class="bks">' + new Array(n + 1).join(row) + '</div>';
+  }
   function build() {
   var page = $('backupsPage'); if (!page) return false;
-  page.innerHTML = '<div class="bk-topbar"><span class="bk-topbar-title">Backups</span><div class="bk-topbar-tools"><div class="bk-search-wrap"><input class="bk-search" id="bkSearch" type="search" name="q" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore style="-webkit-appearance:none;" placeholder="Search projects\u2026"><button class="bk-search-clear" id="bkSearchClear" style="display:none">\u00d7</button></div></div></div><div id="bkBody"></div>';
+  page.innerHTML = '<div class="bk-topbar"><span class="bk-topbar-title">Backups</span><div class="bk-topbar-tools"><div class="bk-search-wrap"><input class="bk-search" id="bkSearch" type="search" name="q" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore style="-webkit-appearance:none;" placeholder="Search projects\u2026"><button class="bk-search-clear" id="bkSearchClear" style="display:none">\u00d7</button></div></div></div><div id="bkBody">' + skelHtml() + '</div>';
   return true;
 }
 

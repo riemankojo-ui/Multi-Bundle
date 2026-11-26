@@ -1,5 +1,5 @@
 /* Multi Bundle Service Worker — v8 */
-const CACHE='multibundle-v220';
+const CACHE='multibundle-v221';
 const ASSETS=['/','/index.html','/style.css','/app.js','/errwatch.js','/editor.js','/settings.js','/publish.js','/sync.js','/backups.js','/edtools.js','/bundlebtn.js','/filesort.js','/manifest.json','/logo.png','/logo-m.png','/apkbuild.html','/run.html','/store-android.html','/store-ios.html','/workflow.html','/cloud.html','/topbar.js'];
 
 {
@@ -14,6 +14,7 @@ self.addEventListener('fetch',function(e){
   var url;try{url=new URL(e.request.url)}catch(err){return}
   if(url.origin!==location.origin)return;
   if(url.pathname.indexOf('/api/')===0||url.pathname.indexOf('/__/')===0)return;
+  if(e.request.mode!=='navigate'&&/\.(js|css|png|json)$/.test(url.pathname)){e.respondWith(caches.match(e.request).then(function(hit){var net=fetch(e.request).then(function(res){if(res&&res.status===200&&res.type==='basic'){var cp=res.clone();caches.open(CACHE).then(function(c){c.put(e.request,cp)})}return res}).catch(function(){return hit});return hit||net}));return}
   e.respondWith(fetch(e.request).then(function(res){
     if(res&&res.status===200&&res.type==='basic'){var copy=res.clone();caches.open(CACHE).then(function(c){c.put(e.request,copy)})}
     return res;

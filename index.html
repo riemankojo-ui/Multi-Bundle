@@ -138,6 +138,7 @@
     </section>
 
 <script>try{var __b=document.getElementById('projectCards'),__n=parseInt(localStorage.getItem('mb_pcount')||'0',10)||0;if(__b){__b.querySelectorAll('.mbsk').forEach(function(e){e.remove()});var __h='<div class="mbsk"><div class="mbsk-row"><i class="mbsk-ic"></i><div class="mbsk-col"><i class="mbsk-l1"></i><i class="mbsk-l2"></i></div></div><i class="mbsk-chip"></i><div class="mbsk-row"><i class="mbsk-b"></i><i class="mbsk-b"></i><i class="mbsk-b"></i><i class="mbsk-b s"></i></div></div>';__b.insertAdjacentHTML('beforeend',new Array(Math.min(__n,20)+1).join(__h));var __c=document.getElementById('projectCount');if(__c&&__n)__c.textContent=__n+' / 20'}}catch(e){}</script>
+<script>try{var __s=localStorage.getItem('mb_pcards'),__b2=document.getElementById('projectCards'),__n2=parseInt(localStorage.getItem('mb_pcount')||'0',10)||0;if(__s&&__b2&&__n2>0){__b2.innerHTML=__s;__b2.classList.add('mb-snap');var __st=document.createElement('style');__st.textContent='#projectCards.mb-snap{pointer-events:none}';document.head.appendChild(__st)}}catch(e){}</script>
     <!-- NEW: GitHub Repos Section -->
     <section class="card" id="ghProjectsSection" hidden>
       <div class="heading">

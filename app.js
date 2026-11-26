@@ -285,7 +285,7 @@ async function renderProjectCards(){
       '<button class="pc-btn dots" data-act="more" title="More"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>'+
       '</div></div>';
   }).join('');
-    if(all.length>__projShown){const mb=document.createElement('button');mb.className='btn secondary pc-more';mb.textContent='More';mb.onclick=function(){__projShown+=6;renderProjectCards()};box.appendChild(mb)}
+    box.classList.remove('mb-snap'); if(window.__authKnown){try{var __sn=box.innerHTML.replace(/<img [^>]*>/g,'');if(__sn.length<150000)localStorage.setItem('mb_pcards',__sn)}catch(e){}} if(all.length>__projShown){const mb=document.createElement('button');mb.className='btn secondary pc-more';mb.textContent='More';mb.onclick=function(){__projShown+=6;renderProjectCards()};box.appendChild(mb)}
   box.querySelectorAll('.project-card').forEach(function(card){
     const id=card.dataset.id;
     card.querySelectorAll('.pc-btn').forEach(function(btn){
